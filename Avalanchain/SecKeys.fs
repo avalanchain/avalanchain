@@ -77,7 +77,7 @@ type CryptoContext (*<'TData>*) = {
     Dispose: unit -> unit
 }
 
-let dataHash serializer cryptoContext data = 
+let dataHasher serializer cryptoContext data = 
     let serialized = serializer data
     { Hash = cryptoContext.Hash serialized; Value = data }
 

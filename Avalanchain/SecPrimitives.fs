@@ -12,7 +12,9 @@ and Serializer<'TData> = 'TData -> Serialized
 and Deserializer<'TData> = Serialized -> 'TData 
 
 type Hash = Hash of Serialized // TODO: Add boundaries, algorithm, etc
-    with member inline this.Bytes = match this with Hash h -> h
+    with 
+        member inline this.Bytes = match this with Hash h -> h
+        static member inline Zero = Hash([||])
 and Hashed<'TData> = { Hash: Hash; Value: 'TData }
 and Hasher = Serialized -> Hash
 and DataHasher<'TData> = 'TData -> Hashed<'TData> 
@@ -25,13 +27,18 @@ type MerkleTree =
 with 
     member this.Hash = 
         match this with
-        | Empty -> Hash([||])
+        | Empty -> Hash.Zero
         | Leaf h -> h
         | Tree hd -> hd.Hash
+    member this.OwnHash = 
+        match this with
+        | Empty -> Hash.Zero
+        | Leaf h -> h
+        | Tree hd -> (fst hd.Value).Hash // Left leaf has value of the newly added element
 and Merkled<'TData> = { Merkle: MerkleTree; Value: 'TData }
 
 // TODO: Fix merkles
-let toMerkle (serializer: Serializer<'T>) hasher optionalInit data : MerkleTree =
+let toMerkle (serializer: Serializer<'T>) hasher optionalInit (data: 'T list) : MerkleTree =
     let bytesList = data |> List.map serializer
     let fold init els =
         els
@@ -48,6 +55,10 @@ let toMerkle (serializer: Serializer<'T>) hasher optionalInit data : MerkleTree 
     | x :: xs, None -> fold (Leaf(hasher x)) (xs)   
     | x :: xs, Some init -> fold init (bytesList) 
 
+let toMerkled (serializer: Serializer<'TData>) hasher optionalInit data : Merkled<'TData> =
+    let mt = toMerkle serializer hasher optionalInit [data]
+    { Merkle = mt; Value = data }
+
 let hashToMerkle hasher optionalInit hashes : MerkleTree =
     let fold init els =
         els
@@ -63,3 +74,4 @@ let hashToMerkle hasher optionalInit hashes : MerkleTree =
     | x :: [], Some init -> fold init ([x])
     | x :: xs, None -> fold (Leaf(x)) (xs)   
     | x :: xs, Some init -> fold init (hashes) 
+

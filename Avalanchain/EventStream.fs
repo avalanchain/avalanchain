@@ -38,7 +38,7 @@ type EventStreamStep<'TState, 'TData> = {
     Def: Hashed<EventStreamDef<'TState, 'TData>>
     TimeStamp: DateTimeOffset
     Event: MerkledEvent<'TData>
-    State: Hashed<StreamState<'TState>>
+    State: Merkled<StreamState<'TState>>
     Nonce: Nonce
     //StreamStatus: EventStreamStatus<'TData>
 } with 
@@ -89,24 +89,24 @@ let streamEventProcessor serializers (cryptoContext: CryptoContext) streamStep (
         merkled, proof
     
     let project event =
-        let projection = streamStep.Def.Value.Projection.F // TODO: Rethink projection invoking on aggregate
+        let projection = streamStep.Def.Value.Projection.F // TODO: Rethink projection invoking on state
         try
             projection.Invoke(streamStep.State.Value, event.Data)
         with
             | ex -> fail (sprintf "Error projection execution : '%s'" (ex.ToString()))
 
     let buildNewStream state =
-        let hashedState = dataHash serializers.state cryptoContext state
+        let hashedState = dataHasher serializers.state cryptoContext state
         let nonce = streamStep.Nonce + 1u
-        let newStream = {
+        let newStreamStep = {
                             Def = streamStep.Def
                             TimeStamp = DateTimeOffset.UtcNow
                             Event = merkler event nonce hashedState // MerkledEvent<'TData> // TODO
-                            State = hashedState
+                            State = toMerkled serializers.state cryptoContext.Hash (Some streamStep.State.Merkle) hashedState.Value // TODO: optimize redundant serializations
                             Nonce = nonce
                             // StreamStatus = streamStep.StreamStatus
                         }
-        ok newStream
+        ok newStreamStep
 
     let run = 
         project 

@@ -14,13 +14,14 @@ let hash3 = [| for i in 30uy .. 35uy -> i |]
 let hash4 = [| for i in 40uy .. 45uy -> i |]
 
 let hasher = (fun h -> Hash h)
+let serializer = (fun h -> h)
 
-let zeroMerkle = [] |> SecPrimitives.toMerkle hasher None
-let oneMerkle = [ hash0 ] |> SecPrimitives.toMerkle hasher None
-let twoMerkle = [ hash0; hash1 ] |> SecPrimitives.toMerkle hasher None
-let threeMerkle = [ hash0; hash1; hash2 ] |> SecPrimitives.toMerkle hasher None
-let fourMerkle = [ hash0; hash1; hash2; hash3 ] |> SecPrimitives.toMerkle hasher None
-let fiveMerkle = [ hash0; hash1; hash2; hash3; hash4 ] |> SecPrimitives.toMerkle hasher None
+let zeroMerkle = [] |> SecPrimitives.toMerkle serializer hasher None
+let oneMerkle = [ hash0 ] |> SecPrimitives.toMerkle serializer hasher None
+let twoMerkle = [ hash0; hash1 ] |> SecPrimitives.toMerkle serializer hasher None
+let threeMerkle = [ hash0; hash1; hash2 ] |> SecPrimitives.toMerkle serializer hasher None
+let fourMerkle = [ hash0; hash1; hash2; hash3 ] |> SecPrimitives.toMerkle serializer hasher None
+let fiveMerkle = [ hash0; hash1; hash2; hash3; hash4 ] |> SecPrimitives.toMerkle serializer hasher None
 
 
 
