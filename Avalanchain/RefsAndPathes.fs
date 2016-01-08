@@ -35,7 +35,7 @@ type ExecutionProof = {
     //Key: ExecutorKey // <-- exists in the signature itself
 }
 and ExecutionProofData = {
-    StreamRef: EventStreamRef
+    StreamRefHash: Hash
     Nonce: Nonce
     EventHash: Hash
     StateHash: Hash

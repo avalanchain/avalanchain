@@ -20,7 +20,7 @@ type EventStreamStatus<'TData> =
     | BlockedByEvent of string * MerkledEvent<'TData> * Exception option
 
 type EventStreamDef<'TState, 'TData> = {
-    Ref: EventStreamRef
+    Ref: Hashed<EventStreamRef>
     Projection: Projection<StreamState<'TState>, 'TData>
     EmitsTo: EventStreamRef list
     ExecutionPolicy: ExecutionPolicy 
@@ -29,7 +29,6 @@ and StreamState<'TState> = { // TODO: Change to dynamic?
     Value: 'TState 
     StreamRef: EventStreamRef
     Nonce: uint32
-    Proofs: Set<ExecutionProof>
 }
 and HashedAggregate<'TState> = Hashed<StreamState<'TState>> * EventSpine
 and Snapshot<'TState> = HashedAggregate<'TState>
@@ -40,10 +39,11 @@ type EventStreamStep<'TState, 'TData> = {
     Event: MerkledEvent<'TData>
     State: Merkled<StreamState<'TState>>
     Nonce: Nonce
+    Proofs: Set<ExecutionProof>
     //StreamStatus: EventStreamStatus<'TData>
 } with 
-    member inline this.Path = this.Def.Value.Ref.Path
-    member inline this.Version = this.Def.Value.Ref.Version
+    member inline this.Path = this.Def.Value.Ref.Value.Path
+    member inline this.Version = this.Def.Value.Ref.Value.Version
 //    member inline this.Hash = this.Def.Value.Ref.Hash
 
 type EventStream<'TState, 'TData> = {
@@ -55,8 +55,8 @@ type EventStream<'TState, 'TData> = {
     LatestNonce: Nonce
     StreamStatus: EventStreamStatus<'TData>
 } with 
-    member inline this.Path = this.Def.Value.Ref.Path
-    member inline this.Version = this.Def.Value.Ref.Version
+    member inline this.Path = this.Def.Value.Ref.Value.Path
+    member inline this.Version = this.Def.Value.Ref.Value.Version
 //    member inline this.Hash = this.Def.Value.Ref.Hash
 
 
@@ -72,22 +72,21 @@ type Serializers<'TData, 'TState> = {
     epd: Serializer<ExecutionProofData>
 }
 
-let streamEventProcessor serializers (cryptoContext: CryptoContext) streamStep (event: Event<'TData>) =
+//ExecutionProof
+let proofIt epdSerializer (cryptoContext: CryptoContext) streamDef nonce (hashedEvent: HashedEvent<'TData>) hashedState = 
+    let epd = {
+        StreamRefHash = streamDef.Ref.Hash
+        Nonce = nonce
+        EventHash = hashedEvent.Hash // TODO: After fixing merkleTree remove hashing from there
+        StateHash = hashedState.Hash
+    }
+    let signature = cryptoContext.Sign (Unsigned (epdSerializer epd)) 
+    { Data = epd; Signature = signature }
+
+let streamEventProcessor serializers (cryptoContext: CryptoContext) (streamStep: EventStreamStep<'TState, 'TData>) (event: Event<'TData>) =
 //    let verifyEvent he =
 //        cryptoContext.Verify 
-    let merkler (event: Event<'TData>) nonce hashedState : MerkledEvent<'TData> = 
-        let merkleTree = toMerkle serializers.data cryptoContext.Hash (Some (streamStep.Event |> fst).Merkle) [event.Data]
-        let merkled = { Merkle = merkleTree; Value = event }
-        let epd = {
-            StreamRef = streamStep.Def.Value.Ref
-            Nonce = nonce
-            EventHash = cryptoContext.Hash (serializers.event event) // TODO: After fixing merkleTree remove hashing from there
-            StateHash = hashedState.Hash
-        }
-        let signature = cryptoContext.Sign (Unsigned (serializers.epd epd)) 
-        let proof = { Data = epd; Signature = signature }
-        merkled, proof
-    
+   
     let project event =
         let projection = streamStep.Def.Value.Projection.F // TODO: Rethink projection invoking on state
         try
@@ -96,16 +95,20 @@ let streamEventProcessor serializers (cryptoContext: CryptoContext) streamStep (
             | ex -> fail (sprintf "Error projection execution : '%s'" (ex.ToString()))
 
     let buildNewStream state =
-        let hashedState = dataHasher serializers.state cryptoContext state
-        let nonce = streamStep.Nonce + 1u
+        let nonce = streamStep.Nonce + 1UL
+        let merkledEvent = toMerkled serializers.event cryptoContext.Hash (Some streamStep.Event.Merkle) event
+        let merkledState = toMerkled serializers.state cryptoContext.Hash (Some streamStep.State.Merkle) state
+        let hashedEvent = { Hash = merkledEvent.Merkle.OwnHash; Value = merkledEvent.Value } 
+        let hashedState = { Hash = merkledState.Merkle.OwnHash; Value = merkledState.Value } 
         let newStreamStep = {
-                            Def = streamStep.Def
-                            TimeStamp = DateTimeOffset.UtcNow
-                            Event = merkler event nonce hashedState // MerkledEvent<'TData> // TODO
-                            State = toMerkled serializers.state cryptoContext.Hash (Some streamStep.State.Merkle) hashedState.Value // TODO: optimize redundant serializations
-                            Nonce = nonce
-                            // StreamStatus = streamStep.StreamStatus
-                        }
+                                Def = streamStep.Def
+                                TimeStamp = DateTimeOffset.UtcNow
+                                Event = merkledEvent
+                                State = merkledState // TODO: optimize redundant serializations
+                                Nonce = nonce
+                                Proofs = [proofIt serializers.epd cryptoContext streamStep.Def.Value nonce hashedEvent hashedState] |> Set.ofList
+                                // StreamStatus = streamStep.StreamStatus
+                            }
         ok newStreamStep
 
     let run = 

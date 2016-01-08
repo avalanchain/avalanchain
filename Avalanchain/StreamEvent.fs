@@ -28,7 +28,7 @@ type Event<'TData> = {
     SubmittedVia: NodeRef
 }
 and HashedEvent<'TData> = Hashed<Event<'TData>>
-and MerkledEvent<'TData> = Merkled<Event<'TData>> * ExecutionProof
+and MerkledEvent<'TData> = Merkled<Event<'TData>> //* ExecutionProof
 and EventRef = Hash
 and EventSpine = MerkleTree
 

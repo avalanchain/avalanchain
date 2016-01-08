@@ -5,7 +5,7 @@ open System
 open FSharpx.Collections
 open FSharp.Core.Fluent
 
-type Nonce = uint32
+type Nonce = uint64
 
 type Serialized = byte array
 and Serializer<'TData> = 'TData -> Serialized
