@@ -21,6 +21,12 @@ type HashableFunction<'T, 'TResult> = {
     Proof: Proof
 }
 
+type HashableFunction<'T1, 'T2, 'TResult> = { 
+    F : Func<'T1, 'T2, 'TResult>
+    Expr: Expr<Func<'T1, 'T2, 'TResult>>
+    Proof: Proof
+}
+
 type SerializedFunction = Proof * Serialized
 
 type HashableFunctionBuilder<'T, 'TResult> = 
@@ -60,5 +66,5 @@ let deserializeFunction (proofVerifier: ProofVerifier) deserializer (serializedF
 
 // NOTE: Projection takes just event data and not the whole event
 //type Projection<'TState, 'TEventData> = 'TState -> 'TEventData -> ProjectionResult<'TState>
-type Projection<'TState, 'TEventData> = HashableFunction<'TState * 'TEventData, ProjectionResult<'TState>>
+type Projection<'TState, 'TEventData> = HashableFunction<'TState, 'TEventData, ProjectionResult<'TState>>
 and ProjectionResult<'TState> = Result<'TState, string>

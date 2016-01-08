@@ -53,17 +53,7 @@ let encrypt encryptor value =
 let decrypt decryptor value = 
     match value with Encrypted e -> Decrypted(decryptor e)
 
-//type Serializers<'TData> = {
-//    Event: Serializer<Event<'TData>>
-//    State: Serializer<AggregateException<'TData>>
-//}
-//type Deserializers<'TData> = {
-//    Event: Deserializer<Event<'TData>>
-//}
-
 type CryptoContext (*<'TData>*) = {
-//    Serializers: Serializers<'TData>
-//    Deserializers: Deserializers<'TData>
     Hash: Hasher
     SigningPublicKey: SigningPublicKey
     Sign: Signer
