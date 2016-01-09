@@ -49,8 +49,8 @@ let processEvent
     (dataHasher: DataHasher<Event<'TData>>) 
     (permissionsChecker: HashedEvent<'TData> -> CheckResult) 
     (proofIt: ProofIt<'TState, 'TData>)
-    (streamStep: EventStreamStep<'TState, 'TData>) 
-    (hashedEvent: HashedEvent<'TData>) : EventProcessingResult<EventStreamStep<'TState, 'TData>> =
+    (streamFrame: EventStreamFrame<'TState, 'TData>) 
+    (hashedEvent: HashedEvent<'TData>) : EventProcessingResult<EventStreamFrame<'TState, 'TData>> =
     // TODO: optimize redundant serializations
 
     let checkIntegrity (event: HashedEvent<'TData>) = 
@@ -64,16 +64,16 @@ let processEvent
         | Ok (_, msgs) -> Ok (event, msgs |> List.map SecurityWarning)
         | Bad msgs -> fail (PermissionsFailure msgs)
 
-    let project (streamStep: EventStreamStep<'TState, 'TData>) (event: HashedEvent<'TData>) =
-        let projection = streamStep.Def.Value.Projection.F 
+    let project (streamFrame: EventStreamFrame<'TState, 'TData>) (event: HashedEvent<'TData>) =
+        let projection = streamFrame.Def.Value.Projection.F 
         try
-            let res = projection.Invoke(streamStep.State.Value.Value, event.Value.Data)
+            let res = projection.Invoke(streamFrame.State.Value.Value, event.Value.Data)
             match res with
             | Ok (newState, msgs) -> 
                 let ns = { 
                     Value = newState 
-                    StreamRef = streamStep.Def.Value.Ref
-                    Nonce = streamStep.Nonce + 1UL
+                    StreamRef = streamFrame.Def.Value.Ref
+                    Nonce = streamFrame.Nonce + 1UL
                 }
                 Ok (ns, msgs |> List.map ExecutionWarning)
             | Bad msgs -> fail (ProcessingFailure msgs)
@@ -82,23 +82,23 @@ let processEvent
 
     let buildNewStream (state: StreamState<'TState>) =
         let nonce = state.Nonce
-        let merkledEvent = toMerkled serializers.event cryptoContext.Hash (Some streamStep.Event.Merkle) hashedEvent.Value
-        let merkledState = toMerkled serializers.state cryptoContext.Hash (Some streamStep.State.Merkle) state
-        let newStreamStep = {
-                                Def = streamStep.Def
+        let merkledEvent = toMerkled serializers.event cryptoContext.Hash (Some streamFrame.Event.Merkle) hashedEvent.Value
+        let merkledState = toMerkled serializers.state cryptoContext.Hash (Some streamFrame.State.Merkle) state
+        let newStreamFrame = {
+                                Def = streamFrame.Def
                                 TimeStamp = DateTimeOffset.UtcNow
                                 Event = merkledEvent
                                 State = merkledState 
                                 Nonce = nonce
-                                Proofs = [proofIt streamStep.Def.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
-                                // StreamStatus = streamStep.StreamStatus
+                                Proofs = [proofIt streamFrame.Def.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
+                                // StreamStatus = streamFrame.StreamStatus
                             }
-        ok newStreamStep
+        ok newStreamFrame
 
     let run =
         checkIntegrity
         >> bind checkPermissions
-        >> bind (project streamStep)
+        >> bind (project streamFrame)
         >> bind buildNewStream
 
     run hashedEvent 

@@ -33,7 +33,7 @@ and StreamState<'TState> = {
 and HashedAggregate<'TState> = Hashed<StreamState<'TState>> * EventSpine
 and Snapshot<'TState> = HashedAggregate<'TState>
 
-type EventStreamStep<'TState, 'TData> = {
+type EventStreamFrame<'TState, 'TData> = {
     Def: Hashed<EventStreamDef<'TState, 'TData>>
     TimeStamp: DateTimeOffset
     Event: MerkledEvent<'TData>
@@ -49,7 +49,7 @@ type EventStreamStep<'TState, 'TData> = {
 type EventStream<'TState, 'TData> = {
     Def: Hashed<EventStreamDef<'TState, 'TData>>
     //TimeStamp: DateTimeOffset
-    Steps: Merkled<EventStreamStep<'TState, 'TData>> list
+    Steps: Merkled<EventStreamFrame<'TState, 'TData>> list
     Events: MerkledEvent<'TData>
     States: Hashed<StreamState<'TState>>
     LatestNonce: Nonce
@@ -63,7 +63,7 @@ type EventStream<'TState, 'TData> = {
 
 
 type StreamEventProcessor<'TState, 'TData> = 
-    EventStreamStep<'TState, 'TData> -> Event<'TData> -> Result<EventStreamStep<'TState, 'TData>, string>
+    EventStreamFrame<'TState, 'TData> -> Event<'TData> -> Result<EventStreamFrame<'TState, 'TData>, string>
 
 type Serializers<'TData, 'TState> = {
     data: Serializer<'TData>
