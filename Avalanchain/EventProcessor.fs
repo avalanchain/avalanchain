@@ -50,7 +50,7 @@ let processEvent
     (permissionsChecker: HashedEvent<'TData> -> CheckResult) 
     (proofIt: ProofIt<'TState, 'TData>)
     (streamStep: EventStreamStep<'TState, 'TData>) 
-    (event: HashedEvent<'TData>) : EventProcessingResult<EventStreamStep<'TState, 'TData>> =
+    (hashedEvent: HashedEvent<'TData>) : EventProcessingResult<EventStreamStep<'TState, 'TData>> =
     // TODO: optimize redundant serializations
 
     let checkIntegrity (event: HashedEvent<'TData>) = 
@@ -82,17 +82,15 @@ let processEvent
 
     let buildNewStream (state: StreamState<'TState>) =
         let nonce = state.Nonce
-        let merkledEvent = toMerkled serializers.event cryptoContext.Hash (Some streamStep.Event.Merkle) event.Value
+        let merkledEvent = toMerkled serializers.event cryptoContext.Hash (Some streamStep.Event.Merkle) hashedEvent.Value
         let merkledState = toMerkled serializers.state cryptoContext.Hash (Some streamStep.State.Merkle) state
-        let hashedEvent = event
-        let hashedState = { Hash = merkledState.Merkle.OwnHash; Value = merkledState.Value } 
         let newStreamStep = {
                                 Def = streamStep.Def
                                 TimeStamp = DateTimeOffset.UtcNow
                                 Event = merkledEvent
                                 State = merkledState 
                                 Nonce = nonce
-                                Proofs = [proofIt streamStep.Def.Value.Ref nonce hashedState hashedEvent] |> Set.ofList
+                                Proofs = [proofIt streamStep.Def.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
                                 // StreamStatus = streamStep.StreamStatus
                             }
         ok newStreamStep
@@ -103,10 +101,5 @@ let processEvent
         >> bind (project streamStep)
         >> bind buildNewStream
 
-    run event 
+    run hashedEvent 
  
-
-
-
-let addToMerkle hashier initMerkle hashedEvent =
-    SecPrimitives.hashToMerkle hashier initMerkle [hashedEvent.Hash]

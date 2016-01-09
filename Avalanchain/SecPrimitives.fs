@@ -35,7 +35,8 @@ with
         | Empty -> Hash.Zero
         | Leaf h -> h
         | Tree hd -> (fst hd.Value).Hash // Left leaf has value of the newly added element
-and Merkled<'TData> = { Merkle: MerkleTree; Value: 'TData }
+and Merkled<'TData> = { Merkle: MerkleTree; HashedValue: Hashed<'TData> }
+    with member this.Value = this.HashedValue.Value
 
 // TODO: Fix merkles
 let toMerkle (serializer: Serializer<'T>) hasher optionalInit (data: 'T list) : MerkleTree =
@@ -57,7 +58,7 @@ let toMerkle (serializer: Serializer<'T>) hasher optionalInit (data: 'T list) : 
 
 let toMerkled (serializer: Serializer<'TData>) hasher optionalInit data : Merkled<'TData> =
     let mt = toMerkle serializer hasher optionalInit [data]
-    { Merkle = mt; Value = data }
+    { Merkle = mt; HashedValue = { Hash = mt.OwnHash; Value = data } }
 
 let hashToMerkle hasher optionalInit hashes : MerkleTree =
     let fold init els =
@@ -75,3 +76,6 @@ let hashToMerkle hasher optionalInit hashes : MerkleTree =
     | x :: xs, None -> fold (Leaf(x)) (xs)   
     | x :: xs, Some init -> fold init (hashes) 
 
+
+let addToMerkle hashier initMerkle hashed =
+    hashToMerkle hashier initMerkle [hashed.Hash]

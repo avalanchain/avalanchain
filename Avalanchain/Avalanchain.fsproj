@@ -62,6 +62,8 @@
     <Compile Include="StreamEvent.fs" />
     <Compile Include="Projection.fs" />
     <Compile Include="Quorum.fs" />
+    <Compile Include="Acl.fs" />
+    <Compile Include="KVStore.fs" />
     <Compile Include="EventStream.fs" />
     <Compile Include="EventProcessor.fs" />
     <Compile Include="Program.fs" />
