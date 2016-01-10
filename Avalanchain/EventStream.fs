@@ -12,6 +12,7 @@ open RefsAndPathes
 open StreamEvent
 open Projection
 open Quorum
+open Acl
 
 type EventStreamStatus<'TData> =
     | Offline
@@ -46,7 +47,7 @@ type EventStreamFrame<'TState, 'TData> = {
     member inline this.Version = this.Def.Value.Ref.Value.Version
 //    member inline this.Hash = this.Def.Value.Ref.Hash
 
-type EventStream<'TState, 'TData> = {
+type EventStream1<'TState, 'TData> = {
     Def: Hashed<EventStreamDef<'TState, 'TData>>
     //TimeStamp: DateTimeOffset
     Steps: Merkled<EventStreamFrame<'TState, 'TData>> list
@@ -72,3 +73,7 @@ type Serializers<'TData, 'TState> = {
     epd: Serializer<ExecutionProofData>
 }
 
+
+type EventStream<'TState, 'TData>(def, acl, streamProcessor, frameSynchronizer, initFrame (*option*)) =
+    let mutable frames = [initFrame]
+    member this.CurrentFrame = frames.Head

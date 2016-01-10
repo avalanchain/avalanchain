@@ -6,9 +6,9 @@ open System.Security.Cryptography
 
 open Avalanchain.SecPrimitives
 
-type SecurityKey = byte array
-and SigningPublicKey = SecurityKey
-and EncryptionPublicKey = SecurityKey
+type PublicKey = byte array
+and SigningPublicKey = PublicKey
+and EncryptionPublicKey = PublicKey
 //and PrivateKey = SecurityKey
 
 type Unsigned = Unsigned of Serialized
