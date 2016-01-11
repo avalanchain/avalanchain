@@ -92,7 +92,9 @@ and ProjectionResult<'TState> = Result<'TState, string>
 type ProjectionStorage<'TState, 'TData> (serializer, deserializer) = 
     //Projection<'TState, 'TData> list
     let projections = new Dictionary<Hash, Projection<'TState, 'TData>>()
-    member inline this.Add (projection: Projection<'TState, 'TData>) = projections.[projection.Hash] <- projection
-    member inline this.AddAll (projs: Projection<'TState, 'TData> seq) = projs |> Seq.iter (fun p -> projections.[p.Hash] <- p)
+    member inline this.Add (projection: Projection<'TState, 'TData>) = projections.[projection.Hash] <- deserializer projection
+    member inline this.AddAll (projs: Projection<'TState, 'TData> seq) = projs |> Seq.iter (fun p -> projections.[p.Hash] <- deserializer p)
     member inline this.Item hash = projections.TryGetValue(hash) |> (fun (b, res) -> if b then Some res else None)
+    member inline this.Projections = projections.Values
+    member inline this.Export = projections.Values |> Seq.map serializer
     
