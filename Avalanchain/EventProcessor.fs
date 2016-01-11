@@ -13,18 +13,6 @@ open StreamEvent
 open Projection
 open EventStream
 
-type CheckResult = Chessie.ErrorHandling.Result<unit, string>
-
-
-type EventProcessingFailure = 
-    | IntegrityFailure
-    | PermissionsFailure of string list
-    | ProcessingFailure of string list
-    | SecurityWarning of string
-    | ExecutionWarning of string
-    
-type EventProcessingResult<'TState> = Result<'TState, EventProcessingFailure>
-
 type ProofIt<'TState, 'TData> = Hashed<EventStreamRef> -> Nonce -> Hashed<StreamState<'TState>> -> HashedEvent<'TData> -> Hashed<ExecutionProof>
 
 let proofIt 
@@ -47,10 +35,11 @@ let processEvent
     (cryptoContext: CryptoContext) 
     serializers 
     (dataHasher: DataHasher<Event<'TData>>) 
-    (permissionsChecker: HashedEvent<'TData> -> CheckResult) 
+    (permissionsChecker: HashedEvent<'TData> -> DataResult<unit>) 
     (proofIt: ProofIt<'TState, 'TData>)
-    (streamFrame: EventStreamFrame<'TState, 'TData>) 
-    (hashedEvent: HashedEvent<'TData>) : EventProcessingResult<EventStreamFrame<'TState, 'TData>> =
+    (streamDef: Hashed<EventStreamDef<'TState, 'TData>>)
+    (streamFrame: EventStreamFrame<'TState, 'TData> option) 
+    (hashedEvent: HashedEvent<'TData>) : EventProcessingResult<'TState, 'TData> =
     // TODO: optimize redundant serializations
 
     let checkIntegrity (event: HashedEvent<'TData>) = 
@@ -61,19 +50,24 @@ let processEvent
     
     let checkPermissions event = 
         match permissionsChecker event with 
-        | Ok (_, msgs) -> Ok (event, msgs |> List.map SecurityWarning)
+        | Ok (_, _) -> ok event
         | Bad msgs -> fail (PermissionsFailure msgs)
 
-    let project (streamFrame: EventStreamFrame<'TState, 'TData>) (event: HashedEvent<'TData>) =
-        let projection = streamFrame.Def.Value.Projection.F 
+    let project (streamFrame: EventStreamFrame<'TState, 'TData> option) (event: HashedEvent<'TData>) =
+        let projection = streamDef.Value.Projection.F 
+        let state = match streamFrame with
+                    | Some sf -> sf.State.Value.Value
+                    | None -> Unchecked.defaultof<'TState>
         try
-            let res = projection.Invoke(streamFrame.State.Value.Value, event.Value.Data)
+            let res = projection.Invoke(state, event.Value.Data)
             match res with
             | Ok (newState, msgs) -> 
                 let ns = { 
                     Value = newState 
-                    StreamRef = streamFrame.Def.Value.Ref
-                    Nonce = streamFrame.Nonce + 1UL
+                    StreamRef = streamDef.Value.Ref
+                    Nonce = match streamFrame with
+                            | Some sf -> sf.Nonce + 1UL 
+                            | None -> 0UL 
                 }
                 Ok (ns, msgs |> List.map ExecutionWarning)
             | Bad msgs -> fail (ProcessingFailure msgs)
@@ -82,15 +76,15 @@ let processEvent
 
     let buildNewStream (state: StreamState<'TState>) =
         let nonce = state.Nonce
-        let merkledEvent = toMerkled serializers.event cryptoContext.Hash (Some streamFrame.Event.Merkle) hashedEvent.Value
-        let merkledState = toMerkled serializers.state cryptoContext.Hash (Some streamFrame.State.Merkle) state
+        let merkledEvent = toMerkled serializers.event cryptoContext.Hasher (streamFrame |> Option.bind (fun sf -> Some sf.Event.Merkle)) hashedEvent.Value
+        let merkledState = toMerkled serializers.state cryptoContext.Hasher (streamFrame |> Option.bind (fun sf -> Some sf.State.Merkle)) state
         let newStreamFrame = {
-                                Def = streamFrame.Def
+                                Def = streamDef
                                 TimeStamp = DateTimeOffset.UtcNow
                                 Event = merkledEvent
                                 State = merkledState 
                                 Nonce = nonce
-                                Proofs = [proofIt streamFrame.Def.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
+                                Proofs = [proofIt streamDef.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
                                 // StreamStatus = streamFrame.StreamStatus
                             }
         ok newStreamFrame

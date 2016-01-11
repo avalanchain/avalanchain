@@ -30,5 +30,5 @@ type Event<'TData> = {
 and HashedEvent<'TData> = Hashed<Event<'TData>>
 and MerkledEvent<'TData> = Merkled<Event<'TData>> //* ExecutionProof
 and EventRef = Hash
-and EventSpine = MerkleTree
+//and EventSpine = MerkleTree
 

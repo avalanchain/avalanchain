@@ -54,22 +54,22 @@ let decrypt decryptor value =
     match value with Encrypted e -> Decrypted(decryptor e)
 
 type CryptoContext (*<'TData>*) = {
-    Hash: Hasher
+    Hasher: Hasher
     SigningPublicKey: SigningPublicKey
-    Sign: Signer
-    Verify: Verifier
+    Signer: Signer
+    Verifier: Verifier
     EncryptionPublicKey: EncryptionPublicKey 
     //PrivateKey: PrivateKey
     //SignatureMethod: Signature
     EncryptionMethod: Encryption
-    Encrypt: Encryptor
-    Decrypt: Decryptor
+    Encryptor: Encryptor
+    Decryptor: Decryptor
     Dispose: unit -> unit
 }
 
 let dataHasher serializer cryptoContext data = 
     let serialized = serializer data
-    { Hash = cryptoContext.Hash serialized; Value = data }
+    { Hash = cryptoContext.Hasher serialized; Value = data }
 
 
 
@@ -81,14 +81,14 @@ let cryptoContextRSANet containerName =
     let rsaParams = rsa.ExportParameters(false) // true - for exporting private key
     let pubKey = rsaParams.Modulus
     { 
-        Hash = (fun bytes -> Hash(sha.ComputeHash(bytes)))
+        Hasher = (fun bytes -> Hash(sha.ComputeHash(bytes)))
         SigningPublicKey = pubKey // NOTE: Exponent is always the same by convention: rsaParams.Exponent |> Convert.ToBase64String = "AQAB"
         EncryptionPublicKey = pubKey
         EncryptionMethod = RSA
-        Encrypt = (fun data -> data |> encrypt (fun d -> rsa.Encrypt(d, true)))
-        Decrypt = (fun data -> data |> decrypt (fun d -> rsa.Decrypt(d, true)))
-        Sign = (fun (Unsigned data) -> Signature(SimpleSignature.RSA(Signed(rsa.SignData(data, sha), pubKey))))
-        Verify = (fun signature (Unsigned data) ->
+        Encryptor = (fun data -> data |> encrypt (fun d -> rsa.Encrypt(d, true)))
+        Decryptor = (fun data -> data |> decrypt (fun d -> rsa.Decrypt(d, true)))
+        Signer = (fun (Unsigned data) -> Signature(SimpleSignature.RSA(Signed(rsa.SignData(data, sha), pubKey))))
+        Verifier = (fun signature (Unsigned data) ->
                         match signature with
                         | Signature s -> 
                             match s with 
@@ -114,14 +114,14 @@ let cryptoContextDHNet =
     let spk = dsa.Key.Export(CngKeyBlobFormat.EccPublicBlob) 
     dsa.HashAlgorithm <- CngAlgorithm.Sha256
     { 
-        Hash = (fun bytes -> Hash(sha.ComputeHash(bytes)))
+        Hasher = (fun bytes -> Hash(sha.ComputeHash(bytes)))
         SigningPublicKey = spk
         EncryptionPublicKey = ecdh.PublicKey.ToByteArray()
         EncryptionMethod = DHNet
-        Encrypt = (fun data -> data |> encrypt (fun d -> enc(d)))
-        Decrypt = (fun data -> data |> decrypt (fun d -> dec(d)))
-        Sign = (fun (Unsigned data) -> Signature(SimpleSignature.RSA(Signed(dsa.SignData(data), spk))))
-        Verify = (fun signature (Unsigned data) ->
+        Encryptor = (fun data -> data |> encrypt (fun d -> enc(d)))
+        Decryptor = (fun data -> data |> decrypt (fun d -> dec(d)))
+        Signer = (fun (Unsigned data) -> Signature(SimpleSignature.RSA(Signed(dsa.SignData(data), spk))))
+        Verifier = (fun signature (Unsigned data) ->
                         match signature with
                         | Signature s -> 
                             match s with 
