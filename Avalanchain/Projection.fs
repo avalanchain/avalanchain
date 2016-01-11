@@ -89,12 +89,17 @@ type Projection<'TState, 'TData> = HashableFunction<'TState, 'TData, ProjectionR
 and ProjectionResult<'TState> = Result<'TState, string>
 
 
-type ProjectionStorage<'TState, 'TData> (serializer, deserializer) = 
-    //Projection<'TState, 'TData> list
+type ProjectionStorage<'TState, 'TData> (serializeFunction, deserializeFunction) = 
     let projections = new Dictionary<Hash, Projection<'TState, 'TData>>()
-    member inline this.Add (projection: Projection<'TState, 'TData>) = projections.[projection.Hash] <- deserializer projection
-    member inline this.AddAll (projs: Projection<'TState, 'TData> seq) = projs |> Seq.iter (fun p -> projections.[p.Hash] <- deserializer p)
-    member inline this.Item hash = projections.TryGetValue(hash) |> (fun (b, res) -> if b then Some res else None)
-    member inline this.Projections = projections.Values
-    member inline this.Export = projections.Values |> Seq.map serializer
-    
+
+    member this.Add (projection: SerializedFunction) = projections.[(fst projection).ValueHash] <- deserializeFunction projection
+    member this.AddAll (projs: SerializedFunction seq) = projs |> Seq.iter (fun p -> projections.[(fst p).ValueHash] <- deserializeFunction p)
+    member this.Item hash = projections.TryGetValue(hash) |> (fun (b, res) -> if b then Some res else None)
+    member this.Projections = projections.Values
+    member this.Export = projections.Values |> Seq.map serializeFunction
+    member this.Import projs = 
+        projections.Clear()
+        this.AddAll projs
+
+
+//type IntProjectionStorage = ProjectionStorage<int, int> (serializer, deserializer)

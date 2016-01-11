@@ -14,6 +14,7 @@ open StreamEvent
 open Projection
 open Quorum
 open Acl
+open Utils
 
 type EventStreamStatus<'TData> =
     | Offline
@@ -93,6 +94,16 @@ type Serializers<'TState, 'TData> = {
     state: Serializer<StreamState<'TState>>
     frame: Serializer<EventStreamFrame<'TState, 'TData>>
     epd: Serializer<ExecutionProofData>
+    projection: Serializer<Projection<'TState, 'TData>>
+}
+
+let picklerSerializers = {
+    data = picklerSerializer
+    event = picklerSerializer
+    state = picklerSerializer
+    frame = picklerSerializer
+    epd = picklerSerializer
+    projection = picklerSerializer
 }
 
 [<Interface>]

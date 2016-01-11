@@ -22,13 +22,6 @@ and ExecutorKey = ExecutorKey of SigningPublicKey
 
 type NodeRef = NodeRef of SigningPublicKey
 
-type Proof = {
-    Signature: Signature
-    ValueHash: Hash
-}
-
-type ProofVerifier = Proof -> bool
-
 type ExecutionProof = {
     Data: ExecutionProofData
     Signature: ExecutorSignature

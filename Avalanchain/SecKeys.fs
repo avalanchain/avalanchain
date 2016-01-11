@@ -38,6 +38,13 @@ and GroupSignature = GroupSignature
 type Signer = Unsigned -> Signature
 type Verifier = Signature -> Unsigned -> bool
 
+type Proof = {
+    Signature: Signature
+    ValueHash: Hash
+}
+
+type ProofVerifier = Proof -> bool
+
 type Encryption =
     | RSA
     | DHNet
@@ -66,6 +73,9 @@ type CryptoContext (*<'TData>*) = {
     Decryptor: Decryptor
     Dispose: unit -> unit
 }
+with 
+    member this.ProofVerifier proof = this.Verifier proof.Signature (Unsigned proof.ValueHash.Bytes)
+    member this.HashSigner (hash: Hash) = this.Signer (Unsigned hash.Bytes)
 
 let dataHasher serializer cryptoContext data = 
     let serialized = serializer data
