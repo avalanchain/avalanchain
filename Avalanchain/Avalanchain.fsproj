@@ -61,11 +61,13 @@
     <Compile Include="Utils.fs" />
     <Compile Include="StreamEvent.fs" />
     <Compile Include="Projection.fs" />
-    <Compile Include="Quorum.fs" />
     <Compile Include="Acl.fs" />
     <Compile Include="KVStore.fs" />
+    <Compile Include="Quorum.fs" />
     <Compile Include="EventStream.fs" />
+    <Compile Include="FrameSynchronizer.fs" />
     <Compile Include="EventProcessor.fs" />
+    <Compile Include="Node.fs" />
     <Compile Include="Program.fs" />
     <None Include="App.config" />
     <None Include="SecPrimitives.fsx" />

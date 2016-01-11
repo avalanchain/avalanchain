@@ -10,7 +10,7 @@ open SecKeys
 open SecPrimitives
 open RefsAndPathes
 
-type ExecutionGroup = ExecutionGroup 
+type ExecutionGroup = ExecutionGroup of string 
 and ExecutionPolicy = // TODO: ExecutionPolicy?
     | None
     | One of NodeSelectionStrategy * NodeSelectionStake 
@@ -21,13 +21,6 @@ and NodeSelectionStrategy =
 and NodeSelectionStake = 
     | Percentage of float 
     | FixedCount of uint16 // TODO: Add limited types (or checks)
-
-type Node = {
-    Path: NodePath
-    Keys: CryptoContext
-    // OwnIPAddress: IPAddress
-    ExecutionGroups: ExecutionGroup list 
-}
 
 
 type ExecutionRequest =
@@ -49,3 +42,4 @@ type Message =
     | Event
     | Command
     | Query
+

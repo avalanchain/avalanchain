@@ -20,7 +20,7 @@ type User = {
     UserName: string
     FullName: string
     Roles: Set<Role>  // Add Groups and OrgChart?
-    Claims: Set<Role>
+    Claims: Set<Claim>
     Disabled: bool
     Updated: DateTimeOffset
 }
