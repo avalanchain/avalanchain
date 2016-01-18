@@ -15,6 +15,7 @@
 #load "Projection.fs"
 #load "Quorum.fs"
 #load "Acl.fs"
+#load "Utils.fs"
 #load "EventStream.fs"
 #load "EventProcessor.fs"
 
