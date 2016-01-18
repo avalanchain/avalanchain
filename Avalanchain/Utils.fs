@@ -12,8 +12,9 @@ open SecKeys
 open RefsAndPathes
 
 
-let __serializer = FsPickler.CreateJsonSerializer()
+//let __serializer = FsPickler.CreateJsonSerializer()
 //let __serializer = FsPickler.CreateBinarySerializer()
+let __serializer = FsPickler.CreateXmlSerializer()
 
 let picklerSerializer data =
     __serializer.Pickle data

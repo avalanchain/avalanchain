@@ -89,7 +89,7 @@ let serializeFunction signer serializer hasher expr =
     let serialized = serializer expr
     let hash = hasher serialized
     let proof = {
-        Signature = signer hash
+        Proof.Signature = signer hash
         ValueHash = hash
     }
     proof, serialized

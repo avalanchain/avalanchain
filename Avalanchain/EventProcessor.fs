@@ -31,7 +31,7 @@ let proofer
         StateHash = hashedState.Hash
     }
     let signature = signer sd//(Unsigned (sdSerializer sd)) 
-    let proof = { Data = sd; Signature = signature }
+    let proof = { ExecutionProof.Data = sd; Signature = signature }
     dataHasher(proof)    
 
 let processEvent 
