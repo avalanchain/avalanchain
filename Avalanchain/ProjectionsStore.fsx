@@ -35,7 +35,8 @@ open Projection
 open EventProcessor
 open EventStream
 
-let a = <@ fun a b -> a + b @>
+
+let a = <@ fun a b -> ok (a + b) @>
 
 let ct = cryptoContextRSANet("RSA Test")
 let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
@@ -44,6 +45,6 @@ let ds = deserializeFunction ct.ProofVerifier Utils.picklerDeserializer
 
 let intProjectionStorage = ProjectionStorage<int, int>(ss, ds)
 
-
+intProjectionStorage.Add(a)
 
 //(proofVerifier: ProofVerifier)

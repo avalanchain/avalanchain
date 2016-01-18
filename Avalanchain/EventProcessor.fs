@@ -14,7 +14,7 @@ open StreamEvent
 open Projection
 open EventStream
 
-type Proofer<'TState, 'TData> = 
+type Proofer<'TState, 'TData when 'TData: equality and 'TState: equality> = 
     Hashed<EventStreamRef> -> Nonce -> Hashed<StreamState<'TState>> -> HashedEvent<'TData> -> Hashed<ExecutionProof>
 
 let proofer 
@@ -62,7 +62,7 @@ let processEvent
                     | Some sf -> sf.State.Value.Value
                     | None -> Unchecked.defaultof<'TState>
         try
-            let res = projection.Invoke(state, event.Value.Data)
+            let res = projection state event.Value.Data
             match res with
             | Ok (newState, msgs) -> 
                 let ns = { 

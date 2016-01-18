@@ -12,9 +12,9 @@ open RefsAndPathes
 open Quorum
 open EventStream
 
-type FrameSynchronizer<'TState, 'TData> = EventStreamFrame<'TState, 'TData> -> EventStreamFrame<'TState, 'TData>
+type FrameSynchronizer<'TState, 'TData when 'TData: equality and 'TState: equality> = EventStreamFrame<'TState, 'TData> -> EventStreamFrame<'TState, 'TData>
 
-type FrameSynchronizationContext<'TState, 'TData> = {
+type FrameSynchronizationContext<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     ExecutionGroup: ExecutionGroup
     ExecutionPolicy: ExecutionPolicy
     FrameSynchronizer: FrameSynchronizer<'TState, 'TData>

@@ -18,30 +18,41 @@ open System.Linq
 //}
 
 type HashableFunction<'T, 'TResult> = { 
-    F : Func<'T, 'TResult>
-    Expr: Expr<Func<'T, 'TResult>>
+    F : 'T -> 'TResult
+    Expr: Expr<'T -> 'TResult>
     Proof: Proof
 }
 with member inline this.Hash = this.Proof.ValueHash
 
 type HashableFunction<'T1, 'T2, 'TResult> = { 
-    F : Func<'T1, 'T2, 'TResult>
-    Expr: Expr<Func<'T1, 'T2, 'TResult>>
+    F : 'T1 -> 'T2 -> 'TResult
+    Expr: Expr<'T1 -> 'T2 -> 'TResult>
     Proof: Proof
 }
-with member inline this.Hash = this.Proof.ValueHash
+with 
+    member inline this.Hash = this.Proof.ValueHash
+    override this.Equals(yobj) =
+        match yobj with
+        | :? HashableFunction<'T1, 'T2, 'TResult> as y -> (this.Hash = y.Hash)
+        | _ -> false
+ 
+    override x.GetHashCode() = hash x.Hash
 
 type SerializedFunction = Proof * Serialized
 
 type HashableFunctionBuilder<'T, 'TResult> = 
-    ProofVerifier -> Deserializer<HashableFunction<'T, 'TResult>> -> SerializedFunction -> Result<HashableFunction<'T, 'TResult>, string> 
+    (*ProofVerifier -> Deserializer<HashableFunction<'T, 'TResult>> -> *)
+    SerializedFunction -> Result<HashableFunction<'T, 'TResult>, string> 
 
 type HashableFunctionBuilder<'T1, 'T2, 'TResult> = 
-    ProofVerifier -> Deserializer<HashableFunction<'T1, 'T2, 'TResult>> -> SerializedFunction -> Result<HashableFunction<'T1, 'T2, 'TResult>, string> 
+    (*ProofVerifier -> Deserializer<HashableFunction<'T1, 'T2, 'TResult>> -> *)
+    SerializedFunction -> Result<HashableFunction<'T1, 'T2, 'TResult>, string> 
 
-type FunctionSerializer<'T, 'TResult> = Signer -> Serializer<Expr<Func<'T, 'TResult>>> -> Hasher -> SerializedFunction
+type FunctionSerializer<'T, 'TResult> = (*Signer -> Serializer<Expr<Func<'T, 'TResult>>> -> Hasher -> *)
+    Expr<'T -> 'TResult> -> SerializedFunction
 
-type FunctionSerializer<'T1, 'T2, 'TResult> = Signer -> Serializer<Expr<Func<'T1, 'T2, 'TResult>>> -> Hasher -> SerializedFunction
+type FunctionSerializer<'T1, 'T2, 'TResult> = (*Signer -> Serializer<Expr<Func<'T1, 'T2, 'TResult>>> -> Hasher -> *)
+    Expr<'T1 -> 'T2 -> 'TResult> -> SerializedFunction
 
 let deserializeFunction (proofVerifier: ProofVerifier) deserializer (serializedFunction: SerializedFunction) =
     let checkProof sf =
@@ -84,19 +95,30 @@ let serializeFunction signer serializer hasher expr =
     proof, serialized
 
 // NOTE: Projection takes just event data and not the whole event
-//type Projection<'TState, 'TEventData> = 'TState -> 'TEventData -> ProjectionResult<'TState>
-type Projection<'TState, 'TData> = HashableFunction<'TState, 'TData, ProjectionResult<'TState>>
+type Projection<'TState, 'TData  when 'TData: equality and 'TState: equality> = 
+    HashableFunction<'TState, 'TData, ProjectionResult<'TState>>
 and ProjectionResult<'TState> = Result<'TState, string>
+and ProjectionExpr<'TState, 'TData> = Quotations.Expr<'TState -> 'TData -> ProjectionResult<'TState>>
+
+type ProjectionSerializer<'TState, 'TData> = FunctionSerializer<'TState, 'TData, ProjectionResult<'TState>>
+type ProjectionDeserializer<'TState, 'TData> = HashableFunctionBuilder<'TState, 'TData, ProjectionResult<'TState>>
 
 
-type ProjectionStorage<'TState, 'TData> (serializeFunction, deserializeFunction) = 
+type ProjectionStorage<'TState, 'TData  when 'TData: equality and 'TState: equality> (serializeFunction: ProjectionSerializer<'TState, 'TData>, deserializeFunction: ProjectionDeserializer<'TState, 'TData>) = 
     let projections = new Dictionary<Hash, Projection<'TState, 'TData>>()
 
-    member this.Add (projection: SerializedFunction) = projections.[(fst projection).ValueHash] <- deserializeFunction projection
-    member this.AddAll (projs: SerializedFunction seq) = projs |> Seq.iter (fun p -> projections.[(fst p).ValueHash] <- deserializeFunction p)
+    member this.AddSerialized (projection: SerializedFunction) = 
+        let result = deserializeFunction projection 
+        result |> either (fun (p, _) -> projections.[(fst projection).ValueHash] <- p) ignore
+        result
+    member this.AddAllSerialized (projs: SerializedFunction seq) = projs |> Seq.map (this.AddSerialized)
+    member this.Add (projection: ProjectionExpr<'TState, 'TData>) = 
+        let serialized = serializeFunction projection
+        this.AddSerialized serialized
+    member this.AddAll (projs: ProjectionExpr<'TState, 'TData> seq) = projs |> Seq.map (this.Add)
     member this.Item hash = projections.TryGetValue(hash) |> (fun (b, res) -> if b then Some res else None)
     member this.Projections = projections.Values
-    member this.Export = projections.Values |> Seq.map serializeFunction
+    member this.Export = projections.Values |> Seq.map (fun p -> serializeFunction p.Expr)
     member this.Import projs = 
         projections.Clear()
         this.AddAll projs

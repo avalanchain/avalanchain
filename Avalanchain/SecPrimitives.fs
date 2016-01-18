@@ -15,9 +15,24 @@ type Hash = Hash of Serialized // TODO: Add boundaries, algorithm, etc
     with 
         member inline this.Bytes = match this with Hash h -> h
         static member inline Zero = Hash([||])
-and Hashed<'TData> = { Hash: Hash; Value: 'TData }
-and Hasher = Serialized -> Hash
-and DataHasher<'TData> = 'TData -> Hashed<'TData> 
+
+[<CustomEquality; CustomComparison>]
+type Hashed<'TData> = { Hash: Hash; Value: 'TData }
+with
+    override this.Equals(yobj) =
+        match yobj with
+        | :? Hashed<'TData> as y -> (this.Hash = y.Hash)
+        | _ -> false
+ 
+    override this.GetHashCode() = hash this.Hash
+    interface System.IComparable with
+        member x.CompareTo yobj =
+            match yobj with
+            | :? Hashed<'TData> as y -> compare x.Hash y.Hash
+            | _ -> invalidArg "yobj" "cannot compare values of different types"
+
+type Hasher = Serialized -> Hash
+type DataHasher<'TData> = 'TData -> Hashed<'TData> 
 
 
 type MerkleTree = 

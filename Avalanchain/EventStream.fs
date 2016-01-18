@@ -22,23 +22,23 @@ type EventStreamStatus<'TData> =
     | Paused
     | BlockedByEvent of string * MerkledEvent<'TData> * Exception option
 
-type EventStreamDef<'TState, 'TData> = {
+type EventStreamDef<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     Ref: Hashed<EventStreamRef>
     Projection: Projection<'TState, 'TData>
     EmitsTo: Hashed<EventStreamRef> list
     ExecutionPolicy: ExecutionPolicy 
 }
-and StreamState<'TState> = { 
+and StreamState<'TState when 'TState: equality> = { 
     Value: 'TState 
     StreamRef: Hashed<EventStreamRef>
     Nonce: Nonce
 }
-and HashedState<'TState> = Hashed<StreamState<'TState>> //* EventSpine
-and MerkledState<'TState> = Merkled<StreamState<'TState>>
+and HashedState<'TState when 'TState: equality> = Hashed<StreamState<'TState>> //* EventSpine
+and MerkledState<'TState when 'TState: equality> = Merkled<StreamState<'TState>>
 and StateRef = Hash
-and Snapshot<'TState> = HashedState<'TState>
+and Snapshot<'TState when 'TState: equality> = HashedState<'TState>
 
-type EventStreamFrame<'TState, 'TData> = {
+type EventStreamFrame<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     Def: Hashed<EventStreamDef<'TState, 'TData>>
     TimeStamp: DateTimeOffset
     Event: MerkledEvent<'TData>
@@ -50,24 +50,9 @@ type EventStreamFrame<'TState, 'TData> = {
     member inline this.Path = this.Def.Value.Ref.Value.Path
     member inline this.Version = this.Def.Value.Ref.Value.Version
 //    member inline this.Hash = this.Def.Value.Ref.Hash
-and HashedFrame<'TState, 'TData> = Hashed<EventStreamFrame<'TState, 'TData>> //* EventSpine
-and MerkledFrame<'TState, 'TData> = Merkled<EventStreamFrame<'TState, 'TData>>
+and HashedFrame<'TState, 'TData when 'TData: equality and 'TState: equality> = Hashed<EventStreamFrame<'TState, 'TData>> //* EventSpine
+and MerkledFrame<'TState, 'TData when 'TData: equality and 'TState: equality> = Merkled<EventStreamFrame<'TState, 'TData>>
 and FrameRef = Hash
-
-
-//type EventStream1<'TState, 'TData> = {
-//    Def: Hashed<EventStreamDef<'TState, 'TData>>
-//    //TimeStamp: DateTimeOffset
-//    Steps: Merkled<EventStreamFrame<'TState, 'TData>> list
-//    Events: MerkledEvent<'TData>
-//    States: Hashed<StreamState<'TState>>
-//    LatestNonce: Nonce
-//    StreamStatus: EventStreamStatus<'TData>
-//} with 
-//    member inline this.Path = this.Def.Value.Ref.Value.Path
-//    member inline this.Version = this.Def.Value.Ref.Value.Version
-////    member inline this.Hash = this.Def.Value.Ref.Hash
-
 
 type DataAccessIssue = 
     | AccessBlocked
@@ -83,12 +68,12 @@ type EventProcessingMsg =
     | SecurityWarning of string
     | ExecutionWarning of string
     
-type EventProcessingResult<'TState, 'TData> = Result<EventStreamFrame<'TState, 'TData>, EventProcessingMsg>
+type EventProcessingResult<'TState, 'TData when 'TData: equality and 'TState: equality> = Result<EventStreamFrame<'TState, 'TData>, EventProcessingMsg>
 
-type StreamEventProcessor<'TState, 'TData> = 
+type StreamEventProcessor<'TState, 'TData when 'TData: equality and 'TState: equality> = 
     Hashed<EventStreamDef<'TState, 'TData>> -> EventStreamFrame<'TState, 'TData> option -> HashedEvent<'TData> -> EventProcessingResult<'TState, 'TData>
 
-type Serializers<'TState, 'TData> = {
+type Serializers<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     data: Serializer<'TData>
     event: Serializer<Event<'TData>>
     state: Serializer<StreamState<'TState>>
