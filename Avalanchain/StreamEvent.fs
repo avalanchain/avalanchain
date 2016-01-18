@@ -13,15 +13,7 @@ open RefsAndPathes
 type SubmitterSignature = Signature
 and SubmitterKey = SigningPublicKey
 
-//type EventData<'TData> = 
-//    | Unencrypted of 'TData
-//    | Encrypted of 'TData * Encryption
-//    with member this.Data = match this with 
-//                            | Unencrypted d -> d
-//                            | Encrypted (d, _) -> d
-
 type Event<'TData> = {
-    //Data: EventData<'TData>
     Data: 'TData
     SubmitterKey: SigningPublicKey
     SubmitterSignature: SubmitterSignature

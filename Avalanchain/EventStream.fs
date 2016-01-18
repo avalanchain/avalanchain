@@ -74,20 +74,26 @@ type StreamEventProcessor<'TState, 'TData when 'TData: equality and 'TState: equ
     Hashed<EventStreamDef<'TState, 'TData>> -> EventStreamFrame<'TState, 'TData> option -> HashedEvent<'TData> -> EventProcessingResult<'TState, 'TData>
 
 type Serializers<'TState, 'TData when 'TData: equality and 'TState: equality> = {
+    streamRef: Serializer<EventStreamRef>
+    streamDef: Serializer<EventStreamDef<'TState, 'TData>>
     data: Serializer<'TData>
     event: Serializer<Event<'TData>>
     state: Serializer<StreamState<'TState>>
     frame: Serializer<EventStreamFrame<'TState, 'TData>>
     epd: Serializer<ExecutionProofData>
+    ep: Serializer<ExecutionProof>
     projection: Serializer<Projection<'TState, 'TData>>
 }
 
 let picklerSerializers = {
+    streamRef = picklerSerializer
+    streamDef = picklerSerializer
     data = picklerSerializer
     event = picklerSerializer
     state = picklerSerializer
     frame = picklerSerializer
     epd = picklerSerializer
+    ep = picklerSerializer
     projection = picklerSerializer
 }
 

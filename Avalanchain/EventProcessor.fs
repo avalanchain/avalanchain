@@ -39,7 +39,7 @@ let processEvent
     serializers 
     (dataHasher: DataHasher<Event<'TData>>) 
     (permissionsChecker: HashedEvent<'TData> -> DataResult<unit>) 
-    (proofIt: Proofer<'TState, 'TData>)
+    (proofer: Proofer<'TState, 'TData>)
     (streamDef: Hashed<EventStreamDef<'TState, 'TData>>)
     (streamFrame: EventStreamFrame<'TState, 'TData> option) 
     (hashedEvent: HashedEvent<'TData>) : EventProcessingResult<'TState, 'TData> =
@@ -87,7 +87,7 @@ let processEvent
                                 Event = merkledEvent
                                 State = merkledState 
                                 Nonce = nonce
-                                Proofs = [proofIt streamDef.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
+                                Proofs = [proofer streamDef.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
                                 // StreamStatus = streamFrame.StreamStatus
                             }
         ok newStreamFrame
@@ -102,7 +102,7 @@ let processEvent
  
 
 type EventStream<'TState, 'TData when 'TData: equality and 'TState: equality>
-    (def, acl, hasher, dataHasher, eventProcessor: StreamEventProcessor<'TState, 'TData>, frameSynchronizer(*, initFrame *), frameSerializer) =
+    (def, hasher, dataHasher, eventProcessor: StreamEventProcessor<'TState, 'TData>(*, frameSynchronizer, initFrame *), frameSerializer) =
 
     let mutable frames = PersistentVector.empty
     let mutable frameRefs = PersistentHashMap.empty

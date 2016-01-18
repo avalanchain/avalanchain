@@ -40,7 +40,7 @@ open System.Dynamic
 
 
 let ct = cryptoContextRSANet("RSA Test")
-//let ps = 
+
 
 let intStorage = 
     let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
@@ -91,6 +91,3 @@ let intStorage =
 //    calcF, calcMax, calcMin
 
 
-
-
-//(proofVerifier: ProofVerifier)
