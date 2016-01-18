@@ -31,7 +31,7 @@ type EventStreamBag<'TState, 'TData when 'TData: equality and 'TState: equality>
     member this.Streams = streamMap
     member this.Add (stream: IEventStream<'TState, 'TData>) = streamMap.Add (stream.Def.Value.Ref, stream)
     member this.Delete (streamRef: Hashed<EventStreamRef>) = streamMap.Remove streamRef
-    member this.Item (streamRef: Hashed<EventStreamRef>) = streamMap.[streamRef]
+    member this.Item (streamRef: Hashed<EventStreamRef>) = streamMap.[streamRef] // TODO: Add reaction to "not found"
 
 type Topology<'TState, 'TData when 'TData: equality and 'TState: equality> = IEventStream<'TState, 'TData> list // TODO: Probably replace with some Tree<'T>?
 
@@ -40,11 +40,23 @@ type Node<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     CryptoContext: CryptoContext
     Serializers: Serializers<'TState, 'TData>
     Streams: EventStreamBag<'TState, 'TData>
-    FrameSynchronizationContextBuilder: ExecutionGroup -> ExecutionPolicy -> FrameSynchronizationContext<'TState, 'TData>
+    EventHasher: DataHasher<Event<'TData>>
+    //FrameSynchronizationContextBuilder: ExecutionGroup -> ExecutionPolicy -> FrameSynchronizationContext<'TState, 'TData>
 
     // OwnIPAddress: IPAddress
     ExecutionGroups: ExecutionGroup list 
 }
-
+with 
+    member private this.ToEvent data = {
+            Data = data
+            SubmitterKey = this.CryptoContext.SigningPublicKey
+            SubmitterSignature = this.CryptoContext.Signer(Unsigned(this.Serializers.data data))
+            SubmittedVia = NodeRef(this.CryptoContext.SigningPublicKey)
+        }
+    member this.Push (streamRef: Hashed<EventStreamRef>) data =
+        let stream = this.Streams.[streamRef] // TODO: Handle "not found"
+        let event = this.ToEvent data
+        let hashedEvent = this.EventHasher event
+        stream.Push(hashedEvent)
 
 
