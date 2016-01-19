@@ -44,72 +44,15 @@ open System.Dynamic
 open Node
 
 
+Parallel.For(0, 16, (fun i -> 
+    let nodePath = sprintf "%d" i
+    let node = buildNode nodePath defaultProjections |> returnOrFail
+    //let node = defaultProjections |> (buildNode<decimal, decimal> nodePath) |> returnOrFail
+    let res = node.Push (node.Streams.Refs.head()) 1M
+    
+    let streamRef = node.Streams.Refs.head()
 
-Parallel.For(0, 2, (fun i -> 
-    let ct = cryptoContextRSANet("RSA Test")
-
-    let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
-    let ds = deserializeFunction ct.ProofVerifier Utils.picklerDeserializer
-    let projectionStorage = ProjectionStorage<int, int>(ss, ds)
-
-    let addProj f = 
-        let res = projectionStorage.Add(f)
-        (returnOrFail res)
-
-
-    let sumF = addProj <@ fun (a:int) (b:int) -> ok (a + b) @>
-
-    let executionSigner signer serializer executionProofData = 
-        let serd = serializer executionProofData
-        let signed = signer (Unsigned serd)
-        signed
-
-    let serializers = picklerSerializers
-
-    let srdh = dataHasher serializers.streamRef ct
-    let sddh = dataHasher serializers.streamDef ct
-    let dh = dataHasher serializers.data ct 
-    let edh = dataHasher serializers.event ct 
-    let eph = dataHasher serializers.ep ct 
-    let framedh = dataHasher serializers.frame ct 
-    let pfr = proofer (executionSigner ct.Signer serializers.epd) eph
-    let permissionsChecker hashedEvent = ok()
-
-    let eventProcessor = processEvent ct picklerSerializers dh permissionsChecker pfr
-
-    let streamRef = {
-        EventStreamRef.Path = "/stream/0"
-        Version = 0u
-    }
-
-    let hashedStreamRef = srdh streamRef
-
-    let streamDef = {
-        Ref = hashedStreamRef
-        Projection = sumF
-        EmitsTo = []
-        ExecutionPolicy = ExecutionPolicy.None 
-    }
-
-    let hashedStreamDef = sddh streamDef
-
-
-
-    let intEventStream = 
-        EventStream (hashedStreamDef, ct.Hasher, framedh, eventProcessor, serializers.frame) :> IEventStream<int, int>
-
-    let node = {
-        Path = "/node/0"
-        CryptoContext = ct
-        Serializers = serializers
-        Streams = EventStreamBag([intEventStream])
-        EventHasher = edh
-        ExecutionGroups = [ExecutionGroup "_main_"]
-    }
-
-    let res = node.Push hashedStreamRef 1
-
-    let ress = [for i in 2..1000 -> i] |> List.map (fun i -> node.Push hashedStreamRef i)
+    let ress = [for i in 0M..1M..999M -> i] |> List.map (fun i -> node.Push streamRef i)
     ress |> ignore
 ))
 
