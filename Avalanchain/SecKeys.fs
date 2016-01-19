@@ -82,7 +82,6 @@ let dataHasher serializer cryptoContext data =
     { Hash = cryptoContext.Hasher serialized; Value = data }
 
 
-
 let cryptoContextRSANet containerName = 
     let cp = new CspParameters()
     cp.KeyContainerName <- containerName
@@ -91,13 +90,14 @@ let cryptoContextRSANet containerName =
     let rsaParams = rsa.ExportParameters(false) // true - for exporting private key
     let pubKey = rsaParams.Modulus
     { 
-        Hasher = (fun bytes -> Hash(sha.ComputeHash(bytes)))
+        Hasher = (fun bytes -> Hash(sha.ComputeHash(sha.ComputeHash(bytes))))
         SigningPublicKey = pubKey // NOTE: Exponent is always the same by convention: rsaParams.Exponent |> Convert.ToBase64String = "AQAB"
         EncryptionPublicKey = pubKey
         EncryptionMethod = RSA
         Encryptor = (fun data -> data |> encrypt (fun d -> rsa.Encrypt(d, true)))
         Decryptor = (fun data -> data |> decrypt (fun d -> rsa.Decrypt(d, true)))
-        Signer = (fun (Unsigned data) -> Signature(SimpleSignature.RSA(Signed(rsa.SignData(data, sha), pubKey))))
+        Signer = (fun (Unsigned data) -> 
+            Signature(SimpleSignature.RSA(Signed(rsa.SignData(data, sha), pubKey))))
         Verifier = (fun signature (Unsigned data) ->
                         match signature with
                         | Signature s -> 
