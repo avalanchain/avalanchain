@@ -9,12 +9,28 @@ open System.Web.Http
 open System.Web.Http.Owin
 open Swashbuckle.Application
 
+type HttpRoute = {
+    controller : string
+    action : string
+    id : RouteParameter }
+
+type ApiHttpRoute = {
+    controller : string
+    id : RouteParameter }
+
 [<Sealed>]
 type Startup() =
 
     static member RegisterWebApi(config: HttpConfiguration) =
+        let a = { controller = "{controller}"; id = RouteParameter.Optional }
         // Configure routing
         config.MapHttpAttributeRoutes()
+        config.Routes.MapHttpRoute(
+            "DefaultApi", // Route name
+            "api/{controller}/{id}", // URL with parameters
+            { controller = "{controller}"; id = RouteParameter.Optional } // Parameter defaults
+        ) |> ignore
+        // Swagger configuration
 
         // Configure serialization
         config.Formatters.XmlFormatter.UseXmlSerializer <- true
@@ -22,10 +38,9 @@ type Startup() =
 
         // Additional Web API settings
 
-        // Swagger configuration
-        config
-          .EnableSwagger(fun c -> c.SingleApiVersion("v1", "My API") |> ignore)
-          .EnableSwaggerUi();
+        config.
+            EnableSwagger(fun c -> c.SingleApiVersion("v1", "Avalanchain Node API") |> ignore).
+            EnableSwaggerUi()
 
     member __.Configuration(builder: IAppBuilder) =
         let config = new HttpConfiguration()
