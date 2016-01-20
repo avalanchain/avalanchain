@@ -1,5 +1,4 @@
-﻿#I "../packages/Newtonsoft.Json.8.0.2/lib/net45"
-#r "../packages/FSharp.Interop.Dynamic.3.0.0.0/lib/portable-net45+sl50+win/FSharp.Interop.Dynamic.dll"
+﻿#r "../packages/FSharp.Interop.Dynamic.3.0.0.0/lib/portable-net45+sl50+win/FSharp.Interop.Dynamic.dll"
 #r "../packages/FSharp.Core.Fluent-4.0.1.0.0.5/lib/portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1/FSharp.Core.Fluent-4.0.dll"
 #r "../packages/FSharpx.Extras.1.10.3/lib/40/FSharpx.Extras.dll"
 #r "../packages/FSharpx.Async.1.12.0/lib/net40/FSharpx.Async.dll"
@@ -35,59 +34,24 @@ open StreamEvent
 open Projection
 open EventProcessor
 open EventStream
-open System.Dynamic
 
-
+let a = <@ fun a b -> a + b @>
 
 let ct = cryptoContextRSANet("RSA Test")
 
 
-let intStorage = 
-    let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
-    let ds = deserializeFunction ct.ProofVerifier Utils.picklerDeserializer
-    let projectionStorage = ProjectionStorage<int, int>(ss, ds)
+let data = [| for i in 0 .. 1024 -> byte (i % 256) |]
+for i = 0 to 1000000 do ct.Hasher data |> ignore
 
-    let calcF = 
-        let f = <@ fun a b -> ok (a + b) @>
-        let res = projectionStorage.Add(f)
-        (returnOrFail res).F 1 2
+for i = 0 to 10000 do ct.Signer (Unsigned data) |> ignore
 
-    let calcMax = 
-        let max = <@ fun (a: int) b -> ok (Math.Max(a, b)) @>
-        let res = projectionStorage.Add(max)
-        (returnOrFail res).F 1 2
-
-    let calcMin = 
-        let max = <@ fun (a: int) b -> ok (Math.Min(a, b)) @>
-        let res = projectionStorage.Add(max)
-        (returnOrFail res).F 1 2
-    calcF, calcMax, calcMin
+let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
+let ds = deserializeFunction ct.ProofVerifier Utils.picklerDeserializer
+//let ps = 
 
 
-//let dynStorage = 
-//    let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
-//    let ds = deserializeFunction ct.ProofVerifier Utils.picklerDeserializer
-//    let projectionStorage = ProjectionStorage<ExpandoObject, ExpandoObject>(ss, ds)
-//
-//    let toDyn (v: int) = 
-//        let eo = ExpandoObject()
-//        eo?Val <- v
-//        eo
-//
-//    let calcF = 
-//        let f = <@ fun a b -> ok (toDyn(a?Val + b?Val)) @>
-//        let res = projectionStorage.Add(f)
-//        (returnOrFail res).F (toDyn 1) (toDyn 2)
-//
-//    let calcMax = 
-//        let max = <@ fun a b -> ok (toDyn(Math.Max(a?Val :> int, b?Val :> int))) @>
-//        let res = projectionStorage.Add(max)
-//        (returnOrFail res).F (toDyn 1) (toDyn 2)
-//
-//    let calcMin = 
-//        let min = <@ fun a b -> ok (toDyn(Math.Min(a?Val :> int, b?Val :> int))) @>
-//        let res = projectionStorage.Add(min)
-//        (returnOrFail res).F (toDyn 1) (toDyn 2)
-//    calcF, calcMax, calcMin
+let intProjectionStorage = ProjectionStorage<int, int>(ss, ds)
 
 
+
+//(proofVerifier: ProofVerifier)
