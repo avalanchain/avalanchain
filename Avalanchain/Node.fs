@@ -128,3 +128,4 @@ let defaultProjections : (string * Quotations.Expr<decimal -> decimal -> Result<
     "LastAbs", <@ fun (s:decimal) e -> ok (Math.Abs(s)) @>
 ]
 
+let defaultNode = defaultProjections |> buildNode "_DefaultNode_" |> returnOrFail

@@ -46,10 +46,7 @@ open Node
 
 Parallel.For(0, 16, (fun i -> 
     let nodePath = sprintf "%d" i
-    let node = buildNode nodePath defaultProjections |> returnOrFail
-    //let node = defaultProjections |> (buildNode<decimal, decimal> nodePath) |> returnOrFail
-    let res = node.Push (node.Streams.Refs.head()) 1M
-    
+    let node = defaultProjections |> buildNode nodePath |> returnOrFail
     let streamRef = node.Streams.Refs.head()
 
     let ress = [for i in 0M..1M..999M -> i] |> List.map (fun i -> node.Push streamRef i)

@@ -12,11 +12,13 @@ open Swashbuckle.Application
 type HttpRoute = {
     controller : string
     action : string
-    id : RouteParameter }
+    id : RouteParameter 
+}
 
 type ApiHttpRoute = {
     controller : string
-    id : RouteParameter }
+    id : RouteParameter 
+}
 
 [<Sealed>]
 type Startup() =

@@ -136,7 +136,9 @@
     <None Include="fonts\glyphicons-halflings-regular.ttf" />
     <None Include="fonts\glyphicons-halflings-regular.svg" />
     <None Include="fonts\glyphicons-halflings-regular.eot" />
+    <Compile Include="Models\Models.fs" />
     <Compile Include="Models\Car.fs" />
+    <Compile Include="Controllers\NodeController.fs" />
     <Compile Include="Controllers\CarsController.fs" />
     <Content Include="Web.config" />
     <Compile Include="Startup.fs" />
@@ -161,6 +163,10 @@
       <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
       <SpecificVersion>True</SpecificVersion>
+    </Reference>
+    <Reference Include="Chessie">
+      <HintPath>..\packages\Chessie.0.2.2\lib\net40\Chessie.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Owin">
       <HintPath>$(SolutionDir)\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
@@ -200,6 +206,13 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Xml.Linq.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Avalanchain\Avalanchain.fsproj">
+      <Name>Avalanchain</Name>
+      <Project>{441ef518-981f-41cc-9de6-ba9c5438ceec}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="..\packages\MSBuild.Extension.Pack.1.8.0\build\net40\MSBuild.Extension.Pack.targets" Condition="Exists('..\packages\MSBuild.Extension.Pack.1.8.0\build\net40\MSBuild.Extension.Pack.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
