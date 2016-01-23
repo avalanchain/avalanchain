@@ -123,6 +123,7 @@ let dataHashers ct (serializers: Serializers<'TState, 'TData>) = {
 
 [<Interface>]
 type IEventStream<'TState, 'TData when 'TData: equality and 'TState: equality> =
+    abstract member Ref : Hashed<EventStreamRef> with get
     abstract member Def : Hashed<EventStreamDef<'TState, 'TData>> with get
     abstract member CurrentFrame : HashedFrame<'TState, 'TData> option with get
     abstract member CurrentState : HashedState<'TState> option with get
@@ -135,5 +136,8 @@ type IEventStream<'TState, 'TData when 'TData: equality and 'TState: equality> =
     abstract member GetFromNonce : Nonce -> DataResult<HashedFrame<'TState, 'TData> seq>
     //abstract member Get<'TData> : Hash -> Hashed<'TData> option
     abstract member Push : HashedEvent<'TData> -> EventProcessingResult<'TState, 'TData>
+    // TODO: Change this to more functional approach
+//    abstract member Subscribe : IEventStream<'TState, 'TData> -> unit
+//    abstract member Unsubscribe : IEventStream<'TState, 'TData> -> unit
 
 

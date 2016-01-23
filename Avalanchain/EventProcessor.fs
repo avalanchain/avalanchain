@@ -53,7 +53,7 @@ let processEvent
     
     let checkPermissions event = 
         match permissionsChecker event with 
-        | Ok (_, _) -> ok event
+        | Ok (_) -> ok event
         | Bad msgs -> fail (PermissionsFailure msgs)
 
     let project (streamFrame: EventStreamFrame<'TState, 'TData> option) (event: HashedEvent<'TData>) =
@@ -77,7 +77,7 @@ let processEvent
         with
             | ex -> fail (ProcessingFailure([sprintf "Error projection execution : '%s'" (ex.ToString())]))
 
-    let buildNewStream (state: StreamState<'TState>) =
+    let buildNewFrame (state: StreamState<'TState>) =
         let nonce = state.Nonce
         let merkledEvent = toMerkled serializers.event cryptoContext.Hasher (streamFrame |> Option.bind (fun sf -> Some sf.Event.Merkle)) hashedEvent.Value
         let merkledState = toMerkled serializers.state cryptoContext.Hasher (streamFrame |> Option.bind (fun sf -> Some sf.State.Merkle)) state
@@ -96,7 +96,7 @@ let processEvent
         checkIntegrity
         >> bind checkPermissions
         >> bind (project streamFrame)
-        >> bind buildNewStream
+        >> bind buildNewFrame
 
     run hashedEvent 
  
@@ -109,13 +109,15 @@ type EventStream<'TState, 'TData when 'TData: equality and 'TState: equality>
     let mutable eventRefs = PersistentHashMap.empty
     let mutable stateRefs = PersistentHashMap.empty
     let mutable merkledFrame = Option.None 
-
-    //member private this.toMerkled<'T> = 
-    //member this.CurrentFrame = frames.Head
+//    let mutable subscribers = PersistentHashMap.empty
 
     // TODO: Add Acl checks
-    interface IEventStream<'TState, 'TData> with 
+    interface IEventStream<'TState, 'TData> with
+//        member this.Subscribe(subscriber) = subscribers <- subscribers.Add (subscriber.Ref, subscriber)
+//        member this.Unsubscribe(subscriber) = subscribers <- subscribers.Remove (subscriber.Ref)
+        
         member this.Def with get() = def
+        member this.Ref with get() = def.Value.Ref
         member this.CurrentFrame with get() = frames.tryHead()
         member this.CurrentState with get() = frames.tryHead() |> Option.bind (fun x -> Some x.Value.State.HashedValue)
         member this.GetEvent<'TData> eventRef = 
@@ -145,4 +147,5 @@ type EventStream<'TState, 'TData when 'TData: equality and 'TState: equality>
                 eventRefs <- eventRefs.Add (hashedFrame.Value.Event.HashedValue.Hash, hashedFrame.Value.Event.HashedValue)
                 stateRefs <- stateRefs.Add (hashedFrame.Value.State.HashedValue.Hash, hashedFrame.Value.State.HashedValue)
                 merkledFrame <- Some (toMerkled frameSerializer hasher (merkledFrame.bind(fun f -> Some f.Merkle)) frame)
+                //subscribers |> Seq.iter (fun s -> (snd s).Push (hashedFrame.Value.State.HashedValue.Value.Value) |> ignore)
                 newFrame
