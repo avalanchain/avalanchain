@@ -76,8 +76,8 @@
     <None Include="Projection.fsx" />
     <None Include="EventStream.fsx" />
     <None Include="Script1.fsx" />
-    <Content Include="packages.config" />
     <None Include="ProjectionsStore.fsx" />
+    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="BouncyCastle.Crypto">
