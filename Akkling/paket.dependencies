@@ -1,0 +1,32 @@
+source https://nuget.org/api/v2
+
+nuget Akka.Cluster
+nuget Akka.Cluster.Sharding
+nuget Akka.Cluster.Tools
+nuget Akka.Persistence.Sqlite
+nuget Akka.Serialization.Wire
+nuget FsPickler
+nuget Wire
+nuget Helios
+nuget Google.ProtocolBuffers
+nuget FAKE
+nuget FSPowerPack.Linq.Community
+nuget FSharp.Formatting
+nuget FsCheck
+nuget FsCheck.Xunit
+nuget Newtonsoft.Json = 7.0.1
+nuget Octokit
+nuget SourceLink
+nuget xunit.assert = 2.0.0
+nuget xunit.runner.console
+
+source https://www.myget.org/F/akkadotnet/api/v2
+
+nuget Akka prerelease
+nuget Akka.Persistence prerelease
+nuget Akka.Remote prerelease
+nuget Akka.TestKit prerelease
+nuget Akka.TestKit.Xunit2 prerelease
+
+
+github fsharp/FAKE modules/Octokit/Octokit.fsx

@@ -53,141 +53,124 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Library1.fs" />
     <None Include="Bootstrap.fsx" />
-    <None Include="Script.fsx" />
+    <None Include="Script4.fsx" />
+    <None Include="Script3.fsx" />
     <Content Include="packages.config" />
+    <None Include="Script.fsx" />
+    <None Include="Script2.fsx" />
+    <None Include="Script1.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Akka">
-      <HintPath>..\packages\Akka.1.0.6\lib\net45\Akka.dll</HintPath>
+      <HintPath>..\packages\Akka.1.0.7.149-beta\lib\net45\Akka.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka" />
     <Reference Include="Akka.Cluster">
-      <HintPath>..\packages\Akka.Cluster.1.0.6.17-beta\lib\net45\Akka.Cluster.dll</HintPath>
+      <HintPath>..\packages\Akka.Cluster.1.0.7.149-beta\lib\net45\Akka.Cluster.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Cluster" />
     <Reference Include="Akka.Cluster.Sharding">
-      <HintPath>..\packages\Akka.Cluster.Sharding.1.0.6\lib\net45\Akka.Cluster.Sharding.dll</HintPath>
+      <HintPath>..\packages\Akka.Cluster.Sharding.1.0.7.149-beta\lib\net45\Akka.Cluster.Sharding.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Cluster.Sharding" />
+    <Reference Include="Akka.Cluster.Tools">
+      <HintPath>..\packages\Akka.Cluster.Tools.1.0.7.149-beta\lib\net45\Akka.Cluster.Tools.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Akka.DI.AutoFac">
-      <HintPath>..\packages\Akka.DI.AutoFac.1.0.6\lib\net45\Akka.DI.AutoFac.dll</HintPath>
+      <HintPath>..\packages\Akka.DI.AutoFac.1.0.7.149-beta\lib\net45\Akka.DI.AutoFac.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.DI.AutoFac" />
     <Reference Include="Akka.DI.Core">
-      <HintPath>..\packages\Akka.DI.Core.1.0.6\lib\net45\Akka.DI.Core.dll</HintPath>
+      <HintPath>..\packages\Akka.DI.Core.1.0.7.149-beta\lib\net45\Akka.DI.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.DI.Core" />
     <Reference Include="Akka.FSharp">
-      <HintPath>..\packages\Akka.FSharp.1.0.6\lib\net45\Akka.FSharp.dll</HintPath>
+      <HintPath>..\packages\Akka.FSharp.1.0.7.149-beta\lib\net45\Akka.FSharp.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.FSharp" />
     <Reference Include="Akka.Logger.NLog">
-      <HintPath>..\packages\Akka.Logger.NLog.1.0.6\lib\net45\Akka.Logger.NLog.dll</HintPath>
+      <HintPath>..\packages\Akka.Logger.NLog.1.0.7.149-beta\lib\net45\Akka.Logger.NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Logger.NLog" />
     <Reference Include="Akka.Persistence">
-      <HintPath>..\packages\Akka.Persistence.1.0.6.17-beta\lib\net45\Akka.Persistence.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.1.0.7.149-beta\lib\net45\Akka.Persistence.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Persistence" />
     <Reference Include="Akka.Persistence.FSharp">
-      <HintPath>..\packages\Akka.Persistence.FSharp.1.0.6.17-beta\lib\net45\Akka.Persistence.FSharp.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.FSharp.1.0.7.149-beta\lib\net45\Akka.Persistence.FSharp.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Persistence.FSharp" />
     <Reference Include="Akka.Persistence.Sql.Common">
-      <HintPath>..\packages\Akka.Persistence.Sql.Common.1.0.6.17-beta\lib\net45\Akka.Persistence.Sql.Common.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.Sql.Common.1.0.7.149-beta\lib\net45\Akka.Persistence.Sql.Common.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Persistence.Sql.Common" />
     <Reference Include="Akka.Persistence.Sqlite">
-      <HintPath>..\packages\Akka.Persistence.Sqlite.1.0.6.17-beta\lib\net45\Akka.Persistence.Sqlite.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.Sqlite.1.0.7.149-beta\lib\net45\Akka.Persistence.Sqlite.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Persistence.Sqlite" />
     <Reference Include="Akka.Remote">
-      <HintPath>..\packages\Akka.Remote.1.0.6\lib\net45\Akka.Remote.dll</HintPath>
+      <HintPath>..\packages\Akka.Remote.1.0.7.149-beta\lib\net45\Akka.Remote.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Remote" />
     <Reference Include="Akka.Serialization.Wire">
-      <HintPath>..\packages\Akka.Serialization.Wire.1.0.6.17-beta\lib\net45\Akka.Serialization.Wire.dll</HintPath>
+      <HintPath>..\packages\Akka.Serialization.Wire.1.0.7.149-beta\lib\net45\Akka.Serialization.Wire.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Akka.Serialization.Wire" />
     <Reference Include="Akka.TestKit">
-      <HintPath>..\packages\Akka.TestKit.1.0.6\lib\net45\Akka.TestKit.dll</HintPath>
+      <HintPath>..\packages\Akka.TestKit.1.0.7.149-beta\lib\net45\Akka.TestKit.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.TestKit.NUnit">
-      <HintPath>..\packages\Akka.TestKit.NUnit.1.0.6\lib\net45\Akka.TestKit.NUnit.dll</HintPath>
+      <HintPath>..\packages\Akka.TestKit.NUnit.1.0.7.149-beta\lib\net45\Akka.TestKit.NUnit.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Autofac">
       <HintPath>..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Autofac" />
     <Reference Include="Chessie">
       <HintPath>..\packages\Chessie.0.4.0\lib\net40\Chessie.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Chessie" />
     <Reference Include="FSharp.Core">
       <HintPath>..\packages\FSharp.Core.4.0.0.1\lib\net40\FSharp.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FSharp.Core" />
     <Reference Include="FSharp.PowerPack">
-      <HintPath>..\packages\FSPowerPack.Core.Community.3.0.0.0\lib\Net40\FSharp.PowerPack.dll</HintPath>
+      <HintPath>..\packages\FSPowerPack.Core.Community.3.0.0.0\Lib\Net40\FSharp.PowerPack.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FSharp.PowerPack" />
     <Reference Include="FSharp.PowerPack.Linq">
-      <HintPath>..\packages\FSPowerPack.Linq.Community.3.0.0.0\lib\Net40\FSharp.PowerPack.Linq.dll</HintPath>
+      <HintPath>..\packages\FSPowerPack.Linq.Community.3.0.0.0\Lib\Net40\FSharp.PowerPack.Linq.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FSharp.PowerPack.Linq" />
     <Reference Include="FsPickler">
       <HintPath>..\packages\FsPickler.1.7.2\lib\net45\FsPickler.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FsPickler" />
     <Reference Include="Google.ProtocolBuffers">
       <HintPath>..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Google.ProtocolBuffers" />
     <Reference Include="Google.ProtocolBuffers.Serialization">
       <HintPath>..\packages\Google.ProtocolBuffers.2.4.1.555\lib\net40\Google.ProtocolBuffers.Serialization.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Google.ProtocolBuffers.Serialization" />
     <Reference Include="Helios">
       <HintPath>..\packages\Helios.1.4.2\lib\net45\Helios.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Helios" />
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Newtonsoft.Json" />
     <Reference Include="NLog">
       <HintPath>..\packages\NLog.4.2.3\lib\net45\NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NLog" />
     <Reference Include="nunit.framework">
       <HintPath>..\packages\NUnit.2.6.4\lib\nunit.framework.dll</HintPath>
       <Private>True</Private>
@@ -197,28 +180,40 @@
       <HintPath>..\packages\System.Collections.Immutable.1.1.37\lib\dotnet\System.Collections.Immutable.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System.Collections.Immutable" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.SQLite">
       <HintPath>..\packages\System.Data.SQLite.Core.1.0.99.0\lib\net451\System.Data.SQLite.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="System.Data.SQLite" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml" />
-    <Reference Include="Wire">
-      <HintPath>..\packages\Wire.0.0.6\lib\Wire.dll</HintPath>
+    <ProjectReference Include="..\Akkling\src\Akkling.Cluster.Sharding\Akkling.Cluster.Sharding.fsproj">
+      <Name>Akkling.Cluster.Sharding</Name>
+      <Project>{88387857-c31e-47f8-b377-11aa78d7ce71}</Project>
       <Private>True</Private>
-    </Reference>
+    </ProjectReference>
+    <ProjectReference Include="..\Akkling\src\Akkling.Persistence\Akkling.Persistence.fsproj">
+      <Name>Akkling.Persistence</Name>
+      <Project>{d89d1ecd-f38c-48c9-ade9-1bab5bece19f}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\Akkling\src\Akkling\Akkling.fsproj">
+      <Name>Akkling</Name>
+      <Project>{d38228d5-ec7f-454e-9f54-ab5ca0ad2da0}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <ProjectReference Include="..\Avalanchain\Avalanchain.fsproj">
       <Name>Avalanchain</Name>
       <Project>{441ef518-981f-41cc-9de6-ba9c5438ceec}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <Reference Include="Wire" />
+    <Reference Include="Wire">
+      <HintPath>..\packages\Wire.0.0.6\lib\Wire.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <Import Project="..\packages\System.Data.SQLite.Core.1.0.99.0\build\net451\System.Data.SQLite.Core.targets" Condition="Exists('..\packages\System.Data.SQLite.Core.1.0.99.0\build\net451\System.Data.SQLite.Core.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
