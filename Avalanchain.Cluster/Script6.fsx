@@ -200,7 +200,7 @@ let actor2 = spawn system2 "printer1" <| (actorOf (fun msg -> printfn "SS2 Recei
 //let remoteNodeAddr = Address.Parse "akka.tcp://cluster-system@localhost:5001/"
 //let actor3 = spawne system1 "printer3" <@ actorOf (fun msg -> printfn "SS3 Received: %s\n" msg) @>
 //                [ 
-//                  SpawnOption.Deploy (Deploy (RemoteScope remoteNodeAddr)) ]
+//                   ]
 //
 //let actor13 = spawne system1 "printer13" <@ actorOf (fun msg -> printfn "SS13 Received: %s\n" msg) @>
 //                [ 
@@ -209,6 +209,7 @@ let actor2 = spawn system2 "printer1" <| (actorOf (fun msg -> printfn "SS2 Recei
 //
 let actor14 = spawne system2 "printer14" <@ actorOf2 (fun ctx msg -> printfn "%A Received: %s\n" ctx.Self.Path msg) @>
                 [ 
+                    SpawnOption.Deploy (Deploy (ClusterScope.Instance))
                     SpawnOption.Router (
                         new Akka.Cluster.Routing.ClusterRouterPool(
                             new Akka.Routing.BroadcastPool(8),
@@ -220,7 +221,7 @@ let actor14 = spawne system2 "printer14" <@ actorOf2 (fun ctx msg -> printfn "%A
 
 //let actor3 = spawne system1 "EG5Router" <@ actorOf (fun msg -> printfn "SS3 Received: %s\n" msg) @> []
 
-//let actor5 = select "akka://cluster-system/user/EG5Router" system1
+let actor5 = select "akka://cluster-system/user/printer14" system1
 
 let c = 3
 for i = 0 to c do actor1 <! sprintf "hello world %d" i
