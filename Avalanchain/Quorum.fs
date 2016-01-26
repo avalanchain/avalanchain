@@ -11,16 +11,19 @@ open SecPrimitives
 open RefsAndPathes
 
 type ExecutionGroup = ExecutionGroup of string 
+    with member this.Value = 
+            let (ExecutionGroup ret) = this
+            ret
 and ExecutionPolicy = // TODO: ExecutionPolicy?
     | None
     | One of NodeSelectionStrategy * NodeSelectionStake 
-    | All of ExecutionPolicy list
+    | All of Set<ExecutionPolicy>
 and NodeSelectionStrategy = 
     | Random 
-    | Mandatory of ExecutionGroup list
+    | Mandatory of Set<ExecutionGroup>
 and NodeSelectionStake = 
-    | Percentage of float 
-    | FixedCount of uint16 // TODO: Add limited types (or checks)
+    | Percentage of Percentage: float * Total: uint32 // TODO: Replace logic with total derived from aggregating join/leave messages
+    | FixedCount of uint32 // TODO: Add limited types (or checks)
 
 
 type ExecutionRequest =

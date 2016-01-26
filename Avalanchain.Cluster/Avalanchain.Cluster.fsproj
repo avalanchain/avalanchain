@@ -54,12 +54,14 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <None Include="Bootstrap.fsx" />
-    <None Include="Script4.fsx" />
-    <None Include="Script3.fsx" />
+    <None Include="Script6.fsx" />
+    <None Include="Script5.fsx" />
     <Content Include="packages.config" />
     <None Include="Script.fsx" />
-    <None Include="Script2.fsx" />
     <None Include="Script1.fsx" />
+    <None Include="Script2.fsx" />
+    <None Include="Script3.fsx" />
+    <None Include="Script4.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Akka">
