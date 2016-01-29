@@ -53,7 +53,10 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Messages.fs" />
+    <Compile Include="SqliteCluster.fs" />
     <None Include="Bootstrap.fsx" />
+    <None Include="Script7.fsx" />
     <None Include="Script6.fsx" />
     <None Include="Script5.fsx" />
     <Content Include="packages.config" />
@@ -183,6 +186,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Data.SQLite">
       <HintPath>..\packages\System.Data.SQLite.Core.1.0.99.0\lib\net451\System.Data.SQLite.dll</HintPath>
       <Private>True</Private>
