@@ -4,7 +4,9 @@
 #time "on"
 #load "Bootstrap.fsx"
 
+
 open System
+open System.Collections.Immutable
 open Akka.FSharp
 open Akka.Actor
 open Akka.Cluster
@@ -12,20 +14,19 @@ open Akka.Cluster
 //open Akkling.Cluster
 //open Akkling.Cluster.Sharding
 
-open Avalanchain.Cluster
+open Akka.Persistence
+open Akka.Persistence.FSharp
 open Avalanchain.Quorum
+
+#load "Messages.fs"
+#load "SqliteCluster.fs"
+
 
 let configWithPort port = 
     let config = Configuration.parse("""
         akka {
             actor {
               provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
-              serializers {
-                wire = "Akka.Serialization.WireSerializer, Akka.Serialization.Wire"
-              }
-              serialization-bindings {
-                "System.Object" = wire
-              }
             }
             remote {
               helios.tcp {
@@ -35,7 +36,7 @@ let configWithPort port =
               }
             }
             cluster {
-                auto-down-unreachable-after = 5s
+                auto-down-unreachable-after = 15s
               }
             persistence {
               journal {
@@ -57,39 +58,13 @@ let configWithPort port =
         """)
     config.WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
     
-let produceMessages (system: ActorSystem) (shardRegion: IActorRef)
-    let[<Literal>] entitiesCount = 20
-    let[<Literal>] shardsCount = 10
-    let rand = new Random();
 
-    system.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5), 
-        fun () ->
-            for i = 0 to 1 do
-                let shardId = rand.Next(shardsCount)
-                let entityId = rand.Next(entitiesCount)
-
-                shardRegion.Tell({shardId.ToString(); entityId.ToString(); "hello world"})
-    )
-
-let runExample (system: ActorSystem)
-{
-    let sharding = ClusterSharding.Get(system)
-    let shardRegion = sharding.Start(
-        typeName: "printer",
-        entityProps: Props.Create<Printer>(),
-        settings: ClusterShardingSettings.Create(system),
-        messageExtractor: new MessageExtractor());
-
-    Thread.Sleep(5000);
-    Console.Write("Press ENTER to start producing messages...");
-    Console.ReadLine();
-
-    ProduceMessages(system, shardRegion);
 
 // first cluster system with sharding region up and ready
-let system1 = System.create "sharded-cluster-system" (configWithPort 5000)
+let system = System.create "sharded-cluster-system" (configWithPort 5000)
 //let actor1 = spawn system1 "printer1" <| props (Behaviors.printf "SS1 Received: %s\n")
-let actor1 = spawn system1 "printer1" <| (actorOf (fun msg -> printfn "SS1 Received: %s\n" msg))
+//let actor1 = spawn system1 "printer1" <| (actorOf (fun msg -> printfn "SS1 Received: %s\n" msg))
+Avalanchain.Cluster.SQLite.runExample system
 
 //// second cluster system with sharding region up and ready
 //let system2 = System.create "cluster-system" (configWithPort 5001)

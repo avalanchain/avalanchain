@@ -53,9 +53,9 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <None Include="Bootstrap.fsx" />
     <Compile Include="Messages.fs" />
     <Compile Include="SqliteCluster.fs" />
-    <None Include="Bootstrap.fsx" />
     <None Include="Script7.fsx" />
     <None Include="Script6.fsx" />
     <None Include="Script5.fsx" />
@@ -196,19 +196,9 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml" />
-    <ProjectReference Include="..\Akkling\src\Akkling.Cluster.Sharding\Akkling.Cluster.Sharding.fsproj">
-      <Name>Akkling.Cluster.Sharding</Name>
-      <Project>{88387857-c31e-47f8-b377-11aa78d7ce71}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Akkling\src\Akkling.Persistence\Akkling.Persistence.fsproj">
       <Name>Akkling.Persistence</Name>
       <Project>{d89d1ecd-f38c-48c9-ade9-1bab5bece19f}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Akkling\src\Akkling\Akkling.fsproj">
-      <Name>Akkling</Name>
-      <Project>{d38228d5-ec7f-454e-9f54-ab5ca0ad2da0}</Project>
       <Private>True</Private>
     </ProjectReference>
     <ProjectReference Include="..\Avalanchain\Avalanchain.fsproj">
