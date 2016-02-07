@@ -40,19 +40,32 @@ let configWithPort port =
               }
             persistence {
               journal {
-                plugin = "akka.persistence.journal.sqlite"
-                sqlite {
-                  connection-string = "Data Source=.\\store.db;Version=3;"
-                  auto-initialize = true
+                  # Path to the journal plugin to be used
+                  plugin = "akka.persistence.journal.inmem"
+
+                  # In-memory journal plugin.
+                  inmem {
+
+                    # Class name of the plugin.
+                    class = "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+
+                    # Dispatcher for the plugin actor.
+                    plugin-dispatcher = "akka.actor.default-dispatcher"
+                  }
                 }
-              }
-              snapshot-store {
-                plugin = "akka.persistence.snapshot-store.sqlite"
-                sqlite {
-                  connection-string = "Data Source=.\\store.db;Version=3;"
-                  auto-initialize = true
+                snapshot-store {
+                  plugin = "akka.persistence.journal.inmem"
+
+                  # In-memory journal plugin.
+                  inmem {
+
+                    # Class name of the plugin.
+                    class = "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+
+                    # Dispatcher for the plugin actor.
+                    plugin-dispatcher = "akka.actor.default-dispatcher"
+                  }
                 }
-              }
             }
           }
         """)
@@ -64,11 +77,20 @@ let configWithPort port =
 let system = System.create "sharded-cluster-system" (configWithPort 5000)
 //let actor1 = spawn system1 "printer1" <| props (Behaviors.printf "SS1 Received: %s\n")
 //let actor1 = spawn system1 "printer1" <| (actorOf (fun msg -> printfn "SS1 Received: %s\n" msg))
-Avalanchain.Cluster.SQLite.runExample system
 
-//// second cluster system with sharding region up and ready
-//let system2 = System.create "cluster-system" (configWithPort 5001)
-////let actor2 = spawn system2 "printer2" <| props (Behaviors.printf "SS2 Received: %s\n")
+// second cluster system with sharding region up and ready
+let system2 = System.create "sharded-cluster-system" (configWithPort 5001)
+
+// third cluster system with sharding region up and ready
+let system3 = System.create "sharded-cluster-system" (configWithPort 5002)
+
+
+Avalanchain.Cluster.SQLite.runExample system
+Avalanchain.Cluster.SQLite.runExample system2
+Avalanchain.Cluster.SQLite.runExample system3
+
+
+//let actor2 = spawn system2 "printer2" <| props (Behaviors.printf "SS2 Received: %s\n")
 //let actor2 = spawn system2 "printer1" <| (actorOf (fun msg -> printfn "SS2 Received: %s\n" msg))
 //
 //let remoteNodeAddr = Address.Parse "akka.tcp://cluster-system@localhost:5001/"

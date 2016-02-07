@@ -3,6 +3,7 @@
 open System
 open System.Text
 open System.Security.Cryptography
+open Base58Check
 
 open Avalanchain.SecPrimitives
 
@@ -76,6 +77,7 @@ type CryptoContext (*<'TData>*) = {
 with 
     member this.ProofVerifier proof = this.Verifier proof.Signature (Unsigned proof.ValueHash.Bytes)
     member this.HashSigner (hash: Hash) = this.Signer (Unsigned hash.Bytes)
+    member this.Address = this.SigningPublicKey |> this.Hasher |> (fun h -> Base58CheckEncoding.Encode h.Bytes)
 
 let dataHasher serializer cryptoContext data = 
     let serialized = serializer data

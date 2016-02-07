@@ -68,7 +68,7 @@
     <Compile Include="Frame.fs" />
     <Compile Include="FrameSynchronizer.fs" />
     <Compile Include="EventProcessor.fs" />
-    <Compile Include="Node.fs" />
+    <Compile Include="NodeContext.fs" />
     <None Include="App.config" />
     <None Include="SecPrimitives.fsx" />
     <None Include="SecKeys.fsx" />
@@ -80,6 +80,10 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Base58Check">
+      <HintPath>..\packages\Base58Check.0.2.0\lib\Net40\Base58Check.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="BouncyCastle.Crypto">
       <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
       <Private>True</Private>

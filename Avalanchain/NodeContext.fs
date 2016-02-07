@@ -1,4 +1,4 @@
-﻿module Avalanchain.Node
+﻿module Avalanchain.NodeContext
 
 open System
 
@@ -21,13 +21,13 @@ open FrameSynchronizer
 type EventStreamBag<'TState, 'TData when 'TData: equality and 'TState: equality>(streams: IEventStream<'TState, 'TData> list) = 
     let mutable streamMap = Map(streams.map(fun s -> s.Def.Value.Ref, s))
     // Checks if all toEmit streams have corresponding definitions
-    let allEmitsExist = 
-        let notDefinedEmitStream = 
+    do (let notDefinedEmitStream = 
             streams.
                 collect(fun s -> s.Def.Value.EmitsTo).
                 tryFind(fun es -> streamMap.tryFind(fun sm -> es.Hash = sm.Key.Hash).IsNone)
         if notDefinedEmitStream.IsSome
         then failwith (sprintf "Stream {%s} for Emitting is not defined" notDefinedEmitStream.Value.Value.Path)
+    )
 
     member this.StreamMap = streamMap
     member this.Add (stream: IEventStream<'TState, 'TData>) = streamMap.Add (stream.Def.Value.Ref, stream)
@@ -38,7 +38,7 @@ type EventStreamBag<'TState, 'TData when 'TData: equality and 'TState: equality>
 
 type Topology<'TState, 'TData when 'TData: equality and 'TState: equality> = IEventStream<'TState, 'TData> list // TODO: Probably replace with some Tree<'T>?
 
-type Node<'TState, 'TData when 'TData: equality and 'TState: equality> = {
+type NodeContext<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     Path: NodePath
     CryptoContext: CryptoContext
     Serializers: Serializers<'TState, 'TData>
@@ -50,6 +50,7 @@ type Node<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     ExecutionGroups: ExecutionGroup list 
 }
 with 
+    member this.Address = this.CryptoContext.Address
     member private this.ToEvent data = {
             Data = data
             SubmitterKey = this.CryptoContext.SigningPublicKey

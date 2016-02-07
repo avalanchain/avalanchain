@@ -135,6 +135,10 @@
       <HintPath>..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Base58Check">
+      <HintPath>..\packages\Base58Check.0.2.0\lib\Net40\Base58Check.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Chessie">
       <HintPath>..\packages\Chessie.0.4.0\lib\net40\Chessie.dll</HintPath>
       <Private>True</Private>
