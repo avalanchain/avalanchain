@@ -8,6 +8,7 @@ open Akka.FSharp
 open Akka.FSharp.Actors
 open Akka.FSharp.Spawn
 open System
+open FSharp.Core
 open System.Collections.Immutable
 open System.Data
 open System.Data.SQLite
@@ -15,6 +16,7 @@ open Microsoft.FSharp.Quotations
 
 open Avalanchain.Cluster.Messages
 open Akka.Persistence.FSharp
+open Akka.Persistence
 
 type DbHelper (connectionFactory: unit -> SQLiteConnection) =
     member this.InitializeNodesTable() =
@@ -102,8 +104,8 @@ let produceMessages (system: ActorSystem) (shardRegion: IActorRef) =
     let rand = new Random()
 
     system.Scheduler.Advanced.ScheduleRepeatedly(
-        TimeSpan.FromSeconds(5.0), 
-        TimeSpan.FromSeconds(5.0), 
+        TimeSpan.FromSeconds(1.0), 
+        TimeSpan.FromSeconds(0.001), 
         fun () ->
             for i = 0 to 1 do
                 let shardId = rand.Next(shardsCount)
@@ -112,27 +114,60 @@ let produceMessages (system: ActorSystem) (shardRegion: IActorRef) =
                 shardRegion.Tell({ShardId = shardId.ToString(); EntityId = entityId.ToString(); Message = "hello world"})
     )
 
-type ResActor() as self = 
-    inherit ReceiveActor()
+type ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent>
+    (
+        updateState: 'TState -> 'TEvent -> 'TState, 
+        processBusinessCommand: 'TBusinessCommand -> 'TEvent option, // TODO: Add Chessie error reporting
+        processAdminCommand: 'TAdminCommand -> 'TEvent option // TODO: Add Chessie error reporting
+    ) as self = 
+    inherit PersistentActor()
+    let mutable state = Unchecked.defaultof<'TState>
     do (UntypedActor.Context.SetReceiveTimeout(Nullable(TimeSpan.FromMinutes(2.0))))
-    do (base.Receive<string>(
-            fun message -> 
-                Console.WriteLine("{0} received message '{1}'", self.Self, message)))
-    member private this.Self = base.Self
+    member private __.Self = base.Self
+    member private __.Context = UntypedActor.Context
+    override __.PersistenceId with get() = (sprintf "%s-%s" (self.Context.Parent.Path.Name) self.Self.Path.Name)
+    override __.ReceiveRecover(msg: obj) = 
+        match msg with 
+        | :? 'TEvent as e -> 
+            state <- updateState state e
+            true
+        | :? SnapshotOffer as so -> 
+            match so.Snapshot with
+            | :? 'TState as sos -> 
+                state <- sos
+                true
+            | _ -> false
+        | _ -> false
+    override this.ReceiveCommand(msg: obj) = 
+        match msg with 
+        | :? 'TBusinessCommand as c -> 
+            match processBusinessCommand c with 
+            | Some e -> this.Persist(e, (fun ee -> (state <- updateState state ee) |> ignore))
+                        true
+            | None -> false
+        | :? 'TAdminCommand as c -> 
+            match processAdminCommand c with 
+            | Some e -> this.Persist(e, (fun ee -> (state <- updateState state ee) |> ignore))
+                        true
+            | None -> false
+        | _ -> false
+    
+
 
 let runExample (system: ActorSystem) =
     let shardedSystem = new ShardedSystem (system)
     let sharding = ClusterSharding.Get(system)
-    let messageExtractor = {new IMessageExtractor with 
-                                    member this.EntityId(message) = match message with
-                                                                    | :? ShardedMessage as msg -> msg.EntityId
-                                                                    | _ -> null
-                                    member this.ShardId(message) = match message with
-                                                                    | :? ShardedMessage as msg -> msg.ShardId
-                                                                    | _ -> null
-                                    member this.EntityMessage(message) = match message with
-                                                                            | :? ShardedMessage as msg -> msg.Message :> Object
-                                                                            | _ -> null}
+    let messageExtractor = 
+        {new IMessageExtractor with 
+            member __.EntityId(message) = match message with
+                                            | :? ShardedMessage as msg -> msg.EntityId
+                                            | _ -> null
+            member __.ShardId(message) = match message with
+                                            | :? ShardedMessage as msg -> msg.ShardId
+                                            | _ -> null
+            member __.EntityMessage(message) = match message with
+                                                    | :? ShardedMessage as msg -> msg.Message :> Object
+                                                    | _ -> null}
     //let shardRegion = shardedSystem.StartShardRegion messageExtractor "printer" <@ actorOf (fun msg -> printfn "Shard Received: %s\n" msg) @> []
     //let shardRegion = shardedSystem.StartShardRegion2 messageExtractor "printer" (Props.Create<ResActor>())
 
@@ -144,8 +179,9 @@ let runExample (system: ActorSystem) =
     let apply _ = update
 
     // exec is invoked when a actor receives a new message from another entity
-    let exec (mailbox: Eventsourced<_,_,_>) state cmd = 
+    let exec (mailbox: Eventsourced<_,ShardedMessage,_>) state cmd = 
         printfn "Cmd Received: %A\n" cmd
+        mailbox.PersistEvent (update state) [cmd]
 //        match cmd with
 //        | "print" -> printf "State is: %A\n" state          // print current actor state
 //        | s       -> mailbox.PersistEvent (update state) [s]     // persist event and call update state on complete

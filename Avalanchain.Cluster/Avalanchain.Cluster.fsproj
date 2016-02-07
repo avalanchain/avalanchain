@@ -68,67 +68,67 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Akka">
-      <HintPath>..\packages\Akka.1.0.7.149-beta\lib\net45\Akka.dll</HintPath>
+      <HintPath>..\packages\Akka.1.0.7.154-beta\lib\net45\Akka.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Cluster">
-      <HintPath>..\packages\Akka.Cluster.1.0.7.149-beta\lib\net45\Akka.Cluster.dll</HintPath>
+      <HintPath>..\packages\Akka.Cluster.1.0.7.154-beta\lib\net45\Akka.Cluster.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Cluster.Sharding">
-      <HintPath>..\packages\Akka.Cluster.Sharding.1.0.7.149-beta\lib\net45\Akka.Cluster.Sharding.dll</HintPath>
+      <HintPath>..\packages\Akka.Cluster.Sharding.1.0.7.154-beta\lib\net45\Akka.Cluster.Sharding.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Cluster.Tools">
-      <HintPath>..\packages\Akka.Cluster.Tools.1.0.7.149-beta\lib\net45\Akka.Cluster.Tools.dll</HintPath>
+      <HintPath>..\packages\Akka.Cluster.Tools.1.0.7.154-beta\lib\net45\Akka.Cluster.Tools.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.DI.AutoFac">
-      <HintPath>..\packages\Akka.DI.AutoFac.1.0.7.149-beta\lib\net45\Akka.DI.AutoFac.dll</HintPath>
+      <HintPath>..\packages\Akka.DI.AutoFac.1.0.7.154-beta\lib\net45\Akka.DI.AutoFac.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.DI.Core">
-      <HintPath>..\packages\Akka.DI.Core.1.0.7.149-beta\lib\net45\Akka.DI.Core.dll</HintPath>
+      <HintPath>..\packages\Akka.DI.Core.1.0.7.154-beta\lib\net45\Akka.DI.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.FSharp">
-      <HintPath>..\packages\Akka.FSharp.1.0.7.149-beta\lib\net45\Akka.FSharp.dll</HintPath>
+      <HintPath>..\packages\Akka.FSharp.1.0.7.154-beta\lib\net45\Akka.FSharp.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Logger.NLog">
-      <HintPath>..\packages\Akka.Logger.NLog.1.0.7.149-beta\lib\net45\Akka.Logger.NLog.dll</HintPath>
+      <HintPath>..\packages\Akka.Logger.NLog.1.0.7.154-beta\lib\net45\Akka.Logger.NLog.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Persistence">
-      <HintPath>..\packages\Akka.Persistence.1.0.7.149-beta\lib\net45\Akka.Persistence.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.1.0.7.154-beta\lib\net45\Akka.Persistence.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Persistence.FSharp">
-      <HintPath>..\packages\Akka.Persistence.FSharp.1.0.7.149-beta\lib\net45\Akka.Persistence.FSharp.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.FSharp.1.0.7.154-beta\lib\net45\Akka.Persistence.FSharp.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Persistence.Sql.Common">
-      <HintPath>..\packages\Akka.Persistence.Sql.Common.1.0.7.149-beta\lib\net45\Akka.Persistence.Sql.Common.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.Sql.Common.1.0.7.154-beta\lib\net45\Akka.Persistence.Sql.Common.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Persistence.Sqlite">
-      <HintPath>..\packages\Akka.Persistence.Sqlite.1.0.7.149-beta\lib\net45\Akka.Persistence.Sqlite.dll</HintPath>
+      <HintPath>..\packages\Akka.Persistence.Sqlite.1.0.7.154-beta\lib\net45\Akka.Persistence.Sqlite.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Remote">
-      <HintPath>..\packages\Akka.Remote.1.0.7.149-beta\lib\net45\Akka.Remote.dll</HintPath>
+      <HintPath>..\packages\Akka.Remote.1.0.7.154-beta\lib\net45\Akka.Remote.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Serialization.Wire">
-      <HintPath>..\packages\Akka.Serialization.Wire.1.0.7.149-beta\lib\net45\Akka.Serialization.Wire.dll</HintPath>
+      <HintPath>..\packages\Akka.Serialization.Wire.1.0.7.154-beta\lib\net45\Akka.Serialization.Wire.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.TestKit">
-      <HintPath>..\packages\Akka.TestKit.1.0.7.149-beta\lib\net45\Akka.TestKit.dll</HintPath>
+      <HintPath>..\packages\Akka.TestKit.1.0.7.154-beta\lib\net45\Akka.TestKit.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.TestKit.NUnit">
-      <HintPath>..\packages\Akka.TestKit.NUnit.1.0.7.149-beta\lib\net45\Akka.TestKit.NUnit.dll</HintPath>
+      <HintPath>..\packages\Akka.TestKit.NUnit.1.0.7.154-beta\lib\net45\Akka.TestKit.NUnit.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Autofac">
