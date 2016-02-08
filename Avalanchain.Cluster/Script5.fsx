@@ -84,5 +84,7 @@ Async.Sleep 50 |> Async.RunSynchronously
 publisher  <! Msg (publisher, "hello") // console output: "*publisher Path* says hello"
 subscriber <! Unsubscribe
 // Again wait 50 milliseconds for unsubscribe to complete
-Async.Sleep 50 |> Async.RunSynchronously
+
+
+
 publisher  <! Msg (publisher, "hello again") // no output, subscriber is not subscribed to stream

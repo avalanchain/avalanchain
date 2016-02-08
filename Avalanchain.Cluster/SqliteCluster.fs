@@ -14,75 +14,12 @@ open System.Data
 open System.Data.SQLite
 open Microsoft.FSharp.Quotations
 
-open Avalanchain.Cluster.Messages
+open Messages
+open AutomaticCluster
 open Akka.Persistence.FSharp
 open Akka.Persistence
 
 
-[<Interface>]
-type IAutomaticCluster = 
-    inherit IDisposable
-
-type AutomaticClusterSqlite (system) =
-    let cluster = Cluster.Get(system);
-    let persistence = SqlitePersistence.Get(system);
-    let connectionFactory() = 
-        let conn = new SQLiteConnection(persistence.JournalSettings.ConnectionString)
-        conn.Open()
-        conn
-        
-    let initializeNodesTable() =
-        use cmd = new SQLiteCommand(connectionFactory())
-        cmd.CommandText <- @"CREATE TABLE IF NOT EXISTS cluster_nodes (
-            member_address VARCHAR(255) NOT NULL PRIMARY KEY
-        );"
-        cmd.ExecuteNonQuery() |> ignore // TODO: Add error handling
-
-    let getClusterMembers() = // TODO: Replace with a TypeProvider
-        let mutable result = []
-        use cmd = new SQLiteCommand(@"SELECT member_address from cluster_nodes", connectionFactory())
-        use reader = cmd.ExecuteReader()
-        while reader.Read() do
-            result <- (Address.Parse (reader.GetString(0))) :: result
-        List.rev result
-
-    let addClusterMember(address: Address) =
-        use cmd = new SQLiteCommand(@"INSERT INTO cluster_nodes(member_address) VALUES (@addr)", connectionFactory())
-        use tx = cmd.Connection.BeginTransaction()
-        cmd.Transaction <- tx
-        let addr = address.ToString()
-        cmd.Parameters.Add("@addr", DbType.String).Value <- addr
-
-        cmd.ExecuteNonQuery() |> ignore // TODO: Add error handling
-        tx.Commit()
-
-    let removeClusterMember(address: Address) =
-        use cmd = new SQLiteCommand(@"DELETE FROM cluster_nodes WHERE member_address = @addr", connectionFactory())
-        use tx = cmd.Connection.BeginTransaction()
-        cmd.Transaction <- tx;
-        let addr = address.ToString()
-        cmd.Parameters.Add("@addr", DbType.String).Value <- addr
-
-        cmd.ExecuteNonQuery() |> ignore // TODO: Add error handling
-        tx.Commit()
-
-    let joinCluster() = 
-        initializeNodesTable()
-
-        let members = getClusterMembers()
-        match members with
-        | [] -> 
-            let self = cluster.SelfAddress
-            addClusterMember(self)
-            cluster.JoinSeedNodes(ImmutableList.Create(self))
-        | _ ->
-            cluster.JoinSeedNodes(ImmutableList.ToImmutableList(members))
-            addClusterMember(cluster.SelfAddress)
-    do joinCluster()
-
-    interface IAutomaticCluster with
-        member __.Dispose() = removeClusterMember(cluster.SelfAddress)
-        
 
 type EventSourcingLogic<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> = {
     UpdateState: 'TState -> 'TEvent -> 'TState
@@ -123,24 +60,12 @@ type ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (eventSourcin
             | None -> false
         | _ -> false
 
-type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
-    let automaticCluster = clusterFactory(system)
-    let sharding = ClusterSharding.Get(system)
-    member this.System = system
-    member this.StartShardRegion<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> messageExtractor eventSourcingLogic regionName (options : SpawnOption list) = 
-        let expr = <@ fun () -> new ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent>(eventSourcingLogic) @>
-        let props = Props.Create (Linq.Expression.ToExpression(expr))
-        let appliedProps = applySpawnOptions props options
-        sharding.Start(regionName, appliedProps, ClusterShardingSettings.Create(system), messageExtractor)
-    member this.StartPersisted<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> eventSourcingLogic name (options : SpawnOption list) = 
-        let expr = <@ fun () -> new ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent>(eventSourcingLogic) @>
-        let props = Props.Create (Linq.Expression.ToExpression(expr))
-        let appliedProps = applySpawnOptions props options
-        system.ActorOf(appliedProps, name)
-    interface IDisposable with
-        member __.Dispose() = automaticCluster.Dispose() // TODO: Implement the pattern properly
+let simpleEventSourcingLogic = {
+    UpdateState = (fun state e -> e::state)
+    ProcessBusinessCommand = (fun cmd -> Some(sprintf "Received '%s'" (cmd.ToString())))
+    ProcessAdminCommand = (fun ac -> None)
+}
 
- 
 type ShardedMessageExtractor() =
     interface IMessageExtractor with 
         member __.EntityId(message) = match message with
@@ -153,13 +78,30 @@ type ShardedMessageExtractor() =
                                                 | :? ShardedMessage as msg -> msg.Message :> Object
                                                 | _ -> null
 
-let simpleEventSourcingLogic = {
-    UpdateState = (fun state e -> e::state)
-    ProcessBusinessCommand = (fun cmd -> Some(sprintf "Received '%s'" (cmd.ToString())))
-    ProcessAdminCommand = (fun ac -> None)
-}
 
+type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
+    let automaticCluster = clusterFactory(system)
+    let sharding = ClusterSharding.Get(system)
+    member __.System = system
+    member __.StartShardRegion<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (messageExtractor, eventSourcingLogic, regionName, options : SpawnOption list) = 
+        let expr = <@ fun () -> new ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent>(eventSourcingLogic) @>
+        let props = Props.Create (Linq.Expression.ToExpression(expr))
+        let appliedProps = applySpawnOptions props options
+        sharding.Start(regionName, appliedProps, ClusterShardingSettings.Create(system), messageExtractor)
+    member __.StartPersisted<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (eventSourcingLogic, name, options : SpawnOption list) = 
+        let expr = <@ fun () -> new ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent>(eventSourcingLogic) @>
+        let props = Props.Create (Linq.Expression.ToExpression(expr))
+        let appliedProps = applySpawnOptions props options
+        system.ActorOf(appliedProps, name)
+    member this.StartShardRegion<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (regionName, options) = 
+        this.StartShardRegion (new ShardedMessageExtractor(), simpleEventSourcingLogic, regionName, options)
+    member this.StartPersisted<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (name, options : SpawnOption list) = 
+        this.StartPersisted (simpleEventSourcingLogic, name, options) 
 
+    interface IDisposable with
+        member __.Dispose() = automaticCluster.Dispose() // TODO: Implement the pattern properly
+
+ 
 let produceMessages (system: ActorSystem) (shardRegion: IActorRef) =
     let entitiesCount = 20
     let shardsCount = 10
@@ -178,11 +120,10 @@ let produceMessages (system: ActorSystem) (shardRegion: IActorRef) =
 
 let runExample (system: ActorSystem) =
     let shardedSystem = new ShardedSystem (system, (fun s -> new AutomaticClusterSqlite(s) :> IAutomaticCluster))
-    let messageExtractor = new ShardedMessageExtractor()
     //let shardRegion = shardedSystem.StartShardRegion messageExtractor "printer" <@ actorOf (fun msg -> printfn "Shard Received: %s\n" msg) @> []
     //let shardRegion = shardedSystem.StartShardRegion2 messageExtractor "printer" (Props.Create<ResActor>())
 
-    let shardRegion = shardedSystem.StartShardRegion messageExtractor simpleEventSourcingLogic "printer" []
+    let shardRegion = shardedSystem.StartShardRegion ("printer", [])
 
 //////    // general update state method
 //////    let update state e = 
