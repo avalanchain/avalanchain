@@ -71,7 +71,56 @@ let configWithPort port =
         """)
     config.WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
     
+let produceMessages (system: ActorSystem) (shardRegion: IActorRef) =
+    let entitiesCount = 20
+    let shardsCount = 10
+    let rand = new Random()
 
+    system.Scheduler.Advanced.ScheduleRepeatedly(
+        TimeSpan.FromSeconds(1.0), 
+        TimeSpan.FromSeconds(0.001), 
+        fun () ->
+            for i = 0 to 1 do
+                let shardId = rand.Next(shardsCount)
+                let entityId = rand.Next(entitiesCount)
+
+                shardRegion.Tell({ShardId = shardId.ToString(); EntityId = entityId.ToString(); Message = "hello world"})
+    )
+
+let runExample (system: ActorSystem) =
+    let shardedSystem = new ShardedSystem (system, (fun s -> new AutomaticClusterSqlite(s) :> IAutomaticCluster))
+    //let shardRegion = shardedSystem.StartShardRegion messageExtractor "printer" <@ actorOf (fun msg -> printfn "Shard Received: %s\n" msg) @> []
+    //let shardRegion = shardedSystem.StartShardRegion2 messageExtractor "printer" (Props.Create<ResActor>())
+
+    let shardRegion = shardedSystem.StartShardRegion ("printer", [])
+
+//////    // general update state method
+//////    let update state e = 
+//////        e::state
+//////
+//////    // apply is invoked when actor receives a recovery event
+//////    let apply _ = update
+//////
+//////    // exec is invoked when a actor receives a new message from another entity
+//////    let exec (mailbox: Eventsourced<_,ShardedMessage,_>) state cmd = 
+//////        printfn "Cmd Received: %A\n" cmd
+//////        mailbox.PersistEvent (update state) [cmd]
+////////        match cmd with
+////////        | "print" -> printf "State is: %A\n" state          // print current actor state
+////////        | s       -> mailbox.PersistEvent (update state) [s]     // persist event and call update state on complete
+//////
+//////    let shardRegion = 
+//////        spawnPersist system "s0" {  // s0 identifies actor uniquelly across different incarnations
+//////            state = []              // initial state
+//////            apply = apply           // recovering function
+//////            exec = exec             // command handler
+//////        } []  
+
+    System.Threading.Thread.Sleep(2000)
+    //Console.Write("Press ENTER to start producing messages...")
+    //Console.ReadLine() |> ignore
+
+    produceMessages system shardRegion
 
 // first cluster system with sharding region up and ready
 let system = System.create "sharded-cluster-system" (configWithPort 5000)

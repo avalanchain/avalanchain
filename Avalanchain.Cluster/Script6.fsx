@@ -45,52 +45,9 @@ let hasher ep =
     rnd.NextBytes bytes
     bytes
 
-let toString bytes = 
-    Convert.ToBase64String bytes
 
-type RouterType = 
-    | Nothing of string
-    | Pool of RouterSetting
-    | Group of RouterSetting
-    with member this.Name = 
-            match this with
-            | Nothing name -> name
-            | Pool rs | Group rs -> rs.Name
-
-and RouterSetting = {
-    Name: string
-    MaxPerNode: uint32
-    MaxTotal: uint32
-    MinToOperate: uint32
-}
-
-
-let rec processExecutionPolicy existingGroups (ep: ExecutionPolicy) : RouterType list =
-    let id = ep |> hasher |> toString
-    match ep with
-        | None -> Nothing(id) :: existingGroups
-        | All eps -> 
-            let self = Pool { Name = id; MaxPerNode = 1u; MaxTotal = 1000u; MinToOperate = uint32(eps |> Set.count) }
-            self :: (eps |> (Set.fold processExecutionPolicy existingGroups))
-        | One (strategy, stake) -> 
-            match (strategy, stake) with
-            | Random, Percentage (p, t) -> 
-                let self = Pool { Name = id; MaxPerNode = 1u; MaxTotal = t; MinToOperate = uint32(Math.Round(p * float(t))) }
-                self :: existingGroups
-            | Random, FixedCount fc -> 
-                let self = Pool { Name = id; MaxPerNode = 1u; MaxTotal = fc * 2u; MinToOperate = fc }
-                self :: existingGroups
-            | Mandatory egs, Percentage (p, t) -> 
-                let self = egs |> Set.map(fun (ExecutionGroup eg) -> 
-                                            Pool { Name = eg; MaxPerNode = 1u; MaxTotal = t; MinToOperate = uint32(Math.Round(p * float(t))) }) |> Set.toList
-                self @ existingGroups
-            | Mandatory egs, FixedCount fc -> 
-                let self = egs |> Set.map(fun (ExecutionGroup eg) -> 
-                                            Pool { Name = eg; MaxPerNode = 1u; MaxTotal = fc * 2u; MinToOperate = fc }) |> Set.toList
-                self @ existingGroups
-
-let egs = [ExecutionGroup "EG1"; ExecutionGroup "EG2"; ExecutionGroup "EG3"]
-            |> List.map(fun (ExecutionGroup eg) -> Pool { Name = eg; MaxPerNode = 1u; MaxTotal = 1000u; MinToOperate = 2u })
+//let egs = [ExecutionGroup "EG1"; ExecutionGroup "EG2"; ExecutionGroup "EG3"]
+//            |> List.map(fun (ExecutionGroup eg) -> Pool { Name = eg; MaxPerNode = 1u; MaxTotal = 1000u; MinToOperate = 2u })
 
 let ep = ExecutionPolicy.All (set [
                                 ExecutionPolicy.None
@@ -102,6 +59,7 @@ let ep = ExecutionPolicy.All (set [
 
 let join (strs: string seq) = String.Join(",", strs)
 let join2 (strs: string seq) = String.Join("", strs)
+
 let routers = ep |> processExecutionPolicy egs |> List.rev
 let rolesStr = "[" + join (routers |> List.map (fun r -> sprintf @"""%s""" r.Name)|> Array.ofList) + "]"
 

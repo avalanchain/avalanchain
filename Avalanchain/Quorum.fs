@@ -11,9 +11,12 @@ open SecPrimitives
 open RefsAndPathes
 
 type ExecutionGroup = ExecutionGroup of string 
-    with member this.Value = 
+    with
+        static member Default = ExecutionGroup "_default_" 
+        member this.Value = 
             let (ExecutionGroup ret) = this
             ret
+        
 and ExecutionPolicy = // TODO: ExecutionPolicy?
     | None
     | One of NodeSelectionStrategy * NodeSelectionStake 

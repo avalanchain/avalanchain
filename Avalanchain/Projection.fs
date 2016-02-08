@@ -9,6 +9,7 @@ open SecKeys
 open RefsAndPathes
 open System.Collections.Generic
 open System.Linq
+open System.Collections.Concurrent
 
 //type HashableFunction<'T, 'TResult> = { 
 //    verifier: Verifier, func: Expr<Func<'T, 'TResult>>, proof: Proof) = 
@@ -105,15 +106,18 @@ type ProjectionDeserializer<'TState, 'TData> = HashableFunctionBuilder<'TState, 
 
 
 type ProjectionStorage<'TState, 'TData  when 'TData: equality and 'TState: equality> (serializeFunction: ProjectionSerializer<'TState, 'TData>, deserializeFunction: ProjectionDeserializer<'TState, 'TData>) = 
-    let projections = new Dictionary<Hash, Projection<'TState, 'TData>>()
+    let projections = new ConcurrentDictionary<Hash, Projection<'TState, 'TData>>()
 
+    member this.ToProjection(projExpr: ProjectionExpr<'TState, 'TData>) =
+        (serializeFunction projExpr) |> deserializeFunction
+        
     member this.AddSerialized (projection: SerializedFunction) = 
         let result = deserializeFunction projection 
-        result |> either (fun (p, _) -> projections.[(fst projection).ValueHash] <- p) ignore
+        result |> either (fun (p, _) -> projections.[(fst projection).ValueHash] <- p) ignore // TODO: Ignore already added
         result
     member this.AddAllSerialized (projs: SerializedFunction seq) = projs |> Seq.map (this.AddSerialized)
-    member this.Add (projection: ProjectionExpr<'TState, 'TData>) = 
-        let serialized = serializeFunction projection
+    member this.Add (projExpr: ProjectionExpr<'TState, 'TData>) = 
+        let serialized = serializeFunction projExpr
         this.AddSerialized serialized
     member this.AddAll (projs: ProjectionExpr<'TState, 'TData> seq) = projs |> Seq.map (this.Add)
     member this.Item hash = projections.TryGetValue(hash) |> (fun (b, res) -> if b then Some res else None)
@@ -125,3 +129,8 @@ type ProjectionStorage<'TState, 'TData  when 'TData: equality and 'TState: equal
 
 
 //type IntProjectionStorage = ProjectionStorage<int, int> (serializer, deserializer)
+
+let latestPE<'T> : ProjectionExpr<'T, 'T> = <@ fun (s:'T) e -> ok (e) @>
+let emptyPE<'T> : ProjectionExpr<'T, 'T> = <@ fun (s:'T) e -> ok (Unchecked.defaultof<'T>) @>
+let constPE<'T> c : ProjectionExpr<'T, 'T> = <@ fun (s:'T) e -> ok (c) @>
+let nonFailingPE<'TState, 'TData> (f: 'TState -> 'TData -> 'TState) : ProjectionExpr<'TState, 'TData> = <@ fun s e -> ok (f s e) @>
