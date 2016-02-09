@@ -106,8 +106,8 @@ with
 
 
 //let buildNode<'TData, 'TState when 'TData: equality and 'TState: equality> nodePath projectionExprs = 
-let buildNode nodePath projectionExprs = 
-    let ct = cryptoContextRSANet("RSA Test")
+let buildNode nodePath executionGroups projectionExprs = 
+    let ct = Utils.cryptoContext
 
     let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
     let ds = deserializeFunction ct.ProofVerifier Utils.picklerDeserializer
@@ -134,12 +134,15 @@ let buildNode nodePath projectionExprs =
         Serializers = serializers
         DataHashers = dhs
         Streams = EventStreamBag([])
-        ExecutionGroups = [ExecutionGroup.Default]
+        ExecutionGroups = executionGroups
         ProjectionStorage = projectionStorage
         EventProcessor = eventProcessor
     }
 
-    projectionExprs |> List.map (fun (path, ver, pe, ep) -> node.CreateStream path ver pe ep) |> collect 
+    projectionExprs 
+    |> List.map (fun (path, ver, pe, ep) -> node.CreateStream path ver pe ep) 
+    |> collect 
+    >>= (fun _ -> ok(node))
 
 
 let defaultProjections : (string * uint32 * ProjectionExpr<decimal, decimal> * ExecutionPolicy) list = [
@@ -151,4 +154,4 @@ let defaultProjections : (string * uint32 * ProjectionExpr<decimal, decimal> * E
     "LastAbs", 0u, <@ fun (s:decimal) e -> ok (Math.Abs(s)) @>, ExecutionPolicy.None
 ]
 
-let defaultNode = defaultProjections |> buildNode "_DefaultNode_" |> returnOrFail
+let defaultNode = defaultProjections |> buildNode "_DefaultNode_" [ExecutionGroup.Default] |> returnOrFail

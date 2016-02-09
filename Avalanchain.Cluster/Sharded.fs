@@ -14,52 +14,8 @@ open AutomaticCluster
 open Akka.Persistence.FSharp
 open Akka.Persistence
 
+open Actors
 
-
-type EventSourcingLogic<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> = {
-    UpdateState: 'TState -> 'TEvent -> 'TState
-    ProcessBusinessCommand: 'TBusinessCommand -> 'TEvent option // TODO: Add Chessie error reporting
-    ProcessAdminCommand: 'TAdminCommand -> 'TEvent option // TODO: Add Chessie error reporting
-}
-
-type ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (eventSourcingLogic) as self = 
-    inherit PersistentActor()
-    let mutable state = Unchecked.defaultof<'TState>
-    do (UntypedActor.Context.SetReceiveTimeout(Nullable(TimeSpan.FromMinutes(2.0))))
-    member private __.Self = base.Self
-    member private __.Context = UntypedActor.Context
-    override __.PersistenceId with get() = (sprintf "Actor %s-%s" (self.Context.Parent.Path.Name) self.Self.Path.Name)
-    override __.ReceiveRecover(msg: obj) = 
-        match msg with 
-        | :? 'TEvent as e -> 
-            state <- eventSourcingLogic.UpdateState state e
-            true
-        | :? SnapshotOffer as so -> 
-            match so.Snapshot with
-            | :? 'TState as sos -> 
-                state <- sos
-                true
-            | _ -> false
-        | _ -> false
-    override this.ReceiveCommand(msg: obj) = 
-        match msg with 
-        | :? 'TBusinessCommand as c -> 
-            match eventSourcingLogic.ProcessBusinessCommand c with 
-            | Some e -> this.Persist(e, (fun ee -> (state <- eventSourcingLogic.UpdateState state ee) |> ignore))
-                        true
-            | None -> false
-        | :? 'TAdminCommand as c -> 
-            match eventSourcingLogic.ProcessAdminCommand c with 
-            | Some e -> this.Persist(e, (fun ee -> (state <- eventSourcingLogic.UpdateState state ee) |> ignore)) // TODO: Rethink Admin channel logic
-                        true
-            | None -> false
-        | _ -> false
-
-let simpleEventSourcingLogic = {
-    UpdateState = (fun state e -> e::state)
-    ProcessBusinessCommand = (fun cmd -> Some(sprintf "Received '%s'" (cmd.ToString())))
-    ProcessAdminCommand = (fun ac -> None)
-}
 
 type ShardedMessageExtractor() =
     interface IMessageExtractor with 
@@ -73,6 +29,7 @@ type ShardedMessageExtractor() =
                                                 | :? ShardedMessage as msg -> msg.Message :> Object
                                                 | _ -> null
 
+type ActorSelector = string -> ActorSelection
 
 type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
     let automaticCluster = clusterFactory(system)
@@ -92,6 +49,7 @@ type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
         this.StartShardRegion (new ShardedMessageExtractor(), simpleEventSourcingLogic, regionName, options)
     member this.StartPersisted<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (name, options : SpawnOption list) = 
         this.StartPersisted (simpleEventSourcingLogic, name, options) 
+    member this.ActorSelector: ActorSelector = (fun path -> system.ActorSelection(path))
 
     interface IDisposable with
         member __.Dispose() = automaticCluster.Dispose() // TODO: Implement the pattern properly

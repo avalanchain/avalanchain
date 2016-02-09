@@ -56,7 +56,9 @@
     <None Include="Bootstrap.fsx" />
     <Compile Include="Messages.fs" />
     <Compile Include="AutomaticCluster.fs" />
+    <Compile Include="Actors.fs" />
     <Compile Include="Sharded.fs" />
+    <Compile Include="ActorEventStream.fs" />
     <Compile Include="Node.fs" />
     <None Include="Script7.fsx" />
     <None Include="Script6.fsx" />

@@ -46,7 +46,7 @@ open NodeContext
 
 Parallel.For(0, 16, (fun i -> 
     let nodePath = sprintf "%d" i
-    let node = defaultProjections |> buildNode nodePath |> returnOrFail
+    let node = defaultProjections |> buildNode nodePath [ExecutionGroup.Default] |> returnOrFail
     let streamRef = node.Streams.Refs.head()
 
     let ress = [for i in 0M..1M..999M -> i] |> List.map (fun i -> node.Push streamRef i)

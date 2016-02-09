@@ -21,3 +21,5 @@ let picklerSerializer data =
 
 let picklerDeserializer<'T> data =
     __serializer.UnPickle<'T> data
+
+let cryptoContext = cryptoContextRSANet("RSA Test")
