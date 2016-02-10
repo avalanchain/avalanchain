@@ -57,6 +57,7 @@
     <Compile Include="Messages.fs" />
     <Compile Include="AutomaticCluster.fs" />
     <Compile Include="Actors.fs" />
+    <Compile Include="Extension.fs" />
     <Compile Include="Sharded.fs" />
     <Compile Include="ActorEventStream.fs" />
     <Compile Include="Node.fs" />

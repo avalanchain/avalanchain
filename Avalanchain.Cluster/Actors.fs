@@ -85,18 +85,6 @@ module Stream =
 
     type Command<'T> = NewValue of 'T 
 
-//    let streamLogic<'T, 'TMsg> (projection: 'T -> 'T -> Result<'T, 'TMsg>)  = {
-//        InitialState = Unchecked.defaultof<'T>
-//        Process = (fun _ (NewValue v) -> ok (v))
-//        Apply = (fun s e -> projection s e >>= (fun ss -> ok (e, ss)))
-//        Bundle = (fun f (e, s) -> (e, s))
-//        Unbundle = (fun (e, s) -> (e, s))
-//    }
-//
-//    type StreamActor<'T, 'TMsg>(projection) =
-//        inherit ResActor<Command<'T>, 'T, 'T, 'T * 'T, 'TMsg>(streamLogic<'T, 'TMsg> projection)
-
-
     let streamLogic<'TState, 'TEvent, 'TMsg> (projection: 'TState -> 'TEvent -> Result<'TState, 'TMsg>)  = {
         InitialState = Unchecked.defaultof<'TState>
         Process = (fun _ (NewValue v) -> ok (v))
