@@ -92,5 +92,9 @@ let hashToMerkle hasher optionalInit hashes : MerkleTree =
     | x :: xs, Some init -> fold init (hashes) 
 
 
-let addToMerkle hashier initMerkle hashed =
-    hashToMerkle hashier initMerkle [hashed.Hash]
+let addToMerkle hasher initMerkle hashed =
+    hashToMerkle hasher initMerkle [hashed.Hash]
+
+let addToMerkled hasher initMerkle hashed =
+    let mt = hashToMerkle hasher initMerkle [hashed.Hash]
+    { Merkle = mt; HashedValue = hashed }

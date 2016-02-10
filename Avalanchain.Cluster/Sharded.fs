@@ -35,13 +35,13 @@ type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
     let automaticCluster = clusterFactory(system)
     let sharding = ClusterSharding.Get(system)
     member __.System = system
-    member __.StartShardRegion<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (messageExtractor, eventSourcingLogic, regionName, options : SpawnOption list) = 
-        let expr = <@ fun () -> new ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent>(eventSourcingLogic) @>
+    member __.StartShardRegion<'Message, 'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (messageExtractor, eventSourcingLogic, regionName, options : SpawnOption list) = 
+        let expr = <@ fun () -> new ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg>(eventSourcingLogic) @>
         let props = Props.Create (Linq.Expression.ToExpression(expr))
         let appliedProps = applySpawnOptions props options
         sharding.Start(regionName, appliedProps, ClusterShardingSettings.Create(system), messageExtractor)
-    member __.StartPersisted<'Message, 'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (eventSourcingLogic, name, options : SpawnOption list) = 
-        let expr = <@ fun () -> new ResActor<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent>(eventSourcingLogic) @>
+    member __.StartPersisted<'Message, 'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic, name, options : SpawnOption list) = 
+        let expr = <@ fun () -> new ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg>(eventSourcingLogic) @>
         let props = Props.Create (Linq.Expression.ToExpression(expr))
         let appliedProps = applySpawnOptions props options
         system.ActorOf(appliedProps, name)
