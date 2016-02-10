@@ -8,7 +8,7 @@ open Avalanchain.Projection
 
 type EventSourcingLogic<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> = {
     InitialState: 'TState
-    Process: 'TState option -> 'TCommand -> Result<'TEvent, 'TMsg> 
+    Process: 'TState -> 'TCommand -> Result<'TEvent, 'TMsg> 
     Apply: 'TState -> 'TEvent -> Result<'TEvent * 'TState, 'TMsg>
     Bundle: 'TFrame option -> 'TEvent * 'TState -> 'TFrame
     Unbundle: 'TFrame -> 'TEvent * 'TState
