@@ -18,7 +18,7 @@ type ExecutionGroup = ExecutionGroup of string
             ret
         
 and ExecutionPolicy = // TODO: ExecutionPolicy?
-    | None
+    | Pass
     | One of NodeSelectionStrategy * NodeSelectionStake 
     | All of Set<ExecutionPolicy>
 and NodeSelectionStrategy = 

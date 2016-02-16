@@ -44,30 +44,32 @@ type EventStreamBag<'TState, 'TData when 'TData: equality and 'TState: equality>
 type Topology<'TState, 'TData when 'TData: equality and 'TState: equality> = IEventStream<'TState, 'TData> list // TODO: Probably replace with some Tree<'T>?
 
 type NodeContext<'TState, 'TData when 'TData: equality and 'TState: equality> = {
-    Path: NodePath
     CryptoContext: CryptoContext
     Serializers: Serializers<'TState, 'TData>
     DataHashers: DataHashers<'TState, 'TData>
     ProjectionStorage: ProjectionStorage<'TState, 'TData>
-    Streams: EventStreamBag<'TState, 'TData>
     EventProcessor: StreamEventProcessor<'TState, 'TData>
+    Proofer: Proofer<'TState, 'TData>
+    PermissionsChecker: HashedEvent<'TData> -> DataResult<unit>
     //FrameSynchronizationContextBuilder: ExecutionGroup -> ExecutionPolicy -> FrameSynchronizationContext<'TState, 'TData>
 
-    // OwnIPAddress: IPAddress
-    ExecutionGroups: ExecutionGroup list 
 }
-with 
-    member this.Address = this.CryptoContext.Address
+
+type Node<'TState, 'TData when 'TData: equality and 'TState: equality>(path: NodePath, executionGroups: ExecutionGroup list, nodeContext) =
+    // OwnIPAddress: IPAddress
+    let streams = EventStreamBag<'TState, 'TData>([])
+
+    member __.Address = nodeContext.CryptoContext.Address
     member private this.ToEvent data = {
             Data = data
-            SubmitterKey = this.CryptoContext.SigningPublicKey
-            SubmitterSignature = this.CryptoContext.Signer(Unsigned(this.Serializers.data data))
-            SubmittedVia = NodeRef(this.CryptoContext.SigningPublicKey)
+            SubmitterKey = nodeContext.CryptoContext.SigningPublicKey
+            SubmitterSignature = nodeContext.CryptoContext.Signer(Unsigned(nodeContext.Serializers.data data))
+            SubmittedVia = NodeRef(nodeContext.CryptoContext.SigningPublicKey)
         }
     member this.Push (streamRef: Hashed<EventStreamRef>) data =
-        let stream = this.Streams.[streamRef] // TODO: Handle "not found"
+        let stream = streams.[streamRef] // TODO: Handle "not found"
         let event = this.ToEvent data
-        let hashedEvent = this.DataHashers.eventDh event
+        let hashedEvent = nodeContext.DataHashers.eventDh event
         stream.Push(hashedEvent)
 
     member this.CreateStreamDef path version (projectionExpr: ProjectionExpr<'TState, 'TData>) executionPolicy = 
@@ -75,28 +77,28 @@ with
             Path = path
             Version = version
         }
-        let projection = this.ProjectionStorage.ToProjection(projectionExpr)
+        let projection = nodeContext.ProjectionStorage.ToProjection(projectionExpr)
         let buildDef prj = 
             let streamDef = {
-                Ref = this.DataHashers.streamRefDh streamRef
+                Ref = nodeContext.DataHashers.streamRefDh streamRef
                 Projection = prj
                 //EmitsTo: Hashed<EventStreamRef> list //TODO: Add EmitTo
                 ExecutionPolicy = executionPolicy 
             }
-            ok (this.DataHashers.streamDefDh streamDef)
+            ok (nodeContext.DataHashers.streamDefDh streamDef)
 
         projection >>= buildDef
 
     member this.CreateStreamFromDef hashedStreamDef =
         let createStream projection = 
             let eventStream = 
-                EventStream (hashedStreamDef, this.CryptoContext.Hasher, this.DataHashers.frameDh, this.EventProcessor, this.Serializers.frame) :> IEventStream<'TState, 'TData>
+                EventStream (hashedStreamDef, nodeContext.CryptoContext.Hasher, nodeContext.DataHashers.frameDh, nodeContext.EventProcessor, nodeContext.Serializers.frame) :> IEventStream<'TState, 'TData>
             ok (eventStream)
 
         let newStream = hashedStreamDef.Value.Projection.Expr 
-                        |> this.ProjectionStorage.Add 
+                        |> nodeContext.ProjectionStorage.Add 
                         >>= createStream
-                        |> lift this.Streams.Add
+                        |> lift streams.Add
         newStream
 
     member this.CreateStream path version (projectionExpr: ProjectionExpr<'TState, 'TData>) executionPolicy = 
@@ -104,11 +106,7 @@ with
         >>= this.CreateStreamFromDef
 
 
-
-//let buildNode<'TData, 'TState when 'TData: equality and 'TState: equality> nodePath projectionExprs = 
-let buildNode nodePath executionGroups projectionExprs = 
-    let ct = Utils.cryptoContext
-
+let buildNodeContext<'TState, 'TData when 'TData: equality and 'TState: equality>(ct: CryptoContext) =
     let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher
     let ds = deserializeFunction ct.ProofVerifier Utils.picklerDeserializer
     let projectionStorage = ProjectionStorage(ss, ds)
@@ -119,7 +117,7 @@ let buildNode nodePath executionGroups projectionExprs =
         signed
 
     let serializers = picklerSerializers
-    let dhs = dataHashers ct serializers
+    let dhs = dataHashers<'TState, 'TData> ct serializers
 
     let pfr = proofer (executionSigner ct.Signer serializers.epd) dhs.epDh
     let permissionsChecker hashedEvent = ok() // TODO: Add proper permission checking
@@ -128,30 +126,38 @@ let buildNode nodePath executionGroups projectionExprs =
 
     //let executionGroupBuilder // TODO: Add executionGroupBuilder
 
-    let node = {
-        Path = nodePath
+    let nodeContext = {
         CryptoContext = ct
         Serializers = serializers
         DataHashers = dhs
-        Streams = EventStreamBag([])
-        ExecutionGroups = executionGroups
         ProjectionStorage = projectionStorage
         EventProcessor = eventProcessor
+        Proofer = pfr
+        PermissionsChecker = permissionsChecker
     }
+    nodeContext
 
+//let buildNode<'TData, 'TState when 'TData: equality and 'TState: equality> nodePath projectionExprs = 
+let buildNode nodePath executionGroups nodeContext = 
+    Node(nodePath, executionGroups, nodeContext)
+
+
+let registerProjections (node: Node<'TState, 'TData>) projectionExprs =
     projectionExprs 
     |> List.map (fun (path, ver, pe, ep) -> node.CreateStream path ver pe ep) 
     |> collect 
     >>= (fun _ -> ok(node))
 
 
-let defaultProjections : (string * uint32 * ProjectionExpr<decimal, decimal> * ExecutionPolicy) list = [
-    "Sum", 0u, <@ fun (s:decimal) e -> ok (s + e) @>, ExecutionPolicy.None
-    "Max", 0u, <@ fun (s:decimal) e -> ok (Math.Max(s, e)) @>, ExecutionPolicy.None
-    "Min", 0u, <@ fun (s:decimal) e -> ok (Math.Min(s, e)) @>, ExecutionPolicy.None
-    "First", 0u, <@ fun (s:decimal) e -> ok (Unchecked.defaultof<decimal>) @>, ExecutionPolicy.None
-    "Last", 0u, <@ fun (s:decimal) e -> ok (e) @>, ExecutionPolicy.None
-    "LastAbs", 0u, <@ fun (s:decimal) e -> ok (Math.Abs(s)) @>, ExecutionPolicy.None
-]
-
-let defaultNode = defaultProjections |> buildNode "_DefaultNode_" [ExecutionGroup.Default] |> returnOrFail
+//let defaultProjections : (string * uint32 * ProjectionExpr<decimal, decimal> * ExecutionPolicy) list = [
+//    "Sum", 0u, <@ fun (s:decimal) e -> ok (s + e) @>, ExecutionPolicy.None
+//    "Max", 0u, <@ fun (s:decimal) e -> ok (Math.Max(s, e)) @>, ExecutionPolicy.None
+//    "Min", 0u, <@ fun (s:decimal) e -> ok (Math.Min(s, e)) @>, ExecutionPolicy.None
+//    "First", 0u, <@ fun (s:decimal) e -> ok (Unchecked.defaultof<decimal>) @>, ExecutionPolicy.None
+//    "Last", 0u, <@ fun (s:decimal) e -> ok (e) @>, ExecutionPolicy.None
+//    "LastAbs", 0u, <@ fun (s:decimal) e -> ok (Math.Abs(s)) @>, ExecutionPolicy.None
+//]
+//
+//let defaultNode = defaultProjections  
+//                    |> registerProjections (buildNodeContext(Utils.cryptoContext) |> buildNode "_DefaultNode_" [ExecutionGroup.Default])
+//                    |> returnOrFail

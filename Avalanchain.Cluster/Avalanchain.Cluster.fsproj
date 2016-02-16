@@ -58,9 +58,10 @@
     <Compile Include="AutomaticCluster.fs" />
     <Compile Include="Actors.fs" />
     <Compile Include="Extension.fs" />
+    <Compile Include="Node.fs" />
     <Compile Include="Sharded.fs" />
     <Compile Include="ActorEventStream.fs" />
-    <Compile Include="Node.fs" />
+    <None Include="Script8.fsx" />
     <None Include="Script7.fsx" />
     <None Include="Script6.fsx" />
     <None Include="Script5.fsx" />

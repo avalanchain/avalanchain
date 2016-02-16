@@ -14,16 +14,17 @@ type EventSourcingLogic<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> = {
     Unbundle: 'TFrame -> 'TEvent * 'TState
 }
 
-type ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic: EventSourcingLogic<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg>) as self = 
+type ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic: EventSourcingLogic<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg>) as this = 
     inherit PersistentActor()
     let mutable frame: 'TFrame option = None
     let getState() = match frame with
                         | Some f -> eventSourcingLogic.Unbundle f |> snd
                         | None -> eventSourcingLogic.InitialState
-    do (UntypedActor.Context.SetReceiveTimeout(Nullable(TimeSpan.FromMinutes(2.0))))
-    member private __.Self = base.Self
-    member private __.Context = UntypedActor.Context
-    override __.PersistenceId with get() = (sprintf "Actor %s-%s" (self.Context.Parent.Path.Name) self.Self.Path.Name)
+    do (Console.WriteLine("NAME - " + base.Self.Path.Name)
+        UntypedActor.Context.SetReceiveTimeout(Nullable(TimeSpan.FromMinutes(2.0))))
+    member private this.Self = base.Self
+    member private this.Context = UntypedActor.Context
+    override __.PersistenceId with get() = (sprintf "Actor %s-%s" (this.Context.Parent.Path.Name) this.Self.Path.Name)
     override __.ReceiveRecover(msg: obj) = 
         match msg with 
         | :? 'TEvent as e -> 
@@ -49,9 +50,13 @@ type ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic: 
             | Ok ((e, newState), msgs) -> 
                 this.Persist(e, (fun ee -> frame <- Some(eventSourcingLogic.Bundle frame (ee, newState))))
                 if List.isEmpty msgs then this.Sender.Tell(msgs, this.Self)
+                this.Log.Info("Command '{0}' processed, Event '{1}' saved, new State '{2}', warnings '{3}", c, e, newState, msgs)
+                Console.WriteLine("Command '{0}' processed, Event '{1}' saved, new State '{2}', warnings '{3}", c, e, newState, msgs)
                 true
             | Bad msgs -> 
                 this.Sender.Tell(msgs, this.Self)
+                this.Log.Error("Event '{0}' processing failed with saved, new State '{1}'", c, msgs)
+                Console.WriteLine("Event '{0}' processing failed with saved, new State '{1}'", c, msgs)
                 false
         | _ -> false
 
@@ -64,6 +69,9 @@ let simpleEventSourcingLogic = {
 }
 
 module KeyValue =
+    open System.Collections.Concurrent
+    open Akka.FSharp
+
     //type AdminCommand = AdminCommand
 
     type Command<'T> = NewValue of 'T 
@@ -76,8 +84,21 @@ module KeyValue =
         Unbundle = (fun e -> (e, e))
     }
 
-    type KeyValueActor<'T, 'TMsg>() =
+    type KVMsg<'TK, 'TV> = 
+        | Add of 'TK * 'TV
+        | Get of 'TK
+
+    type KeyValueActor<'T, 'TMsg>(key: string) =
         inherit ResActor<Command<'T>, 'T, 'T, 'T, 'TMsg>(kvLogic<'T, 'TMsg>)
+        member __.Key = key
+
+    let bucketDict (dict:ConcurrentDictionary<'TK, 'TV>) (mailbox: Actor<KVMsg<'TK, 'TV>>) = function
+        | Add (k, v)  -> dict.[k] = v |> ignore
+        | Get k  -> mailbox.Sender() <! (dict.TryGetValue k |> (function | (true, v) -> Some(v) | (false, _) -> None))
+
+    let bucket mailbox = bucketDict (new ConcurrentDictionary<'TK, 'TV>()) mailbox
+
+    //type KeyValueBucketActor<'T, 'TMsg> = 
 
 module Stream =
 
@@ -93,11 +114,12 @@ module Stream =
         Unbundle = (fun (e, s) -> (e, s))
     }
 
-    type StreamActor<'TState, 'TEvent, 'TMsg>(projection) =
+    type StreamActor<'TState, 'TEvent, 'TMsg>(projection, key: string) =
         inherit ResActor<Command<'TEvent>, 'TEvent, 'TState, 'TEvent * 'TState, 'TMsg>(streamLogic<'TState, 'TEvent, 'TMsg> projection)
+        member __.Key = key
 
-    type StreamActor<'T, 'TMsg>(projection) = 
-        inherit StreamActor<'T, 'T, 'TMsg>(projection)
+    type StreamActor<'T, 'TMsg>(projection, key: string) = 
+        inherit StreamActor<'T, 'T, 'TMsg>(projection, key)
 
 
 module Stream2 =

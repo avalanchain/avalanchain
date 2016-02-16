@@ -82,6 +82,7 @@ type Serializers<'TState, 'TData when 'TData: equality and 'TState: equality> = 
     frame: Serializer<EventStreamFrame<'TState, 'TData>>
     epd: Serializer<ExecutionProofData>
     ep: Serializer<ExecutionProof>
+    exp: Serializer<ExecutionPolicy>
     projection: Serializer<Projection<'TState, 'TData>>
 }
 
@@ -94,6 +95,7 @@ type DataHashers<'TState, 'TData when 'TData: equality and 'TState: equality> = 
     frameDh: DataHasher<EventStreamFrame<'TState, 'TData>>
     epdDh: DataHasher<ExecutionProofData>
     epDh: DataHasher<ExecutionProof>
+    expDh: DataHasher<ExecutionPolicy>
     projectionDh: DataHasher<Projection<'TState, 'TData>>
 }
 
@@ -106,10 +108,11 @@ let picklerSerializers = {
     frame = picklerSerializer
     epd = picklerSerializer
     ep = picklerSerializer
+    exp = picklerSerializer
     projection = picklerSerializer
 }
 
-let dataHashers ct (serializers: Serializers<'TState, 'TData>) = {
+let dataHashers<'TState, 'TData when 'TData: equality and 'TState: equality> ct (serializers: Serializers<'TState, 'TData>) = {
     streamRefDh = dataHasher serializers.streamRef ct
     streamDefDh = dataHasher serializers.streamDef ct
     dataDh = dataHasher serializers.data ct
@@ -118,6 +121,7 @@ let dataHashers ct (serializers: Serializers<'TState, 'TData>) = {
     frameDh = dataHasher serializers.frame ct
     epdDh = dataHasher serializers.epd ct
     epDh = dataHasher serializers.ep ct
+    expDh = dataHasher serializers.exp ct
     projectionDh = dataHasher serializers.projection ct
 }
 

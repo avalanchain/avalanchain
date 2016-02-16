@@ -19,7 +19,7 @@ open Akka.Persistence.FSharp
 open Avalanchain.Quorum
 
 #load "Messages.fs"
-#load "SqliteCluster.fs"
+#load "Sharded.fs"
 
 
 let configWithPort port = 
@@ -91,6 +91,7 @@ let runExample (system: ActorSystem) =
     let shardedSystem = new ShardedSystem (system, (fun s -> new AutomaticClusterSqlite(s) :> IAutomaticCluster))
     //let shardRegion = shardedSystem.StartShardRegion messageExtractor "printer" <@ actorOf (fun msg -> printfn "Shard Received: %s\n" msg) @> []
     //let shardRegion = shardedSystem.StartShardRegion2 messageExtractor "printer" (Props.Create<ResActor>())
+
 
     let shardRegion = shardedSystem.StartShardRegion ("printer", [])
 

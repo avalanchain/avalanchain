@@ -36,6 +36,8 @@
 #r "Google.ProtocolBuffers.dll"
 #r "Google.ProtocolBuffers.Serialization.dll"
 #r "System.Collections.Immutable.dll"
+#r "Chessie.dll"
+#r "Base58Check.dll"
 
 #r "Avalanchain.dll"
 //#r "Avalanchain.Cluster.dll"

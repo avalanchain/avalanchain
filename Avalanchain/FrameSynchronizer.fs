@@ -23,7 +23,7 @@ type FrameSynchronizationContext<'TState, 'TData when 'TData: equality and 'TSta
 let frameSynchronizationContextBuilder executionGroup executionPolicy =
     let frameSynchronizer =
         match executionPolicy with // TODO: Implement complex\ policies
-        | None -> (fun x -> x)
+        | Pass -> (fun x -> x)
         | One (strategy, stake) -> (fun x -> x)
         | All _ -> (fun x -> x)
 

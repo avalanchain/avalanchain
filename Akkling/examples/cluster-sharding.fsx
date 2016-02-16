@@ -1,30 +1,38 @@
-#r "../src/Akkling/bin/Debug/Akka.dll"
-#r "../src/Akkling/bin/Debug/Wire.dll"
-#r "../src/Akkling/bin/Debug/Newtonsoft.Json.dll"
-#r "../src/Akkling/bin/Debug/FSharp.PowerPack.dll"
-#r "../src/Akkling/bin/Debug/FSharp.PowerPack.Linq.dll"
-#r "../src/Akkling/bin/Debug/Akkling.dll"
-#r "../packages/Helios/lib/net45/Helios.dll"
-#r "../packages/FsPickler/lib/net45/FsPickler.dll"
-#r "../packages/Google.ProtocolBuffers/lib/net40/Google.ProtocolBuffers.dll"
-#r "../packages/Google.ProtocolBuffers/lib/net40/Google.ProtocolBuffers.Serialization.dll"
-#r "../packages/Akka.Remote/lib/net45/Akka.Remote.dll"
-#r "../src/Akkling.Persistence/bin/Debug/Google.ProtocolBuffers.dll"
-#r "../src/Akkling.Persistence/bin/Debug/Akka.Persistence.dll"
-#r "../src/Akkling.Persistence/bin/Debug/Akkling.Persistence.dll"
-#r "../packages/Akka.Cluster/lib/net45/Akka.Cluster.dll"
-#r "../packages/Akka.Cluster.Tools/lib/net45/Akka.Cluster.Tools.dll"
-#r "../packages/Akka.Persistence.Sql.Common/lib/net45/Akka.Persistence.Sql.Common.dll"
-#r "../packages/System.Data.SQLite.Core/lib/net45/System.Data.SQLite.dll"
-#r "../packages/Akka.Persistence.Sqlite/lib/net45/Akka.Persistence.Sqlite.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Debug/Akkling.Cluster.Sharding.dll"
+#I "../src/Akkling.Cluster.Sharding/bin/Debug"
+#r "Akka.dll"
+#r "Wire.dll"
+#r "Newtonsoft.Json.dll"
+#r "FSharp.PowerPack.dll"
+#r "FSharp.PowerPack.Linq.dll"
+#r "Akkling.dll"
+#r "Helios.dll"
+#r "FsPickler.dll"
+#r "Google.ProtocolBuffers.dll"
+#r "Google.ProtocolBuffers.Serialization.dll"
+#r "Akka.Remote.dll"
+#r "System.Data.SQLite.dll"
+
+#r "Akka.Persistence.Sqlite.dll"
+#r "Akka.Persistence.Sql.Common.dll"
+#r "Akka.Persistence.dll"
+#r "Akka.Persistence.FSharp.dll"
+
+
+#r "Akkling.Persistence.dll"
+#r "Akka.Cluster.dll"
+#r "Akka.Cluster.Sharding.dll"
+#r "Akka.Cluster.Tools.dll"
+#r "Akkling.Cluster.Sharding.dll"
 
 open System
+open Akka.Actor
+open Akka.Persistence
+open Akka.Cluster
+open Akka.Cluster.Sharding
 open Akkling
 open Akkling.Cluster
 open Akkling.Cluster.Sharding
-open Akka.Actor
-open Akka.Cluster
+open Akka.Persistence.FSharp
 
 let configWithPort port = 
     let config = Configuration.parse("""
@@ -45,17 +53,30 @@ let configWithPort port =
           }
           persistence {
             journal {
-              plugin = "akka.persistence.journal.sqlite"
-              sqlite {
-                connection-string = "Data Source=.\\store.db;Version=3;"
-                auto-initialize = true
+              # Path to the journal plugin to be used
+              plugin = "akka.persistence.journal.inmem"
+
+              # In-memory journal plugin.
+              inmem {
+
+                # Class name of the plugin.
+                class = "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+
+                # Dispatcher for the plugin actor.
+                plugin-dispatcher = "akka.actor.default-dispatcher"
               }
             }
             snapshot-store {
-              plugin = "akka.persistence.snapshot-store.sqlite"
-              sqlite {
-                connection-string = "Data Source=.\\store.db;Version=3;"
-                auto-initialize = true
+              plugin = "akka.persistence.journal.inmem"
+
+              # In-memory journal plugin.
+              inmem {
+
+                # Class name of the plugin.
+                class = "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+
+                # Dispatcher for the plugin actor.
+                plugin-dispatcher = "akka.actor.default-dispatcher"
               }
             }
           }

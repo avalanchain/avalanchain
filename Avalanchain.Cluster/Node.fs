@@ -8,7 +8,6 @@ open Akka
 open Akka.FSharp
 open Akka.Actor
 open Akka.Cluster
-open Sharded
 
 type RouterType = 
     | Nothing of string
@@ -29,29 +28,29 @@ and RouterSetting = {
 let toBase58Hash (hashed: Hashed<'a>) = 
     Base58CheckEncoding.Encode hashed.Hash.Bytes
 
-let rec processExecutionPolicy (hasher: DataHasher<ExecutionPolicy>) existingGroups (ep: ExecutionPolicy) : RouterType list =
+let rec processExecutionPolicy (hasher: DataHasher<ExecutionPolicy>) existingRouters (ep: ExecutionPolicy) : RouterType list =
     let id = ep |> hasher |> toBase58Hash
     match ep with
-        | None -> Nothing(id) :: existingGroups
+        | Pass -> Nothing(id) :: existingRouters
         | All eps -> 
             let self = Pool { Name = id; MaxPerNode = 1u; MaxTotal = 1000u; MinToOperate = uint32(eps |> Set.count) }
-            self :: (eps |> (Set.fold (processExecutionPolicy hasher) existingGroups))
+            self :: (eps |> (Set.fold (processExecutionPolicy hasher) existingRouters))
         | One (strategy, stake) -> 
             match (strategy, stake) with
             | Random, Percentage (p, t) -> 
                 let self = Pool { Name = id; MaxPerNode = 1u; MaxTotal = t; MinToOperate = uint32(Math.Round(p * float(t))) }
-                self :: existingGroups
+                self :: existingRouters
             | Random, FixedCount fc -> 
                 let self = Pool { Name = id; MaxPerNode = 1u; MaxTotal = fc * 2u; MinToOperate = fc }
-                self :: existingGroups
+                self :: existingRouters
             | Mandatory egs, Percentage (p, t) -> 
                 let self = egs |> Set.map(fun (ExecutionGroup eg) -> 
                                             Pool { Name = eg; MaxPerNode = 1u; MaxTotal = t; MinToOperate = uint32(Math.Round(p * float(t))) }) |> Set.toList
-                self @ existingGroups
+                self @ existingRouters
             | Mandatory egs, FixedCount fc -> 
                 let self = egs |> Set.map(fun (ExecutionGroup eg) -> 
                                             Pool { Name = eg; MaxPerNode = 1u; MaxTotal = fc * 2u; MinToOperate = fc }) |> Set.toList
-                self @ existingGroups
+                self @ existingRouters
 
 let toSpawnOption routerType = match routerType with
                                 | Nothing id -> routerType, []
@@ -66,8 +65,5 @@ let toSpawnOption routerType = match routerType with
                                 | Group rs -> failwith "NotImplemented"
 
 
-let createRouters (shardedSystem: ShardedSystem) routerTypes = 
-    routerTypes 
-    |> List.map (toSpawnOption >> fun (rt, options) -> shardedSystem.StartPersisted(rt.Name, options))
 
 
