@@ -57,11 +57,11 @@
     <Compile Include="Messages.fs" />
     <Compile Include="AutomaticCluster.fs" />
     <Compile Include="Actors.fs" />
-    <Compile Include="Extension.fs" />
     <Compile Include="Node.fs" />
+    <Compile Include="Extension.fs" />
     <Compile Include="Sharded.fs" />
     <Compile Include="ActorEventStream.fs" />
-    <None Include="Script8.fsx" />
+    <None Include="Script9.fsx" />
     <None Include="Script7.fsx" />
     <None Include="Script6.fsx" />
     <None Include="Script5.fsx" />
@@ -71,6 +71,7 @@
     <None Include="Script2.fsx" />
     <None Include="Script3.fsx" />
     <None Include="Script4.fsx" />
+    <None Include="Script8.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Akka">
@@ -103,6 +104,14 @@
     </Reference>
     <Reference Include="Akka.Logger.NLog">
       <HintPath>..\packages\Akka.Logger.NLog.1.0.7.154-beta\lib\net45\Akka.Logger.NLog.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Akka.Monitoring">
+      <HintPath>..\packages\Akka.Monitoring.0.5.1\lib\net45\Akka.Monitoring.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Akka.Monitoring.ApplicationInsights">
+      <HintPath>..\packages\Akka.Monitoring.ApplicationInsights.0.5.1\lib\net45\Akka.Monitoring.ApplicationInsights.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Akka.Persistence">
@@ -177,6 +186,10 @@
       <HintPath>..\packages\Helios.1.4.2\lib\net45\Helios.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.ApplicationInsights">
+      <HintPath>..\packages\Microsoft.ApplicationInsights.0.17.0\lib\net45\Microsoft.ApplicationInsights.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -206,11 +219,6 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml" />
-    <ProjectReference Include="..\Akkling\src\Akkling.Persistence\Akkling.Persistence.fsproj">
-      <Name>Akkling.Persistence</Name>
-      <Project>{d89d1ecd-f38c-48c9-ade9-1bab5bece19f}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Avalanchain\Avalanchain.fsproj">
       <Name>Avalanchain</Name>
       <Project>{441ef518-981f-41cc-9de6-ba9c5438ceec}</Project>

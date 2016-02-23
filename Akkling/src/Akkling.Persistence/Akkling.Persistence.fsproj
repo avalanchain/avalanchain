@@ -68,13 +68,6 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Akkling\Akkling.fsproj">
-      <Name>Akkling</Name>
-      <Project>{d38228d5-ec7f-454e-9f54-ab5ca0ad2da0}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-  </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

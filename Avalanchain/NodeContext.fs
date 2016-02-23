@@ -64,7 +64,7 @@ type Node<'TState, 'TData when 'TData: equality and 'TState: equality>(path: Nod
             Data = data
             SubmitterKey = nodeContext.CryptoContext.SigningPublicKey
             SubmitterSignature = nodeContext.CryptoContext.Signer(Unsigned(nodeContext.Serializers.data data))
-            SubmittedVia = NodeRef(nodeContext.CryptoContext.SigningPublicKey)
+            SubmittedVia = nodeContext.DataHashers.nodeRefDh(path, nodeContext.CryptoContext.SigningPublicKey)
         }
     member this.Push (streamRef: Hashed<EventStreamRef>) data =
         let stream = streams.[streamRef] // TODO: Handle "not found"

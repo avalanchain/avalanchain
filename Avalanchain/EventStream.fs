@@ -84,6 +84,7 @@ type Serializers<'TState, 'TData when 'TData: equality and 'TState: equality> = 
     ep: Serializer<ExecutionProof>
     exp: Serializer<ExecutionPolicy>
     projection: Serializer<Projection<'TState, 'TData>>
+    nodeRef: Serializer<NodeRefData>
 }
 
 type DataHashers<'TState, 'TData when 'TData: equality and 'TState: equality> = {
@@ -97,6 +98,7 @@ type DataHashers<'TState, 'TData when 'TData: equality and 'TState: equality> = 
     epDh: DataHasher<ExecutionProof>
     expDh: DataHasher<ExecutionPolicy>
     projectionDh: DataHasher<Projection<'TState, 'TData>>
+    nodeRefDh: DataHasher<NodeRefData>
 }
 
 let picklerSerializers = {
@@ -110,6 +112,7 @@ let picklerSerializers = {
     ep = picklerSerializer
     exp = picklerSerializer
     projection = picklerSerializer
+    nodeRef = picklerSerializer
 }
 
 let dataHashers<'TState, 'TData when 'TData: equality and 'TState: equality> ct (serializers: Serializers<'TState, 'TData>) = {
@@ -123,6 +126,7 @@ let dataHashers<'TState, 'TData when 'TData: equality and 'TState: equality> ct 
     epDh = dataHasher serializers.ep ct
     expDh = dataHasher serializers.exp ct
     projectionDh = dataHasher serializers.projection ct
+    nodeRefDh = dataHasher serializers.nodeRef ct
 }
 
 [<Interface>]

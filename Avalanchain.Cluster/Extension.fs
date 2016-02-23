@@ -12,6 +12,7 @@ open Chessie.ErrorHandling
 open Avalanchain.EventStream
 open Akka.FSharp
 open Actors.KeyValue
+open Actors.Stream
 
 type ChainNodeExtension =
     inherit ExtensionIdProvider<ChainNode>
@@ -31,6 +32,14 @@ and ChainNode(system: ActorSystemImpl) =
         let actor = system.SystemGuardian.GetChild([key])
         if ActorRefs.Nobody.Equals(actor) then
             spawn system key <| actorOf2 (KeyValue.bucket)
+        else
+            actor
+
+    member this.GetByStreamBucket<'TS, 'TE> name f =
+        let key = "hash~" + name + "~" + typedefof<'TS>.FullName + "~" + typedefof<'TE>.FullName
+        let actor = system.SystemGuardian.GetChild([key])
+        if ActorRefs.Nobody.Equals(actor) then
+            system.ActorOf (Props.Create(<@fun () -> new StreamActor2<'TS, 'TE, string>(f, name)@>), key)
         else
             actor
     
@@ -53,12 +62,16 @@ and ChainNode(system: ActorSystemImpl) =
     member this.StreamLogic2<'TS, 'TD when 'TD: equality and 'TS: equality> streamDef = Stream2.streamLogic<'TS, 'TD, EventProcessingMsg> (this.StreamContext()) streamDef
 
         // GetByHash
-    member private this.GetFromBucket<'T> bucketName (hash: Hash) = 
+    member private this.GetFromBucket<'T> bucketName (hash: Hash) : Async<'T> = 
         let bucket = this.GetByHashBucket<'T> bucketName
         async {
-            let! ret = bucket <? KVMsg<Hash, 'T>.Get(hash)
-            return System.Convert.ChangeType(ret, typedefof<'T>)
+            return! bucket <? KVMsg<Hash, 'T>.Get(hash)
         }
+
+    member private this.AddToBucket<'T> bucketName (hash: Hash) value = 
+        let bucket = this.GetByHashBucket<'T> bucketName
+        bucket <! KVMsg<Hash, 'T>.Add(hash, value) // TODO: Replace with ack delivery
+
 
     member this.StreamRefByHash<'T> (hash: Hash) = 
         this.GetFromBucket<'T> "stream-ref" hash
@@ -72,10 +85,6 @@ and ChainNode(system: ActorSystemImpl) =
         this.GetFromBucket<'T> "frame" hash
     member this.MerkleByHash<'T> (hash: Hash) = 
         this.GetFromBucket<'T> "merkle" hash
-
-    member private this.AddToBucket<'T> bucketName (hash: Hash) value = 
-        let bucket = this.GetByHashBucket<'T> bucketName
-        bucket <! KVMsg<Hash, 'T>.Add(hash, value) // TODO: Replace with ack delivery
 
     member this.StreamRefAddHash<'T> (hash: Hash) value = 
         this.AddToBucket<'T> "stream-ref" hash value

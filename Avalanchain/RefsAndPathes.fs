@@ -20,7 +20,8 @@ type EventStreamRef = {
 type ExecutorSignature = Signature
 and ExecutorKey = ExecutorKey of SigningPublicKey
 
-type NodeRef = NodeRef of SigningPublicKey
+type NodeRef = Hashed<NodeRefData>
+and NodeRefData = NodePath * SigningPublicKey
 
 type ExecutionProof = {
     Data: ExecutionProofData

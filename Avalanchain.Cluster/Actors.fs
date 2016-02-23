@@ -20,7 +20,7 @@ type ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic: 
     let getState() = match frame with
                         | Some f -> eventSourcingLogic.Unbundle f |> snd
                         | None -> eventSourcingLogic.InitialState
-    do (Console.WriteLine("NAME - " + base.Self.Path.Name)
+    do (Console.WriteLine("NAME - " + base.Self.Path.Address.ToString())
         UntypedActor.Context.SetReceiveTimeout(Nullable(TimeSpan.FromMinutes(2.0))))
     member private this.Self = base.Self
     member private this.Context = UntypedActor.Context
@@ -42,6 +42,8 @@ type ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic: 
             | _ -> false
         | _ -> false
     override this.ReceiveCommand(msg: obj) = 
+        this.Log.Debug("Received '{0}'", msg)
+        Console.WriteLine("Received '{0}'", msg)
         match msg with 
         | :? 'TCommand as c ->   // TODO: Think about adding Admin channel logic
             let state = getState()
@@ -114,12 +116,12 @@ module Stream =
         Unbundle = (fun (e, s) -> (e, s))
     }
 
-    type StreamActor<'TState, 'TEvent, 'TMsg>(projection, key: string) =
+    type StreamActor2<'TState, 'TEvent, 'TMsg>(projection, key: string) =
         inherit ResActor<Command<'TEvent>, 'TEvent, 'TState, 'TEvent * 'TState, 'TMsg>(streamLogic<'TState, 'TEvent, 'TMsg> projection)
         member __.Key = key
 
     type StreamActor<'T, 'TMsg>(projection, key: string) = 
-        inherit StreamActor<'T, 'T, 'TMsg>(projection, key)
+        inherit StreamActor2<'T, 'T, 'TMsg>(projection, key)
 
 
 module Stream2 =

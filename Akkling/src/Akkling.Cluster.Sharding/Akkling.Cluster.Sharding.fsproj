@@ -78,11 +78,6 @@
       <Project>{d89d1ecd-f38c-48c9-ade9-1bab5bece19f}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\Akkling\Akkling.fsproj">
-      <Name>Akkling</Name>
-      <Project>{d38228d5-ec7f-454e-9f54-ab5ca0ad2da0}</Project>
-      <Private>True</Private>
-    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2' Or $(TargetFrameworkVersion) == 'v4.5.3' Or $(TargetFrameworkVersion) == 'v4.6' Or $(TargetFrameworkVersion) == 'v4.6.1')">

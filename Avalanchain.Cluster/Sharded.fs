@@ -40,12 +40,6 @@ type PathPrefixes = {
     LightStream: string
     LocalStream: string
     Node: string
-    StreamRefByHash: string
-    StreamDefByHash: string
-    EventByHash: string
-    StateByHash: string
-    FrameByHash: string
-    MerkleByHash: string
 }
 
 type ActorSelector = string -> ActorSelection
@@ -59,13 +53,6 @@ type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
         LightStream = "stream0"
         LocalStream = "stream"
         Node = "node"
-
-        StreamRefByHash = "srbh"
-        StreamDefByHash = "srbh"
-        EventByHash = "ebh"
-        StateByHash = "sbh"
-        FrameByHash = "fbh"
-        MerkleByHash = "mbh"
     }
 
     member __.System = system
@@ -92,6 +79,8 @@ type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
         (streamDef: Hashed<EventStreamDef<'TEvent, 'TState>>, options : SpawnOption list) = 
         this.StartPersisted(chainNode.StreamLogic2<'TEvent, 'TState> streamDef, pathPrefixes.LocalStream + streamDef.Value.Ref.Value.Path, options)
 
+
+
     member this.StartClusterStream<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg when 'TEvent: equality and 'TState: equality> 
         (ep: ExecutionPolicy) (streamDef: Hashed<EventStreamDef<'TEvent, 'TState>>) = 
 //        let options = 
@@ -113,32 +102,3 @@ type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
 
  
 
-
-let produceMessages (system: ActorSystem) (shardRegion: IActorRef) =
-    let entitiesCount = 20
-    let shardsCount = 10
-    let rand = new Random()
-
-    system.Scheduler.Advanced.ScheduleRepeatedly(
-        TimeSpan.FromSeconds(1.0), 
-        TimeSpan.FromSeconds(0.001), 
-        fun () ->
-            for i = 0 to 1 do
-                let shardId = rand.Next(shardsCount)
-                let entityId = rand.Next(entitiesCount)
-                //printfn "Message# - %d" i
-                shardRegion.Tell({ShardId = shardId.ToString(); EntityId = entityId.ToString(); Message = "hello world"})
-    )
-
-let runExample (system: ActorSystem) =
-    //let shardedSystem = new ShardedSystem (system, (fun s -> new AutomaticClusterSqlite(s) :> IAutomaticCluster))
-    let shardedSystem = new ShardedSystem (system, (fun s -> {new IAutomaticCluster 
-                                                                interface IDisposable with member __.Dispose() = ()}))
-
-    let kvRef = shardedSystem.StartKeyValue<double, double, double, double * double, string>("aa", []) 
-
-    System.Threading.Thread.Sleep(2000)
-    //Console.Write("Press ENTER to start producing messages...")
-    //Console.ReadLine() |> ignore
-
-    produceMessages system kvRef
