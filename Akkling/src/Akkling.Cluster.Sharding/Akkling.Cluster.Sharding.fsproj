@@ -61,6 +61,8 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="ClusterExtensions.fs" />
     <Compile Include="ClusterSingleton.fs" />
+    <Compile Include="DistributedPubSub.fs" />
+    <Compile Include="ClusterClient.fs" />
     <Compile Include="ClusterSharding.fs" />
     <None Include="Akkling.Cluster.Sharding.fsproj.paket.template" />
     <None Include="paket.references" />
@@ -76,6 +78,11 @@
     <ProjectReference Include="..\Akkling.Persistence\Akkling.Persistence.fsproj">
       <Name>Akkling.Persistence</Name>
       <Project>{d89d1ecd-f38c-48c9-ade9-1bab5bece19f}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\Akkling\Akkling.fsproj">
+      <Name>Akkling</Name>
+      <Project>{d38228d5-ec7f-454e-9f54-ab5ca0ad2da0}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>

@@ -9,7 +9,7 @@
 #r "../packages/Akka.Persistence.Sqlite.1.0.7.154-beta/lib/net45/Akka.Persistence.Sqlite.dll"
 #r "../packages/Akka.Cluster.Sharding.1.0.7.154-beta/lib/net45/Akka.Cluster.Sharding.dll"
 #r "../packages/Akka.Cluster.Tools.1.0.7.154-beta/lib/net45/Akka.Cluster.Tools.dll"
-#r "../packages/FSharp.Core.4.0.0.1/lib/net40/FSharp.Core.dll"
+//#r "../packages/FSharp.Core.4.0.0.1/lib/net40/FSharp.Core.dll"
 #r "../packages/Akka.FSharp.1.0.7.154-beta/lib/net45/Akka.FSharp.dll"
 #r "../packages/System.Collections.Immutable.1.1.37/lib/dotnet/System.Collections.Immutable.dll"
 #r "../packages/System.Data.SQLite.Core.1.0.99.0/lib/net451/System.Data.SQLite.dll"

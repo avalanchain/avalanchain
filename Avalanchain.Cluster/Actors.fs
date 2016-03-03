@@ -188,19 +188,24 @@ module Stream2 =
         PermissionsChecker: HashedEvent<'TData> -> DataResult<unit>
     }
 
-    let streamLogic<'TState, 'TData, 'TMsg when 'TData: equality and 'TState: equality> (slc: StreamLogicContext<'TState, 'TData>) streamDef = {
+    let streamLogic<'TState, 'TData, 'TCommand, 'TMsg when 'TData: equality and 'TState: equality> 
+        (slc: StreamLogicContext<'TState, 'TData>) 
+        streamDef 
+        (dataGetter: 'TCommand -> HashedEvent<'TData>) = {
         InitialState = 
             slc.StateHasher({ 
                                 Value = Unchecked.defaultof<'TState> 
                                 StreamRef = streamDef.Value.Ref
                                 Nonce = 0UL 
                             })
-        Process = (fun _ (NewValue v) -> v |> checkIntegrity slc.DataHasher >>= checkPermissions slc.PermissionsChecker)
+        Process = (fun _ c -> dataGetter(c) |> checkIntegrity slc.DataHasher >>= checkPermissions slc.PermissionsChecker)
         Apply = (fun s e -> project streamDef slc.StateHasher s e >>= (fun ss -> ok (e, ss)))
         Bundle = (fun frame (e, s) -> buildNewFrame streamDef slc.Hasher slc.Proofer frame e s)
         Unbundle = (fun frame -> (frame.Event.HashedValue, frame.State.HashedValue))
     }
 
+    let mt = (fun c -> match c with (NewValue v) -> v)
+
     type StreamActor<'TState, 'TData when 'TData: equality and 'TState: equality>(streamLogicContext: StreamLogicContext<'TState, 'TData>, streamDef) =
         inherit ResActor<Command<HashedEvent<'TData>>, HashedEvent<'TData>, HashedState<'TState>, EventStreamFrame<'TState, 'TData>, EventProcessingMsg>
-            (streamLogic<'TState, 'TData, EventProcessingMsg> streamLogicContext streamDef)
+            (streamLogic<'TState, 'TData, Command<HashedEvent<'TData>>, EventProcessingMsg> streamLogicContext streamDef mt)

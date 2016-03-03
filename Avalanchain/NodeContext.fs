@@ -52,7 +52,6 @@ type NodeContext<'TState, 'TData when 'TData: equality and 'TState: equality> = 
     Proofer: Proofer<'TState, 'TData>
     PermissionsChecker: HashedEvent<'TData> -> DataResult<unit>
     //FrameSynchronizationContextBuilder: ExecutionGroup -> ExecutionPolicy -> FrameSynchronizationContext<'TState, 'TData>
-
 }
 
 type Node<'TState, 'TData when 'TData: equality and 'TState: equality>(path: NodePath, executionGroups: ExecutionGroup list, nodeContext) =
