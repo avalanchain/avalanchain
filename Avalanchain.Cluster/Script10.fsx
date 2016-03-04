@@ -16,6 +16,7 @@
 #r "../packages/Akka.Cluster.Sharding.1.0.7.154-beta/lib/net45/Akka.Cluster.Sharding.dll"
 #r "../packages/Akka.Cluster.Tools.1.0.7.154-beta/lib/net45/Akka.Cluster.Tools.dll"
 //#r "../packages/FSharp.Core.4.0.0.1/lib/net40/FSharp.Core.dll"
+#r "../packages/Akka.1.0.7.154-beta/lib/net45/Akka.dll"
 #r "../packages/Akka.FSharp.1.0.7.154-beta/lib/net45/Akka.FSharp.dll"
 #r "../packages/System.Collections.Immutable.1.1.37/lib/dotnet/System.Collections.Immutable.dll"
 #r "../packages/System.Data.SQLite.Core.1.0.99.0/lib/net451/System.Data.SQLite.dll"
@@ -23,21 +24,30 @@
 #r "../packages/Base58Check.0.2.0/lib/Net40/Base58Check.dll"
 #r "../packages/Helios.1.4.2/lib/net45/Helios.dll"
 #r "../packages/FsPickler.1.7.2/lib/net45/FsPickler.dll"
+#r "../packages/Akka.Cluster.1.0.7.154-beta/lib/net45/Akka.Cluster.dll"
+#r "../packages/Akka.Cluster.Sharding.1.0.7.154-beta/lib/net45/Akka.Cluster.Sharding.dll"
+#r "../packages/Akka.Cluster.Tools.1.0.7.154-beta/lib/net45/Akka.Cluster.Tools.dll"
+#r "../packages/Akkling.0.3.0/lib/net45/Akkling.dll"
+#r "../packages/Akkling.Persistence.0.3.0/lib/net45/Akkling.Persistence.dll"
+#r "../packages/Akkling.Cluster.Sharding.0.3.0/lib/net45/Akkling.Cluster.Sharding.dll"
 //#r "../packages/"
 //#r "../packages/"
 
 #I "bin/Debug/"
 
-#r "bin/Debug/Newtonsoft.Json.dll"
-#r "bin/Debug/Akka.dll"
-//#r "bin/Debug/Akka.Remote.dll"
+//#r "bin/Debug/Newtonsoft.Json.dll"
+//#r "bin/Debug/Akka.dll"
+////#r "bin/Debug/Akka.Remote.dll"
+////#r "bin/Debug/Akka.Persistence.dll"
+//#r "bin/Debug/Akkling.dll"
+//#r "bin/Debug/Akkling.Persistence.dll"
+//#r "bin/Debug/Google.ProtocolBuffers.dll"
 //#r "bin/Debug/Akka.Persistence.dll"
-#r "bin/Debug/Akkling.dll"
-#r "bin/Debug/Akkling.Persistence.dll"
-#r "bin/Debug/Akka.Cluster.dll"
-//#r "bin/Debug/Akka.Cluster.Sharding.dll"
-//#r "bin/Debug/Akka.Cluster.Tools.dll"
-#r "bin/Debug/Akkling.Cluster.Sharding.dll"
+//#r "bin/Debug/Akkling.Persistence.dll"
+//#r "bin/Debug/Akka.Cluster.dll"
+////#r "bin/Debug/Akka.Cluster.Sharding.dll"
+////#r "bin/Debug/Akka.Cluster.Tools.dll"
+//#r "bin/Debug/Akkling.Cluster.Sharding.dll"
 #r "bin/Debug/Avalanchain.dll"
 
 
@@ -50,13 +60,18 @@
 //#load "SqliteCluster.fs"
 
 open System
+open System.Threading
 open System.Collections.Immutable
 open Akka.Actor
 //open Akka.FSharp
-open Akka.Cluster
 //
 open Akka.Persistence
 //open Akka.Persistence.FSharp
+
+open Akka.Cluster
+open Akka.Cluster.Tools
+open Akka.Cluster.Sharding
+
 open Akkling
 open Akkling.Persistence
 open Avalanchain.Quorum
@@ -69,6 +84,7 @@ open Avalanchain.SecPrimitives
 open Avalanchain.SecKeys
 open Avalanchain.StreamEvent
 open Avalanchain.EventStream
+open Avalanchain
 
 
 
@@ -99,11 +115,12 @@ let configWithPort port =
     
    
 
-type NodeCommand<'TT> = 
-    | Post of Transaction<'TT>
+type NodeCommand<'TD when 'TD: equality> = 
+    | Post of Transaction<'TD>
     | Admin of NodeAdminCommand
     | Confirmation of ConfirmationPacket
-and Transaction<'TT> = Transaction of 'TT
+    | Monitor of NodeMonitorQuery
+and Transaction<'TD> = Hashed<EventStreamRef> * 'TD
 and NodeAdminCommand =
     | AddNode of NodeRef
     | RemoveNode of NodeRef
@@ -115,6 +132,14 @@ and ConfirmationPacket = {
     EventHash: Hash
     StateHash: Hash
     NodeProof: Proof // eventHash*stateHash signed
+}
+and NodeMonitorQuery =
+    | Streams                          // Set<StreamStatusData>
+    | Stream of Hashed<EventStreamRef> // StreamStatusData option
+    | KnownNodeRefs
+and StreamStatusData<'TS when 'TS: equality> = {
+    Ref: Hashed<EventStreamRef>
+    State: Hashed<'TS>
 }
  
 type NodeChildActors = {
@@ -128,27 +153,27 @@ let childActors = {
 }
 
 module CommandLog =
-    type CommandWrapper<'TT> = {
-        Command: NodeCommand<'TT>
+    type CommandWrapper<'TD when 'TD: equality> = {
+        Command: NodeCommand<'TD>
         TimeStamp: DateTimeOffset
     }
 
-    type CommandEvent<'TT> = 
-        | Command of CommandWrapper<'TT>
+    type CommandEvent<'TD when 'TD: equality> = 
+        | Command of CommandWrapper<'TD>
         | SnapshotOffer of SnapshotOffer
 
 
-    type CommandLogMessage<'TT> = 
-        | Command of NodeCommand<'TT>
-        | Event of CommandEvent<'TT>
+    type CommandLogMessage<'TD when 'TD: equality> = 
+        | Command of NodeCommand<'TD>
+        | Event of CommandEvent<'TD>
 
-    let toEvent (cmd: NodeCommand<'TT>) = 
+    let toEvent (cmd: NodeCommand<'TD>) = 
         CommandEvent.Command {
             Command = cmd
             TimeStamp = DateTimeOffset.UtcNow
         } |> Event
 
-    let createActor<'TT> (system: IActorRefFactory) = 
+    let createActor<'TD> (system: IActorRefFactory) = 
         spawn system "command-log" <| propsPersist(fun mailbox -> 
             let rec loop state = 
                 actor { 
@@ -187,7 +212,7 @@ module NodeRefStore =
             TimeStamp = DateTimeOffset.UtcNow
         } |> Event
 
-    let createActor<'TT> (system: IActorRefFactory) = 
+    let createActor<'TD> (system: IActorRefFactory) = 
         spawn system "node-ref-store" <| propsPersist(fun mailbox -> 
             let rec loop state = 
                 actor { 
@@ -213,72 +238,89 @@ module NodeRefStore =
                 }
             loop (set[]))
 
-module Post =
-    type PostQuery = 
-        | All // TODO: Add fundamental queries
+//module Post =
+//    type PostQuery = 
+//        | All // TODO: Add fundamental queries
+//
+//    type PostMessage<'TD> = 
+//        | Command of Transaction<'TD>
+//        | Event of HashedEvent<'TD>
+//        | Query of PostQuery
+//
+//    let toEvent eventHasher cmd = 
+//        let Transaction data = cmd
+//        PostEvent.Command {
+//            Command = cmd
+//            TimeStamp = DateTimeOffset.UtcNow
+//        } |> Event
+//
+//    let internal createActor<'TState, 'TData when 'TData: equality and 'TState: equality> (system: IActorRefFactory) 
+//        (streamLogicContext: Stream2.StreamLogicContext<'TState, 'TData>) streamDef =
+//
+//        let eventSourcingLogic = Stream2.streamLogic<'TState, 'TData, EventProcessingMsg> streamLogicContext streamDef
+//
+//        spawn system "node-store" <| propsPersist(fun mailbox -> 
+//            let rec loop (frame: 'TFrame option) = 
+//                actor { 
+//                    let! (msg: PostMessage<'TData>) = mailbox.Receive()
+//                    let getState() = match frame with
+//                                        | Some f -> eventSourcingLogic.Unbundle f |> snd
+//                                        | None -> eventSourcingLogic.InitialState
+//                    match msg with 
+//                        | Command t -> 
+//                            let state = getState()
+//                            let event = eventSourcingLogic.Process state t
+//                            return Persist ((cmd |> toEvent))
+//                        | Event e -> 
+//                            match e with
+//                            | PostEvent.Command c -> return! loop (c::state)
+//                            //| SnapshotOffer so -> mailbox.s
+//                            | _ -> return! loop state 
+//                        | Query q ->
+//                            match q with
+//                            | All -> 
+//                                mailbox.Sender() <! getState()
+//                                return! loop frame
+//                }
+//            loop (None))
 
-    type PostMessage<'TT> = 
-        | Command of Transaction<'TT>
-        | Event of HashedEvent<'TT>
-        | Query of PostQuery
-
-    let toEvent eventHasher cmd = 
-        let Transaction data = cmd
-        PostEvent.Command {
-            Command = cmd
-            TimeStamp = DateTimeOffset.UtcNow
-        } |> Event
-
-    let internal createActor<'TState, 'TData when 'TData: equality and 'TState: equality> (system: IActorRefFactory) 
-        (streamLogicContext: Stream2.StreamLogicContext<'TState, 'TData>) streamDef =
-
-        let eventSourcingLogic = Stream2.streamLogic<'TState, 'TData, EventProcessingMsg> streamLogicContext streamDef
-
-        spawn system "node-store" <| propsPersist(fun mailbox -> 
-            let rec loop (frame: 'TFrame option) = 
-                actor { 
-                    let! (msg: PostMessage<'TData>) = mailbox.Receive()
-                    let getState() = match frame with
-                                        | Some f -> eventSourcingLogic.Unbundle f |> snd
-                                        | None -> eventSourcingLogic.InitialState
-                    match msg with 
-                        | Command t -> 
-                            let state = getState()
-                            let event = eventSourcingLogic.Process state t
-                            return Persist ((cmd |> toEvent))
-                        | Event e -> 
-                            match e with
-                            | PostEvent.Command c -> return! loop (c::state)
-                            //| SnapshotOffer so -> mailbox.s
-                            | _ -> return! loop state 
-                        | Query q ->
-                            match q with
-                            | All -> 
-                                mailbox.Sender() <! getState()
-                                return! loop frame
-                }
-            loop (None))
-
-let createNodeActor<'TT> (system: IActorRefFactory) =
+let createNodeActor<'TS, 'TD when 'TS: equality and 'TD: equality> (system: IActorRefFactory) nodePath =
+    let nodeExtension = ChainNode.Get mailbox.System
+    let node() = nodeExtension.GetNode<'TS, 'TD>(nodePath, [ExecutionGroup.Default])
     spawn system "node"
         <| props(fun mailbox ->
                 // define child actor
-                let commandLog = CommandLog.createActor<'TT> mailbox
+                let commandLog = CommandLog.createActor<'TD> mailbox
                 let nodeRefStore = NodeRefStore.createActor mailbox
-                //let nodeExtension = mailbox.
                     
                 // define parent behavior
-                let rec parentLoop() =
+                let rec loop() =
                     actor {
-                        let! (msg: NodeCommand<'TT>) = mailbox.Receive()
+                        let! (msg: NodeCommand<'TD>) = mailbox.Receive()
                         commandLog.Forward(msg)  // forward all messages through the log
                         match msg with
                         | Admin c -> nodeRefStore.Forward(msg)
-                        | Post t -> () // TODO:
-                        | Confirmation c -> () // TODO:
-                        return! parentLoop()
+                        | Post post -> 
+                            let streamRef, t = post
+                            let ret = node().Push streamRef t
+                            mailbox.Sender() <! ret
+                        | Confirmation c -> 
+                            () // TODO:
+                        | Monitor m ->
+                            match m with 
+                            | Streams -> 
+                                let ret = node().States
+                                mailbox.Sender() <! ret
+                            | Stream streamRef -> 
+                                let ret = node().State streamRef
+                                mailbox.Sender() <! ret
+                            | KnownNodeRefs -> 
+                                let refs = nodeRefStore <? NodeRefStore.NodeRefQuery.All
+                                mailbox.Sender() <! refs
+                            
+                        return! loop()
                     }
-                parentLoop())
+                loop())
 
 
 type AddData<'TS, 'TD when 'TS: equality and 'TD: equality> =
@@ -289,8 +331,19 @@ type AddData<'TS, 'TD when 'TS: equality and 'TD: equality> =
 
 let system = System.create "sys-1" <| configWithPort 5000
 
+Thread.Sleep(2000)
+
 let system1 = System.create "sys-1" <| configWithPort 5001
 
 let system2 = System.create "sys-1" <| configWithPort 5002
 
 //let system = System.create "persisting-sys" <| Configuration.defaultConfig()
+
+
+let ct = Utils.cryptoContext
+let nc = NodeContext.buildNodeContext<double, double> ct
+let nodeActor = createNodeActor<double, double> system "/"
+
+let nr = ("aaa", [| 1uy; 2uy |]) |> nc.DataHashers.nodeRefDh
+nodeActor <! Admin(AddNode (nr))
+nodeActor <? Monitor(KnownNodeRefs)

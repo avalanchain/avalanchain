@@ -73,6 +73,8 @@
     <None Include="Script4.fsx" />
     <None Include="Script8.fsx" />
     <None Include="Script9.fsx" />
+    <None Include="Scripts\load-references-debug.fsx" />
+    <None Include="Scripts\load-project-debug.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Akka">
@@ -147,6 +149,18 @@
       <HintPath>..\packages\Akka.TestKit.NUnit.1.0.7.154-beta\lib\net45\Akka.TestKit.NUnit.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Akkling">
+      <HintPath>..\packages\Akkling.0.3.0\lib\net45\Akkling.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Akkling.Cluster.Sharding">
+      <HintPath>..\packages\Akkling.Cluster.Sharding.0.3.0\lib\net45\Akkling.Cluster.Sharding.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Akkling.Persistence">
+      <HintPath>..\packages\Akkling.Persistence.0.3.0\lib\net45\Akkling.Persistence.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Autofac">
       <HintPath>..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
       <Private>True</Private>
@@ -217,24 +231,7 @@
     </Reference>
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Xml" />
-    <Reference Include="System.Xml" />
-    <ProjectReference Include="..\Akkling\src\Akkling.Cluster.Sharding\Akkling.Cluster.Sharding.fsproj">
-      <Name>Akkling.Cluster.Sharding</Name>
-      <Project>{88387857-c31e-47f8-b377-11aa78d7ce71}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Akkling\src\Akkling.Persistence\Akkling.Persistence.fsproj">
-      <Name>Akkling.Persistence</Name>
-      <Project>{d89d1ecd-f38c-48c9-ade9-1bab5bece19f}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\Akkling\src\Akkling\Akkling.fsproj">
-      <Name>Akkling</Name>
-      <Project>{d38228d5-ec7f-454e-9f54-ab5ca0ad2da0}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Avalanchain\Avalanchain.fsproj">
       <Name>Avalanchain</Name>
       <Project>{441ef518-981f-41cc-9de6-ba9c5438ceec}</Project>

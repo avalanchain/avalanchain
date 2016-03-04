@@ -104,6 +104,9 @@ type Node<'TState, 'TData when 'TData: equality and 'TState: equality>(path: Nod
         this.CreateStreamDef path version projectionExpr executionPolicy 
         >>= this.CreateStreamFromDef
 
+    member this.States = streams.Streams |> Seq.map(fun s -> s.Ref, s.CurrentState)
+    member this.State streamRef = streams.StreamMap.TryFind streamRef
+
 
 let buildNodeContext<'TState, 'TData when 'TData: equality and 'TState: equality>(ct: CryptoContext) =
     let ss = serializeFunction ct.HashSigner Utils.picklerSerializer ct.Hasher

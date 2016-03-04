@@ -31,6 +31,8 @@ and ChainNode(system: ActorSystemImpl) =
             nodeContexts.GetOrAdd(key, (fun k -> (NodeContext.buildNode path executionGroups (NodeContext.buildNodeContext<'TD, 'TS>(ct))) :> obj))
         nc :?> NodeContext.Node<'TS, 'TD>
 
+    member this.CryptoContext = ct
+
     interface Akka.Actor.IExtension 
     static member Get (system: ActorSystem): ChainNode =
             system.WithExtension<ChainNode, ChainNodeExtension>()
