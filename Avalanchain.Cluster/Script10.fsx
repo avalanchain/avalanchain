@@ -285,13 +285,13 @@ module NodeRefStore =
 //            loop (None))
 
 let createNodeActor<'TS, 'TD when 'TS: equality and 'TD: equality> (system: IActorRefFactory) nodePath =
-    let nodeExtension = ChainNode.Get mailbox.System
-    let node() = nodeExtension.GetNode<'TS, 'TD>(nodePath, [ExecutionGroup.Default])
     spawn system "node"
         <| props(fun mailbox ->
                 // define child actor
                 let commandLog = CommandLog.createActor<'TD> mailbox
                 let nodeRefStore = NodeRefStore.createActor mailbox
+                let nodeExtension = ChainNode.Get mailbox.System
+                let node() = nodeExtension.GetNode<'TS, 'TD>(nodePath, [ExecutionGroup.Default])
                     
                 // define parent behavior
                 let rec loop() =
@@ -315,7 +315,10 @@ let createNodeActor<'TS, 'TD when 'TS: equality and 'TD: equality> (system: IAct
                                 let ret = node().State streamRef
                                 mailbox.Sender() <! ret
                             | KnownNodeRefs -> 
-                                let refs = nodeRefStore <? NodeRefStore.NodeRefQuery.All
+                                let refs = 
+                                    async {
+                                            return! nodeRefStore <? NodeRefStore.Query (NodeRefStore.NodeRefQuery.All)
+                                        } |> Async.RunSynchronously // TODO: Remove sync 
                                 mailbox.Sender() <! refs
                             
                         return! loop()
@@ -346,4 +349,9 @@ let nodeActor = createNodeActor<double, double> system "/"
 
 let nr = ("aaa", [| 1uy; 2uy |]) |> nc.DataHashers.nodeRefDh
 nodeActor <! Admin(AddNode (nr))
-nodeActor <? Monitor(KnownNodeRefs)
+
+let refs: AskResult<obj> =
+    async {
+        return! nodeActor <? Monitor(KnownNodeRefs)
+    } |> Async.RunSynchronously
+
