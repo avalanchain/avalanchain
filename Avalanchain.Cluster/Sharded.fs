@@ -16,10 +16,10 @@ open Akka.Persistence.FSharp
 open Akka.Persistence
 
 open Actors
-open Extension
 open Avalanchain
 open Avalanchain.EventStream
 open Avalanchain.Quorum
+open Avalanchain.Cluster.Extension
 open Node
 
 
@@ -71,28 +71,28 @@ type ShardedSystem (system, clusterFactory: ActorSystem -> IAutomaticCluster) =
     member this.StartPersisted<'TAdminCommand, 'TBusinessCommand, 'TState, 'TEvent> (name, options : SpawnOption list) = 
         this.StartPersisted (simpleEventSourcingLogic, name, options) 
 
-    member this.StartKeyValue<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (name, options : SpawnOption list) = 
-        this.StartPersisted(chainNode.KeyValueLogic, pathPrefixes.KeyValue + name, options) // TODO: Change to sharded
-    member this.StartLightStream<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (name, projection, options : SpawnOption list) = 
-        this.StartPersisted(chainNode.StreamLogic projection, pathPrefixes.LightStream + name, options)
-    member this.StartLocalStream<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg when 'TEvent: equality and 'TState: equality> 
-        (streamDef: Hashed<EventStreamDef<'TEvent, 'TState>>, options : SpawnOption list) = 
-        this.StartPersisted(chainNode.StreamLogic2<'TEvent, 'TState> streamDef, pathPrefixes.LocalStream + streamDef.Value.Ref.Value.Path, options)
+//    member this.StartKeyValue<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (name, options : SpawnOption list) = 
+//        this.StartPersisted(chainNode.KeyValueLogic, pathPrefixes.KeyValue + name, options) // TODO: Change to sharded
+//    member this.StartLightStream<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (name, projection, options : SpawnOption list) = 
+//        this.StartPersisted(chainNode.StreamLogic projection, pathPrefixes.LightStream + name, options)
+//    member this.StartLocalStream<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg when 'TEvent: equality and 'TState: equality> 
+//        (streamDef: Hashed<EventStreamDef<'TEvent, 'TState>>, options : SpawnOption list) = 
+//        this.StartPersisted(chainNode.StreamLogic2<'TEvent, 'TState> streamDef, pathPrefixes.LocalStream + streamDef.Value.Ref.Value.Path, options)
 
 
 
-    member this.StartClusterStream<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg when 'TEvent: equality and 'TState: equality> 
-        (ep: ExecutionPolicy) (streamDef: Hashed<EventStreamDef<'TEvent, 'TState>>) = 
-//        let options = 
-//            [ 
-//                SpawnOption.Deploy (Akka.Actor.Deploy (ClusterScope.Instance))
-//                SpawnOption.Router (
-//                    new Akka.Cluster.Routing.ClusterRouterPool(
-//                        new Akka.Routing.BroadcastPool(8),
-//                        new Akka.Cluster.Routing.ClusterRouterPoolSettings(4, true, eg.Value, 2)))
-//            ]
-        let routerTypes = processExecutionPolicy (chainNode.GetNodeContext<'TEvent, 'TState>().DataHashers.expDh) [] ep
-        routerTypes |> List.map (toSpawnOption >> fun (rt, options) -> this.StartLocalStream (streamDef, options))
+//    member this.StartClusterStream<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg when 'TEvent: equality and 'TState: equality> 
+//        (ep: ExecutionPolicy) (streamDef: Hashed<EventStreamDef<'TEvent, 'TState>>) = 
+////        let options = 
+////            [ 
+////                SpawnOption.Deploy (Akka.Actor.Deploy (ClusterScope.Instance))
+////                SpawnOption.Router (
+////                    new Akka.Cluster.Routing.ClusterRouterPool(
+////                        new Akka.Routing.BroadcastPool(8),
+////                        new Akka.Cluster.Routing.ClusterRouterPoolSettings(4, true, eg.Value, 2)))
+////            ]
+//        let routerTypes = processExecutionPolicy (chainNode.GetNodeContext<'TEvent, 'TState>().DataHashers.expDh) [] ep
+//        routerTypes |> List.map (toSpawnOption >> fun (rt, options) -> this.StartLocalStream (streamDef, options))
 
 
     member this.ActorSelector: ActorSelector = (fun path -> system.ActorSelection(path))

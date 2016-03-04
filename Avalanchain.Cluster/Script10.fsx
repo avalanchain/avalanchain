@@ -188,7 +188,7 @@ module NodeRefStore =
         } |> Event
 
     let createActor<'TT> (system: IActorRefFactory) = 
-        spawn system "node-store" <| propsPersist(fun mailbox -> 
+        spawn system "node-ref-store" <| propsPersist(fun mailbox -> 
             let rec loop state = 
                 actor { 
                     let! msg = mailbox.Receive()
@@ -265,6 +265,7 @@ let createNodeActor<'TT> (system: IActorRefFactory) =
                 // define child actor
                 let commandLog = CommandLog.createActor<'TT> mailbox
                 let nodeRefStore = NodeRefStore.createActor mailbox
+                //let nodeExtension = mailbox.
                     
                 // define parent behavior
                 let rec parentLoop() =

@@ -11,14 +11,14 @@ open Avalanchain.Web.Models
 type NodeController() =
     inherit ApiController()
 
-    let node = Avalanchain.Node.defaultNode
+    //let node = Avalanchain.Node.defaultNode
     
 
     /// Gets all values.
     [<Route("node")>]
     member x.Get() = {
-            Path = node.Path
-            StreamsCount = uint32 (node.Streams.StreamMap.Count)
+            Path = "aaa" //node.Path
+            StreamsCount = 1u //uint32 (node.Streams.StreamMap.Count)
         }
 
 //    /// Gets a single value at the specified index.
