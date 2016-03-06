@@ -223,7 +223,7 @@ module NodeRefStore =
                             match e with
                             | NodeRefEvent.Command c -> 
                                 match c.Command with 
-                                    | AddNode nr -> return! loop (Set.add nr state)
+                                    | AddNode nr -> return! loop (newState)
                                     | RemoveNode nr -> return! loop (Set.remove nr state)
                             //| SnapshotOffer so -> mailbox.s
                             | _ -> return! loop state 
@@ -299,7 +299,7 @@ let createNodeActor<'TS, 'TD when 'TS: equality and 'TD: equality> (system: IAct
                         let! (msg: NodeCommand<'TD>) = mailbox.Receive()
                         commandLog.Forward(msg)  // forward all messages through the log
                         match msg with
-                        | Admin c -> nodeRefStore.Forward(msg)
+                        | Admin c -> nodeRefStore <! NodeRefStore.NodeMessage.Command c
                         | Post post -> 
                             let streamRef, t = post
                             let ret = node().Push streamRef t

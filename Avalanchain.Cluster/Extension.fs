@@ -28,7 +28,7 @@ and ChainNode(system: ActorSystemImpl) =
         // TODO: Add executionGroups processing
         let key = typedefof<'TD>.FullName + "~" + typedefof<'TS>.FullName + "~" + path
         let nc = 
-            nodeContexts.GetOrAdd(key, (fun k -> (NodeContext.buildNode path executionGroups (NodeContext.buildNodeContext<'TD, 'TS>(ct))) :> obj))
+            nodeContexts.GetOrAdd(key, (fun k -> NodeContext.buildNode path executionGroups (NodeContext.buildNodeContext<'TD, 'TS>(ct))))
         nc :?> NodeContext.Node<'TS, 'TD>
 
     member this.CryptoContext = ct
