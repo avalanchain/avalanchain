@@ -15,6 +15,7 @@ open Actors.KeyValue
 open Actors.Stream
 open Avalanchain.RefsAndPathes
 open Avalanchain.Quorum
+open Avalanchain.NodeContext
 
 type ChainNodeExtension =
     inherit ExtensionIdProvider<ChainNode>
@@ -22,16 +23,13 @@ type ChainNodeExtension =
 
 and ChainNode(system: ActorSystemImpl) =
     let ct = Utils.cryptoContext
-    let nodeContexts = new ConcurrentDictionary<string, obj>()
+    let nodeStore = NodeStore(ct)
 
-    member this.GetNode<'TS, 'TD when 'TD: equality and 'TS: equality>(path: NodePath, executionGroups: ExecutionGroup list) =
-        // TODO: Add executionGroups processing
-        let key = typedefof<'TD>.FullName + "~" + typedefof<'TS>.FullName + "~" + path
-        let nc = 
-            nodeContexts.GetOrAdd(key, (fun k -> NodeContext.buildNode path executionGroups (NodeContext.buildNodeContext<'TD, 'TS>(ct))))
-        nc :?> NodeContext.Node<'TS, 'TD>
+    member __.GetNode<'TS, 'TD when 'TD: equality and 'TS: equality>(path: NodePath, executionGroups: ExecutionGroup list) =
+        nodeStore.GetNode<'TS, 'TD>(path, executionGroups)
 
-    member this.CryptoContext = ct
+    member __.CryptoContext = ct
+    member __.NodeStore = nodeStore
 
     interface Akka.Actor.IExtension 
     static member Get (system: ActorSystem): ChainNode =

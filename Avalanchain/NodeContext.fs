@@ -15,6 +15,7 @@ open Quorum
 open EventStream
 open EventProcessor
 open FrameSynchronizer
+open System.Collections.Concurrent
 
 
 // Bag of Streams
@@ -163,3 +164,45 @@ let registerProjections (node: Node<'TState, 'TData>) projectionExprs =
 //let defaultNode = defaultProjections  
 //                    |> registerProjections (buildNodeContext(Utils.cryptoContext) |> buildNode "_DefaultNode_" [ExecutionGroup.Default])
 //                    |> returnOrFail
+
+type NodeStore (ct: CryptoContext) =
+    let nodeContexts = new ConcurrentDictionary<string, obj>()
+
+    member this.GetNode<'TS, 'TD when 'TD: equality and 'TS: equality>(path: NodePath, executionGroups: ExecutionGroup list) =
+        // TODO: Add executionGroups processing
+        let key = typedefof<'TD>.FullName + "~" + typedefof<'TS>.FullName + "~" + path
+        let nc = 
+            nodeContexts.GetOrAdd(key, (fun k -> buildNode path executionGroups (buildNodeContext<'TD, 'TS>(ct))))
+        nc :?> Node<'TS, 'TD>
+
+
+type StreamFlow<'TS when 'TS: equality> = EventStreamPath * NodeStore * (('TS -> unit) -> EventStreamReader<'TS>) * ExecutionGroup list
+
+module StreamFlow = 
+    open Avalanchain.Projection
+    open Chessie.ErrorHandling
+    open System.Linq.Expressions
+    open Microsoft.FSharp.Quotations
+
+//    let inline map (mapF: 'T -> 'U) (stream: StreamFlow<'T>) : StreamFlow<'U> =
+//       fun k -> stream (fun v -> k (mapF v))
+
+
+    let inline namedMap<'TS, 'TD when 'TS: equality and 'TD: equality> (funcName: string) (projection: ProjectionExpr<'TS, 'TD>) executionPolicy (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
+        let (parentPath, nodeStore, readerRef, executionGroups) = streamFlow
+        let node = nodeStore.GetNode<'TS, 'TD>("/", executionGroups)
+        let path = parentPath + "/" + funcName + "-" + Guid.NewGuid.ToString()
+        let stream = node.CreateStream path 0u projection executionPolicy
+        let reader (stream: IEventStream<'TS, 'TD>) = 
+            readerRef(stream.Push)
+        let enable (stream: IEventStream<'TS, 'TD>) =
+            // TODO: Add event passing
+            ok (nodeStore, stream.GetReader, executionGroups)
+        stream >>= enable
+
+    let inline map<'TS, 'TD when 'TS: equality and 'TD: equality> (projection: ProjectionExpr<'TS, 'TD>) executionPolicy (streamFlow: StreamFlow<'TS, 'TD>) : StreamFlow<'U> =
+        namedMap "map" projection executionPolicy streamFlow
+
+    let inline filter<'TD when 'TD: equality> (predicate: 'TD -> bool) executionPolicy (streamFlow: StreamFlow<'TD, 'TD>) : StreamFlow<'TD> =
+        let projection = Quotations.Expr<'TState -> 'TData -> ProjectionResult<'TState>>.Lambda(predicate)
+        namedMap "filter" projection executionPolicy streamFlow

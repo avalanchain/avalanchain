@@ -33,6 +33,12 @@ and StreamState<'TState when 'TState: equality> = {
     StreamRef: Hashed<EventStreamRef>
     Nonce: Nonce
 }
+and EventStreamReader<'TState when 'TState: equality> = {
+    Ref: Hashed<EventStreamRef>
+    Reader: 'TState -> unit
+    //EmitsTo: Hashed<EventStreamRef> list //TODO: Add EmitTo
+    ExecutionPolicy: ExecutionPolicy 
+}
 and HashedState<'TState when 'TState: equality> = Hashed<StreamState<'TState>> //* EventSpine
 and MerkledState<'TState when 'TState: equality> = Merkled<StreamState<'TState>>
 and StateRef = Hash
@@ -133,6 +139,7 @@ let dataHashers<'TState, 'TData when 'TData: equality and 'TState: equality> ct 
 type IEventStream<'TState, 'TData when 'TData: equality and 'TState: equality> =
     abstract member Ref : Hashed<EventStreamRef> with get
     abstract member Def : Hashed<EventStreamDef<'TState, 'TData>> with get
+    abstract member GetReader : ('TState -> unit) -> EventStreamReader<'TState> 
     abstract member CurrentFrame : HashedFrame<'TState, 'TData> option with get
     abstract member CurrentState : HashedState<'TState> option with get
     abstract member GetEvent<'TData> : EventRef -> DataResult<HashedEvent<'TData>>

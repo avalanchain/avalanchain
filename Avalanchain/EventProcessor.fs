@@ -109,7 +109,7 @@ type EventStream<'TState, 'TData when 'TData: equality and 'TState: equality>
     let mutable eventRefs = PersistentHashMap.empty
     let mutable stateRefs = PersistentHashMap.empty
     let mutable merkledFrame = Option.None 
-//    let mutable subscribers = PersistentHashMap.empty
+    let mutable subscribers = [] 
 
     // TODO: Add Acl checks
     interface IEventStream<'TState, 'TData> with
@@ -118,6 +118,14 @@ type EventStream<'TState, 'TData when 'TData: equality and 'TState: equality>
         
         member this.Def with get() = def
         member this.Ref with get() = def.Value.Ref
+        member this.GetReader reader: EventStreamReader<'TState> = 
+            subscribers <- reader :: subscribers
+            {
+                Ref = def.Value.Ref
+                Reader = reader
+                ExecutionPolicy = def.Value.ExecutionPolicy
+            }
+            
         member this.CurrentFrame with get() = frames.tryHead()
         member this.CurrentState with get() = frames.tryHead() |> Option.bind (fun x -> Some x.Value.State.HashedValue)
         member this.GetEvent<'TData> eventRef = 
