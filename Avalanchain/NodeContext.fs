@@ -66,13 +66,14 @@ type Node<'TState, 'TData when 'TData: equality and 'TState: equality>(path: Nod
             SubmitterSignature = nodeContext.CryptoContext.Signer(Unsigned(nodeContext.Serializers.data data))
             SubmittedVia = nodeContext.DataHashers.nodeRefDh(path, nodeContext.CryptoContext.SigningPublicKey)
         }
+    member this.ToHashedEvent data = data |> this.ToEvent |> nodeContext.DataHashers.eventDh
     member this.Push (streamRef: Hashed<EventStreamRef>) data =
-        let stream = streams.[streamRef] // TODO: Handle "not found"
-        let event = this.ToEvent data
-        let hashedEvent = nodeContext.DataHashers.eventDh event
-        stream.Push(hashedEvent)
+        let stream = streams.StreamMap.TryFind(streamRef)
+        match stream with 
+        | Some s -> data |> this.ToHashedEvent |> s.Push |> ok
+        | None -> fail (ProcessingFailure([sprintf "Stream not found '%A'" streamRef]))
 
-    member this.CreateStreamDef path version (projectionExpr: ProjectionExpr<'TState, 'TData>) executionPolicy = 
+    member this.CreateStreamDef path version (projectionExpr: ProjectionExpr<'TState, 'TData>) initialState executionPolicy = 
         let streamRef = {
             Path = path
             Version = version
@@ -82,6 +83,7 @@ type Node<'TState, 'TData when 'TData: equality and 'TState: equality>(path: Nod
             let streamDef = {
                 Ref = nodeContext.DataHashers.streamRefDh streamRef
                 Projection = prj
+                InitialState = initialState
                 //EmitsTo: Hashed<EventStreamRef> list //TODO: Add EmitTo
                 ExecutionPolicy = executionPolicy 
             }
@@ -101,8 +103,8 @@ type Node<'TState, 'TData when 'TData: equality and 'TState: equality>(path: Nod
                         |> lift streams.Add
         newStream
 
-    member this.CreateStream path version (projectionExpr: ProjectionExpr<'TState, 'TData>) executionPolicy = 
-        this.CreateStreamDef path version projectionExpr executionPolicy 
+    member this.CreateStream path version (projectionExpr: ProjectionExpr<'TState, 'TData>) initialState executionPolicy = 
+        this.CreateStreamDef path version projectionExpr initialState executionPolicy 
         >>= this.CreateStreamFromDef
 
     member this.States = streams.Streams |> Seq.map(fun s -> s.Ref, s.CurrentState)
@@ -147,7 +149,7 @@ let buildNode nodePath executionGroups nodeContext =
 
 let registerProjections (node: Node<'TState, 'TData>) projectionExprs =
     projectionExprs 
-    |> List.map (fun (path, ver, pe, ep) -> node.CreateStream path ver pe ep) 
+    |> List.map (fun (path, ver, pe, zero, ep) -> node.CreateStream path ver pe zero ep) 
     |> collect 
     >>= (fun _ -> ok(node))
 
@@ -176,33 +178,44 @@ type NodeStore (ct: CryptoContext) =
         nc :?> Node<'TS, 'TD>
 
 
-type StreamFlow<'TS when 'TS: equality> = EventStreamPath * NodeStore * (('TS -> unit) -> EventStreamReader<'TS>) * ExecutionGroup list
+type StreamFlow<'TS when 'TS: equality> = EventStreamPath * 'TS * NodeStore * (('TS -> unit) -> EventStreamReader<'TS>) * ExecutionGroup list
 
 module StreamFlow = 
     open Avalanchain.Projection
     open Chessie.ErrorHandling
-    open System.Linq.Expressions
-    open Microsoft.FSharp.Quotations
 
-//    let inline map (mapF: 'T -> 'U) (stream: StreamFlow<'T>) : StreamFlow<'U> =
-//       fun k -> stream (fun v -> k (mapF v))
-
-
-    let inline namedMap<'TS, 'TD when 'TS: equality and 'TD: equality> (funcName: string) (projection: ProjectionExpr<'TS, 'TD>) executionPolicy (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
-        let (parentPath, nodeStore, readerRef, executionGroups) = streamFlow
+    let inline namedFold<'TS, 'TD when 'TS: equality and 'TD: equality> executionPolicy (funcName: string) (projection: ProjectionExpr<'TS, 'TD>) initialState (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
+        let (parentPath, zero, nodeStore, readerRef, executionGroups) = streamFlow
         let node = nodeStore.GetNode<'TS, 'TD>("/", executionGroups)
         let path = parentPath + "/" + funcName + "-" + Guid.NewGuid.ToString()
-        let stream = node.CreateStream path 0u projection executionPolicy
+        let stream = node.CreateStream path 0u projection initialState executionPolicy
         let reader (stream: IEventStream<'TS, 'TD>) = 
-            readerRef(stream.Push)
+            readerRef(node.ToHashedEvent >> stream.Push >> ignore) // TODO: Propagate results from push
         let enable (stream: IEventStream<'TS, 'TD>) =
             // TODO: Add event passing
-            ok (nodeStore, stream.GetReader, executionGroups)
+            ok (path, initialState, nodeStore, stream.GetReader, executionGroups)
         stream >>= enable
 
-    let inline map<'TS, 'TD when 'TS: equality and 'TD: equality> (projection: ProjectionExpr<'TS, 'TD>) executionPolicy (streamFlow: StreamFlow<'TS, 'TD>) : StreamFlow<'U> =
-        namedMap "map" projection executionPolicy streamFlow
+    let inline mapE<'TS, 'TD when 'TS: equality and 'TD: equality> executionPolicy (projection: ProjectionExpr<'TS, 'TD>) initialState (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
+        namedFold executionPolicy "mapE" projection initialState streamFlow
 
-    let inline filter<'TD when 'TD: equality> (predicate: 'TD -> bool) executionPolicy (streamFlow: StreamFlow<'TD, 'TD>) : StreamFlow<'TD> =
-        let projection = Quotations.Expr<'TState -> 'TData -> ProjectionResult<'TState>>.Lambda(predicate)
-        namedMap "filter" projection executionPolicy streamFlow
+    let inline map<'TS, 'TD when 'TS: equality and 'TD: equality> executionPolicy (f: 'TD -> ProjectionResult<'TS>) (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
+        let projection = <@ fun s d -> f d @>
+        namedFold executionPolicy "map" projection Unchecked.defaultof<'TState> streamFlow
+
+    let inline filter<'TD when 'TD: equality> executionPolicy (predicate: 'TD -> bool) (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
+        //let projection = Quotations.Expr<'TState -> 'TData -> ProjectionResult<'TState>>.Lambda(predicate)
+        let (_, initialState, _, _, _) = streamFlow
+        let projection = <@ fun s d -> if (predicate d) then ok d else ok s @>
+        namedFold executionPolicy "filter" projection initialState streamFlow
+
+    let inline fold<'TS, 'TD when 'TS: equality and 'TD: equality> executionPolicy (reducer: 'TS -> 'TD -> ProjectionResult<'TS>) initialState (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
+        //let projection = Quotations.Expr<'TState -> 'TData -> ProjectionResult<'TState>>.Lambda(predicate)
+        let projection = <@ reducer @>
+        namedFold executionPolicy "fold" projection initialState streamFlow
+
+    let inline reduce<'TD when 'TD: equality> executionPolicy (reducer: 'TD -> 'TD -> ProjectionResult<'TD>) (streamFlow: StreamFlow<'TD>) : Result<StreamFlow<'TS>, string> =
+        //let projection = Quotations.Expr<'TState -> 'TData -> ProjectionResult<'TState>>.Lambda(predicate)
+        let projection = <@ reducer @>
+        namedFold executionPolicy "filter" projection Unchecked.defaultof<'TD> streamFlow
+

@@ -7,7 +7,6 @@ open Akka.Actor
 open Akka.Actor.Internal
 open Avalanchain
 open Avalanchain.Cluster.Actors
-open Avalanchain.Cluster.Actors.Stream2
 open Chessie.ErrorHandling
 open Avalanchain.EventStream
 open Akka.FSharp

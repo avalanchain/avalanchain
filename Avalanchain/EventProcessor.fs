@@ -57,12 +57,12 @@ let processEvent
         | Bad msgs -> fail (PermissionsFailure msgs)
 
     let project (streamFrame: EventStreamFrame<'TState, 'TData> option) (event: HashedEvent<'TData>) =
-        let projection = streamDef.Value.Projection.F 
-        let state = match streamFrame with
-                    | Some sf -> sf.State.Value.Value
-                    | None -> Unchecked.defaultof<'TState>
+        let (projection: 'TState -> 'TData -> ProjectionResult<'TState>) = streamDef.Value.Projection.F 
         try
-            let res = projection state event.Value.Data
+            let res = 
+                match streamFrame with
+                    | Some sf -> projection sf.State.Value.Value event.Value.Data
+                    | None -> projection streamDef.Value.InitialState event.Value.Data
             match res with
             | Ok (newState, msgs) -> 
                 let ns = { 

@@ -124,88 +124,88 @@ module Stream =
         inherit StreamActor2<'T, 'T, 'TMsg>(projection, key)
 
 
-module Stream2 =
-    open Avalanchain.StreamEvent
-    open Avalanchain.EventStream
-    open Avalanchain
-    open Avalanchain.EventProcessor
-
-    let internal checkIntegrity (dataHasher: DataHasher<Event<'TData>>)  (event: HashedEvent<'TData>) = 
-        let rehashed = dataHasher event.Value
-        if (rehashed.Hash = event.Hash) 
-        then ok event
-        else fail IntegrityFailure 
-    
-    let internal checkPermissions (permissionsChecker: HashedEvent<'TData> -> DataResult<unit>) event = 
-        match permissionsChecker event with 
-        | Ok (_) -> ok event
-        | Bad msgs -> fail (PermissionsFailure msgs)
-
-    let internal project streamDef (stateHasher: DataHasher<StreamState<'TState>>) (state: HashedState<'TState>) (event: HashedEvent<'TData>) =
-        let projection = streamDef.Value.Projection.F 
-        try
-            let res = projection state.Value.Value event.Value.Data
-            match res with
-            | Ok (newState, msgs) -> 
-                let ns = { 
-                    Value = newState 
-                    StreamRef = streamDef.Value.Ref
-                    Nonce = state.Value.Nonce + 1UL 
-                }
-                Ok (stateHasher(ns), msgs |> List.map ExecutionWarning)
-            | Bad msgs -> fail (ProcessingFailure msgs)
-        with
-            | ex -> fail (ProcessingFailure([sprintf "Error projection execution : '%s'" (ex.ToString())]))
-
-    let internal buildNewFrame 
-        streamDef
-        hasher
-        (proofer: Proofer<'TState, 'TData>)
-        (streamFrame: EventStreamFrame<'TState, 'TData> option)
-        (hashedEvent: HashedEvent<'TData>)
-        (hashedState: HashedState<'TState>) =
-        let nonce = hashedState.Value.Nonce
-        let merkledEvent = addToMerkled hasher (streamFrame |> Option.bind (fun sf -> Some sf.Event.Merkle)) hashedEvent
-        let merkledState = addToMerkled hasher (streamFrame |> Option.bind (fun sf -> Some sf.State.Merkle)) hashedState
-        let newStreamFrame = {
-                                Def = streamDef
-                                TimeStamp = DateTimeOffset.UtcNow
-                                Event = merkledEvent
-                                State = merkledState 
-                                Nonce = nonce
-                                Proofs = [proofer streamDef.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
-                                // StreamStatus = streamFrame.StreamStatus
-                            }
-        newStreamFrame
-
-    type Command<'T> = NewValue of 'T 
-
-    type StreamLogicContext<'TState, 'TData when 'TData: equality and 'TState: equality> = {
-        Hasher: Hasher
-        Proofer: Proofer<'TState, 'TData>
-        DataHasher: DataHasher<Event<'TData>>
-        StateHasher: DataHasher<StreamState<'TState>>
-        PermissionsChecker: HashedEvent<'TData> -> DataResult<unit>
-    }
-
-    let streamLogic<'TState, 'TData, 'TCommand, 'TMsg when 'TData: equality and 'TState: equality> 
-        (slc: StreamLogicContext<'TState, 'TData>) 
-        streamDef 
-        (dataGetter: 'TCommand -> HashedEvent<'TData>) = {
-        InitialState = 
-            slc.StateHasher({ 
-                                Value = Unchecked.defaultof<'TState> 
-                                StreamRef = streamDef.Value.Ref
-                                Nonce = 0UL 
-                            })
-        Process = (fun _ c -> dataGetter(c) |> checkIntegrity slc.DataHasher >>= checkPermissions slc.PermissionsChecker)
-        Apply = (fun s e -> project streamDef slc.StateHasher s e >>= (fun ss -> ok (e, ss)))
-        Bundle = (fun frame (e, s) -> buildNewFrame streamDef slc.Hasher slc.Proofer frame e s)
-        Unbundle = (fun frame -> (frame.Event.HashedValue, frame.State.HashedValue))
-    }
-
-    let mt = (fun c -> match c with (NewValue v) -> v)
-
-    type StreamActor<'TState, 'TData when 'TData: equality and 'TState: equality>(streamLogicContext: StreamLogicContext<'TState, 'TData>, streamDef) =
-        inherit ResActor<Command<HashedEvent<'TData>>, HashedEvent<'TData>, HashedState<'TState>, EventStreamFrame<'TState, 'TData>, EventProcessingMsg>
-            (streamLogic<'TState, 'TData, Command<HashedEvent<'TData>>, EventProcessingMsg> streamLogicContext streamDef mt)
+//module Stream2 =
+//    open Avalanchain.StreamEvent
+//    open Avalanchain.EventStream
+//    open Avalanchain
+//    open Avalanchain.EventProcessor
+//
+//    let internal checkIntegrity (dataHasher: DataHasher<Event<'TData>>)  (event: HashedEvent<'TData>) = 
+//        let rehashed = dataHasher event.Value
+//        if (rehashed.Hash = event.Hash) 
+//        then ok event
+//        else fail IntegrityFailure 
+//    
+//    let internal checkPermissions (permissionsChecker: HashedEvent<'TData> -> DataResult<unit>) event = 
+//        match permissionsChecker event with 
+//        | Ok (_) -> ok event
+//        | Bad msgs -> fail (PermissionsFailure msgs)
+//
+//    let internal project streamDef (stateHasher: DataHasher<StreamState<'TState>>) (state: HashedState<'TState>) (event: HashedEvent<'TData>) =
+//        let projection = streamDef.Value.Projection.F 
+//        try
+//            let res = projection state.Value.Value event.Value.Data
+//            match res with
+//            | Ok (newState, msgs) -> 
+//                let ns = { 
+//                    Value = newState 
+//                    StreamRef = streamDef.Value.Ref
+//                    Nonce = state.Value.Nonce + 1UL 
+//                }
+//                Ok (stateHasher(ns), msgs |> List.map ExecutionWarning)
+//            | Bad msgs -> fail (ProcessingFailure msgs)
+//        with
+//            | ex -> fail (ProcessingFailure([sprintf "Error projection execution : '%s'" (ex.ToString())]))
+//
+//    let internal buildNewFrame 
+//        streamDef
+//        hasher
+//        (proofer: Proofer<'TState, 'TData>)
+//        (streamFrame: EventStreamFrame<'TState, 'TData> option)
+//        (hashedEvent: HashedEvent<'TData>)
+//        (hashedState: HashedState<'TState>) =
+//        let nonce = hashedState.Value.Nonce
+//        let merkledEvent = addToMerkled hasher (streamFrame |> Option.bind (fun sf -> Some sf.Event.Merkle)) hashedEvent
+//        let merkledState = addToMerkled hasher (streamFrame |> Option.bind (fun sf -> Some sf.State.Merkle)) hashedState
+//        let newStreamFrame = {
+//                                Def = streamDef
+//                                TimeStamp = DateTimeOffset.UtcNow
+//                                Event = merkledEvent
+//                                State = merkledState 
+//                                Nonce = nonce
+//                                Proofs = [proofer streamDef.Value.Ref nonce merkledState.HashedValue hashedEvent] |> Set.ofList
+//                                // StreamStatus = streamFrame.StreamStatus
+//                            }
+//        newStreamFrame
+//
+//    type Command<'T> = NewValue of 'T 
+//
+//    type StreamLogicContext<'TState, 'TData when 'TData: equality and 'TState: equality> = {
+//        Hasher: Hasher
+//        Proofer: Proofer<'TState, 'TData>
+//        DataHasher: DataHasher<Event<'TData>>
+//        StateHasher: DataHasher<StreamState<'TState>>
+//        PermissionsChecker: HashedEvent<'TData> -> DataResult<unit>
+//    }
+//
+//    let streamLogic<'TState, 'TData, 'TCommand, 'TMsg when 'TData: equality and 'TState: equality> 
+//        (slc: StreamLogicContext<'TState, 'TData>) 
+//        streamDef 
+//        (dataGetter: 'TCommand -> HashedEvent<'TData>) = {
+//        InitialState = 
+//            slc.StateHasher({ 
+//                                Value = Unchecked.defaultof<'TState> 
+//                                StreamRef = streamDef.Value.Ref
+//                                Nonce = 0UL 
+//                            })
+//        Process = (fun _ c -> dataGetter(c) |> checkIntegrity slc.DataHasher >>= checkPermissions slc.PermissionsChecker)
+//        Apply = (fun s e -> project streamDef slc.StateHasher s e >>= (fun ss -> ok (e, ss)))
+//        Bundle = (fun frame (e, s) -> buildNewFrame streamDef slc.Hasher slc.Proofer frame e s)
+//        Unbundle = (fun frame -> (frame.Event.HashedValue, frame.State.HashedValue))
+//    }
+//
+//    let mt = (fun c -> match c with (NewValue v) -> v)
+//
+//    type StreamActor<'TState, 'TData when 'TData: equality and 'TState: equality>(streamLogicContext: StreamLogicContext<'TState, 'TData>, streamDef) =
+//        inherit ResActor<Command<HashedEvent<'TData>>, HashedEvent<'TData>, HashedState<'TState>, EventStreamFrame<'TState, 'TData>, EventProcessingMsg>
+//            (streamLogic<'TState, 'TData, Command<HashedEvent<'TData>>, EventProcessingMsg> streamLogicContext streamDef mt)

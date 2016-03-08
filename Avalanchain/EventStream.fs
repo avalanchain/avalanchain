@@ -25,6 +25,7 @@ type EventStreamStatus<'TData> =
 type EventStreamDef<'TState, 'TData when 'TData: equality and 'TState: equality> = {
     Ref: Hashed<EventStreamRef>
     Projection: Projection<'TState, 'TData>
+    InitialState: 'TState
     //EmitsTo: Hashed<EventStreamRef> list //TODO: Add EmitTo
     ExecutionPolicy: ExecutionPolicy 
 }
