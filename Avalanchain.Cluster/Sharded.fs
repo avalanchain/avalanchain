@@ -19,8 +19,8 @@ open Actors
 open Avalanchain
 open Avalanchain.EventStream
 open Avalanchain.Quorum
-open Avalanchain.Cluster.Extension
-open Node
+open Extension
+open SpawnOptions
 
 
 type ShardedMessageExtractor() =

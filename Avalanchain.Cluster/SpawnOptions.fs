@@ -1,4 +1,4 @@
-﻿module Avalanchain.Cluster.Node
+﻿module Avalanchain.Cluster.SpawnOptions
 
 open Avalanchain
 open Avalanchain.Quorum

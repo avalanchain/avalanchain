@@ -57,6 +57,9 @@
 #load "Node.fs"
 #load "Extension.fs"
 #load "Sharded.fs"
+#load "NodeCommand.fs"
+#load "CommandLog.fs"
+#load "NodeRefStore.fs"
 //#load "SqliteCluster.fs"
 
 open System
@@ -74,18 +77,21 @@ open Akka.Cluster.Sharding
 
 open Akkling
 open Akkling.Persistence
+
+open Avalanchain
 open Avalanchain.Quorum
-open Avalanchain.Cluster.AutomaticCluster
-open Avalanchain.Cluster.Extension
-open Avalanchain.Cluster.Sharded
-open Avalanchain.Cluster.Actors
 open Avalanchain.RefsAndPathes
 open Avalanchain.SecPrimitives
 open Avalanchain.SecKeys
 open Avalanchain.StreamEvent
 open Avalanchain.EventStream
-open Avalanchain
 open Avalanchain.NodeContext
+open Avalanchain.Cluster.AutomaticCluster
+open Avalanchain.Cluster.Extension
+open Avalanchain.Cluster.Sharded
+open Avalanchain.Cluster.Actors
+open Avalanchain.Cluster.CommandLog
+open Avalanchain.Cluster.NodeRefStore
 
 
 
@@ -116,33 +122,7 @@ let configWithPort port =
     
    
 
-type NodeCommand<'TD when 'TD: equality> = 
-    | Post of Transaction<'TD>
-    | Admin of NodeAdminCommand
-    | Confirmation of ConfirmationPacket
-    | Monitor of NodeMonitorQuery
-and Transaction<'TD> = Hashed<EventStreamRef> * 'TD
-and NodeAdminCommand =
-    | AddNode of NodeRef
-    | RemoveNode of NodeRef
-    //| AllNodes // expects Set<NodeRef>
-and StreamAdminCommand<'TS, 'TD when 'TS: equality and 'TD: equality> =
-    | AddStream of Hashed<EventStreamDef<'TS, 'TD>>
-and ConfirmationPacket = {
-    StreamRef: Hashed<EventStreamRef>
-    EventHash: Hash
-    StateHash: Hash
-    NodeProof: Proof // eventHash*stateHash signed
-}
-and NodeMonitorQuery =
-    | Streams                          // Set<StreamStatusData>
-    | Stream of Hashed<EventStreamRef> // StreamStatusData option
-    | KnownNodeRefs
-and StreamStatusData<'TS when 'TS: equality> = {
-    Ref: Hashed<EventStreamRef>
-    State: Hashed<'TS>
-}
- 
+
 type NodeChildActors = {
     CommandLog: string
     NodeRefStore: string 
@@ -153,91 +133,7 @@ let childActors = {
     NodeRefStore = "node-ref-store"
 }
 
-module CommandLog =
-    type CommandWrapper<'TD when 'TD: equality> = {
-        Command: NodeCommand<'TD>
-        TimeStamp: DateTimeOffset
-    }
 
-    type CommandEvent<'TD when 'TD: equality> = 
-        | Command of CommandWrapper<'TD>
-        | SnapshotOffer of SnapshotOffer
-
-
-    type CommandLogMessage<'TD when 'TD: equality> = 
-        | Command of NodeCommand<'TD>
-        | Event of CommandEvent<'TD>
-
-    let toEvent (cmd: NodeCommand<'TD>) = 
-        CommandEvent.Command {
-            Command = cmd
-            TimeStamp = DateTimeOffset.UtcNow
-        } |> Event
-
-    let createActor<'TD> (system: IActorRefFactory) = 
-        spawn system "command-log" <| propsPersist(fun mailbox -> 
-            let rec loop state = 
-                actor { 
-                    let! msg = mailbox.Receive()
-                    match msg with 
-                        | Command cmd -> return Persist ((cmd |> toEvent))
-                        | Event e -> return! loop (e::state)
-//                            match e with
-//                            | NodeEvent.Command c -> return! loop (e::state)
-//                            | SnapshotOffer so -> mailbox.s
-                }
-            loop [])
-
-module NodeRefStore =
-    type CommandWrapper = {
-        Command: NodeAdminCommand
-        TimeStamp: DateTimeOffset
-    }
-
-    type NodeRefEvent = 
-        | Command of CommandWrapper
-        | SnapshotOffer of SnapshotOffer
-
-    type NodeRefQuery = 
-        | All 
-        | IsKnown of NodeRef
-
-    type NodeMessage = 
-        | Command of NodeAdminCommand
-        | Event of NodeRefEvent
-        | Query of NodeRefQuery
-
-    let toEvent cmd = 
-        NodeRefEvent.Command {
-            Command = cmd
-            TimeStamp = DateTimeOffset.UtcNow
-        } |> Event
-
-    let createActor<'TD> (system: IActorRefFactory) = 
-        spawn system "node-ref-store" <| propsPersist(fun mailbox -> 
-            let rec loop state = 
-                actor { 
-                    let! msg = mailbox.Receive()
-                    match msg with 
-                        | Command cmd -> return Persist ((cmd |> toEvent))
-                        | Event e -> 
-                            match e with
-                            | NodeRefEvent.Command c -> 
-                                match c.Command with 
-                                    | AddNode nr -> return! loop (Set.add nr state)
-                                    | RemoveNode nr -> return! loop (Set.remove nr state)
-                            //| SnapshotOffer so -> mailbox.s
-                            | _ -> return! loop state 
-                        | Query q ->
-                            match q with
-                            | All -> 
-                                mailbox.Sender() <! state
-                                return! loop state
-                            | IsKnown nr -> 
-                                mailbox.Sender() <! state.Contains nr
-                                return! loop state
-                }
-            loop (set[]))
 
 //module Post =
 //    type PostQuery = 
@@ -285,46 +181,6 @@ module NodeRefStore =
 //                }
 //            loop (None))
 
-let createNodeActor<'TS, 'TD when 'TS: equality and 'TD: equality> (system: IActorRefFactory) nodePath =
-    spawn system "node"
-        <| props(fun mailbox ->
-                // define child actor
-                let commandLog = CommandLog.createActor<'TD> mailbox
-                let nodeRefStore = NodeRefStore.createActor mailbox
-                let nodeExtension = ChainNode.Get mailbox.System
-                let node() = nodeExtension.GetNode<'TS, 'TD>(nodePath, [ExecutionGroup.Default])
-                    
-                // define parent behavior
-                let rec loop() =
-                    actor {
-                        let! (msg: NodeCommand<'TD>) = mailbox.Receive()
-                        commandLog.Forward(msg)  // forward all messages through the log
-                        match msg with
-                        | Admin c -> nodeRefStore <! NodeRefStore.NodeMessage.Command c
-                        | Post post -> 
-                            let streamRef, t = post
-                            let ret = node().Push streamRef t
-                            mailbox.Sender() <! ret
-                        | Confirmation c -> 
-                            () // TODO:
-                        | Monitor m ->
-                            match m with 
-                            | Streams -> 
-                                let ret = node().States
-                                mailbox.Sender() <! ret
-                            | Stream streamRef -> 
-                                let ret = node().State streamRef
-                                mailbox.Sender() <! ret
-                            | KnownNodeRefs -> 
-                                let refs = 
-                                    async {
-                                            return! nodeRefStore <? NodeRefStore.Query (NodeRefStore.NodeRefQuery.All)
-                                        } |> Async.RunSynchronously // TODO: Remove sync 
-                                mailbox.Sender() <! refs
-                            
-                        return! loop()
-                    }
-                loop())
 
 
 type AddData<'TS, 'TD when 'TS: equality and 'TD: equality> =

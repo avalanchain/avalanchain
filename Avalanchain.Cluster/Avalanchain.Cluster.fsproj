@@ -57,10 +57,14 @@
     <Compile Include="Messages.fs" />
     <Compile Include="AutomaticCluster.fs" />
     <Compile Include="Actors.fs" />
-    <Compile Include="Node.fs" />
+    <Compile Include="SpawnOptions.fs" />
     <Compile Include="Extension.fs" />
     <Compile Include="Sharded.fs" />
     <Compile Include="ActorEventStream.fs" />
+    <Compile Include="NodeCommand.fs" />
+    <Compile Include="CommandLog.fs" />
+    <Compile Include="NodeRefStore.fs" />
+    <Compile Include="NodeActor.fs" />
     <None Include="Script10.fsx" />
     <None Include="Script7.fsx" />
     <None Include="Script6.fsx" />
