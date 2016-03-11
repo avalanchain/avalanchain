@@ -17,6 +17,8 @@ and NodeAdminCommand =
     //| AllNodes // expects Set<NodeRef>
 and StreamAdminCommand<'TS, 'TD when 'TS: equality and 'TD: equality> =
     | AddStream of Hashed<EventStreamDef<'TS, 'TD>>
+    | AddNestedStream of Hashed<EventStreamDef<'TS, 'TD>>
+    | RemoveStream of Hashed<EventStreamRef>
 and ConfirmationPacket = {
     StreamRef: Hashed<EventStreamRef>
     EventHash: Hash

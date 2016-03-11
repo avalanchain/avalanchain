@@ -105,7 +105,9 @@ type ProjectionSerializer<'TState, 'TData> = FunctionSerializer<'TState, 'TData,
 type ProjectionDeserializer<'TState, 'TData> = HashableFunctionBuilder<'TState, 'TData, ProjectionResult<'TState>>
 
 
-type ProjectionStorage<'TState, 'TData  when 'TData: equality and 'TState: equality> (serializeFunction: ProjectionSerializer<'TState, 'TData>, deserializeFunction: ProjectionDeserializer<'TState, 'TData>) = 
+type ProjectionStorage<'TState, 'TData  when 'TData: equality and 'TState: equality> 
+    (   serializeFunction: ProjectionSerializer<'TState, 'TData>, 
+        deserializeFunction: ProjectionDeserializer<'TState, 'TData>) = 
     let projections = new ConcurrentDictionary<Hash, Projection<'TState, 'TData>>()
 
     member this.ToProjection(projExpr: ProjectionExpr<'TState, 'TData>) =

@@ -82,7 +82,9 @@ let processEvent
         let merkledEvent = toMerkled serializers.event cryptoContext.Hasher (streamFrame |> Option.bind (fun sf -> Some sf.Event.Merkle)) hashedEvent.Value
         let merkledState = toMerkled serializers.state cryptoContext.Hasher (streamFrame |> Option.bind (fun sf -> Some sf.State.Merkle)) state
         let newStreamFrame = {
-                                Def = streamDef
+                                //Def = streamDef
+                                Ref = streamDef.Value.Ref
+                                DefHash = streamDef.Hash
                                 TimeStamp = DateTimeOffset.UtcNow
                                 Event = merkledEvent
                                 State = merkledState 
@@ -121,7 +123,6 @@ type EventStream<'TState, 'TData when 'TData: equality and 'TState: equality>
         member this.GetReader reader: EventStreamReader<'TState> = 
             subscribers <- reader :: subscribers
             {
-                Ref = def.Value.Ref
                 Reader = reader
                 ExecutionPolicy = def.Value.ExecutionPolicy
             }
@@ -144,16 +145,19 @@ type EventStream<'TState, 'TData when 'TData: equality and 'TState: equality>
             if frames.length > int(nonce) then ok (seq { for i = int(nonce) to frames.length do yield frames.[i] })
             else fail (DataNotExists(nonce.ToString()))
         member this.Push hashedEvent = 
-            let currentFrame = (this :> IEventStream<'TState, 'TData>).CurrentFrame.bind(fun f -> Some f.Value)
-            let newFrame = eventProcessor def currentFrame hashedEvent
-            match newFrame with
-            | Bad _ -> newFrame
-            | Ok (frame, msgs) -> 
-                let hashedFrame = dataHasher frame
-                frames <- frames.Conj hashedFrame
-                frameRefs <- frameRefs.Add (hashedFrame.Hash, hashedFrame)
-                eventRefs <- eventRefs.Add (hashedFrame.Value.Event.HashedValue.Hash, hashedFrame.Value.Event.HashedValue)
-                stateRefs <- stateRefs.Add (hashedFrame.Value.State.HashedValue.Hash, hashedFrame.Value.State.HashedValue)
-                merkledFrame <- Some (toMerkled frameSerializer hasher (merkledFrame.bind(fun f -> Some f.Merkle)) frame)
-                //subscribers |> Seq.iter (fun s -> (snd s).Push (hashedFrame.Value.State.HashedValue.Value.Value) |> ignore)
-                newFrame
+            eventProcessor def None hashedEvent
+            //ok(new EventStreamFrame( def.Value.InitialState, [])
+            //let currentFrame = (this :> IEventStream<'TState, 'TData>).CurrentFrame.bind(fun f -> Some f.Value)
+            //let newFrame = eventProcessor def currentFrame hashedEvent
+            //newFrame
+//            match newFrame with
+//            | Bad _ -> newFrame
+//            | Ok (frame, msgs) -> 
+//                let hashedFrame = dataHasher frame
+//                frames <- frames.Conj hashedFrame
+//                frameRefs <- frameRefs.Add (hashedFrame.Hash, hashedFrame)
+//                eventRefs <- eventRefs.Add (hashedFrame.Value.Event.HashedValue.Hash, hashedFrame.Value.Event.HashedValue)
+//                stateRefs <- stateRefs.Add (hashedFrame.Value.State.HashedValue.Hash, hashedFrame.Value.State.HashedValue)
+//                merkledFrame <- Some (toMerkled frameSerializer hasher (merkledFrame.bind(fun f -> Some f.Merkle)) frame)
+//                //subscribers |> Seq.iter (fun s -> s hashedFrame.Value.State.HashedValue.Value.Value)
+//                newFrame

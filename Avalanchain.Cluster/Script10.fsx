@@ -49,17 +49,18 @@
 ////#r "bin/Debug/Akka.Cluster.Tools.dll"
 //#r "bin/Debug/Akkling.Cluster.Sharding.dll"
 #r "bin/Debug/Avalanchain.dll"
-
+#r "System.Runtime.dll"
 
 #load "Messages.fs"
 #load "AutomaticCluster.fs"
 #load "Actors.fs"
-#load "Node.fs"
+#load "SpawnOptions.fs"
 #load "Extension.fs"
 #load "Sharded.fs"
 #load "NodeCommand.fs"
 #load "CommandLog.fs"
 #load "NodeRefStore.fs"
+#load "NodeActor.fs"
 //#load "SqliteCluster.fs"
 
 open System
@@ -92,6 +93,7 @@ open Avalanchain.Cluster.Sharded
 open Avalanchain.Cluster.Actors
 open Avalanchain.Cluster.CommandLog
 open Avalanchain.Cluster.NodeRefStore
+open Avalanchain.Cluster.NodeActor
 
 
 
@@ -202,15 +204,18 @@ let system2 = System.create "sys-1" <| configWithPort 5002
 
 let ct = Utils.cryptoContext
 let nc = NodeContext.buildNodeContext<double, double> ct
-let nodeActor = createNodeActor<double, double> system "/"
+let nodeActor = NodeActor.createNodeActor<double, double> system "/"
 
-let nr = ("aaa", [| 1uy; 2uy |]) |> nc.DataHashers.nodeRefDh
-nodeActor <! Admin(AddNode (nr))
+//let nr = ("aaa", [| 1uy; 2uy |]) |> nc.DataHashers.nodeRefDh
+//nodeActor <! Admin(AddNode (nr))
+//
+//let refs: AskResult<obj> =
+//    async {
+//        return! nodeActor <? Monitor(KnownNodeRefs)
+//    } |> Async.RunSynchronously
 
-let refs: AskResult<obj> =
-    async {
-        return! nodeActor <? Monitor(KnownNodeRefs)
-    } |> Async.RunSynchronously
+
+//test system
 
 
 //type INodeStore =
@@ -218,35 +223,3 @@ let refs: AskResult<obj> =
 
 
 
-//    let inline ofArray (source: 'T[]) : Stream<'T> =
-//       fun k ->
-//          let mutable i = 0
-//          while i < source.Length do
-//                k source.[i]
-//                i <- i + 1          
-//
-//    let inline filter (predicate: 'T -> bool) (stream: Stream<'T>) : Stream<'T> =
-//       fun k -> stream (fun value -> if predicate value then k value)
-//
-//
-//    let inline iter (iterF: 'T -> unit) (stream: Stream<'T>) : unit =
-//       stream iterF 
-//
-//    let inline toArray (stream: Stream<'T>) : 'T [] =
-//       let acc = new List<'T>()
-//       stream |> iter (fun v -> acc.Add(v))
-//       acc.ToArray()
-//
-//    let inline fold (foldF:'State->'T->'State) (state:'State) (stream:Stream<'T>) =
-//       let acc = ref state
-//       stream (fun v -> acc := foldF !acc v)
-//       !acc
-//
-//    let inline reduce (reducer: ^T -> ^T -> ^T) (stream: Stream< ^T >) : ^T
-//          when ^T : (static member Zero : ^T) =
-//       fold (fun s v -> reducer s v) LanguagePrimitives.GenericZero stream
-//
-//    let inline sum (stream : Stream< ^T>) : ^T
-//          when ^T : (static member Zero : ^T)
-//          and ^T : (static member (+) : ^T * ^T -> ^T) =
-//       fold (+) LanguagePrimitives.GenericZero stream

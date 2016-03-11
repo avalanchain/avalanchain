@@ -1,7 +1,8 @@
 ﻿#r "../packages/FSharp.Core.Fluent-4.0.1.0.0.5/lib/portable-net45+netcore45+wpa81+wp8+MonoAndroid1+MonoTouch1/FSharp.Core.Fluent-4.0.dll"
 #r "../packages/FSharpx.Extras.1.10.3/lib/40/FSharpx.Extras.dll"
 #r "../packages/FSharpx.Async.1.12.0/lib/net40/FSharpx.Async.dll"
-#r "../packages/FSharpx.Collections.1.13.4/lib/net40/FSharpx.Collections.dll"
+#r "../packages/FSharpx.Collections.1.14.0/lib/net40/FSharpx.Collections.dll"
+#r "../packages/Base58Check.0.2.0/lib/Net40/Base58Check.dll"
 
 #load "SecPrimitives.fs"
 #load "SecKeys.fs"

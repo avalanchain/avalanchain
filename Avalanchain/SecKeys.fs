@@ -12,9 +12,18 @@ and SigningPublicKey = PublicKey
 and EncryptionPublicKey = PublicKey
 //and PrivateKey = SecurityKey
 
+[<StructuredFormatDisplay("{AsString}")>]
 type Unsigned = Unsigned of Serialized
+    with 
+        member inline this.Bytes = match this with Unsigned s -> s
+        member inline m.AsString = m.ToString()
+        override this.ToString() = Convert.ToBase64String(this.Bytes)
+[<StructuredFormatDisplay("{AsString}")>]
 type Signed = Signed of byte array * SigningPublicKey
-    with member inline this.Bytes = match this with Signed (s, _) -> s
+    with 
+        member inline this.Bytes = match this with Signed (s, _) -> s
+        member inline m.AsString = m.ToString()
+        override this.ToString() = Convert.ToBase64String(this.Bytes)
 
 type Signature = 
     | Signature of SimpleSignature
@@ -23,10 +32,11 @@ type Signature =
     | RemotableSignature of RingSignature * SimpleSignature // simple visible inside the group and ring one visible outside and inside
     with 
         member inline this.Signed = 
-            match this with Signature s -> (match s with RSA ss -> Some ss | _ -> None) | _ -> None // TODO: Revisit for other cases
+            match this with Signature s -> (match s with RSA ss | NotSigned ss -> Some ss | _ -> None) | _ -> None // TODO: Revisit for other cases
         member inline this.SigningPublicKey = 
-            match this with Signature s -> (match s with RSA (Signed (ba, spk)) -> Some spk | _ -> None) | _ -> None
+            match this with Signature s -> (match s with RSA (Signed (ba, spk)) | NotSigned (Signed (ba, spk)) -> Some spk | _ -> None) | _ -> None
 and SimpleSignature =
+    | NotSigned of Signed
     | RSA of Signed
     | DSA // to be used
     | ECDSA // Ed25519 
@@ -47,6 +57,7 @@ type Proof = {
 type ProofVerifier = Proof -> bool
 
 type Encryption =
+    | Unencrypted
     | RSA
     | DHNet
     | SECP256k1
@@ -83,6 +94,30 @@ let dataHasher serializer cryptoContext data =
     let serialized = serializer data
     { Hash = cryptoContext.Hasher serialized; Value = data }
 
+//// Dummy
+let cryptoContextDummy = 
+    let pubKey = [|1uy; 2uy; 3uy|]
+    { 
+        Hasher = (fun bytes -> Hash(bytes))
+        SigningPublicKey = pubKey
+        EncryptionPublicKey = pubKey
+        EncryptionMethod = Unencrypted
+        Encryptor = (fun data -> data |> encrypt (fun d -> d))
+        Decryptor = (fun data -> data |> decrypt (fun d -> d))
+        Signer = (fun (Unsigned data) -> 
+            Signature(SimpleSignature.NotSigned(Signed(data, pubKey))))
+        Verifier = (fun signature (Unsigned data) ->
+                        match signature with
+                        | Signature s -> 
+                            match s with 
+                            | SimpleSignature.NotSigned (Signed (bytes, pk)) -> data = bytes // Change to VerifyHash()?
+                            | _ -> false
+                        | _ -> false
+                    )
+        Dispose = (fun () -> ())
+    }
+ 
+//// RSA.Net
 
 let cryptoContextRSANet containerName = 
     let cp = new CspParameters()
@@ -149,4 +184,5 @@ let cryptoContextDHNet =
     }
 
 
-let cryptoContext() = cryptoContextRSANet "Test"
+//let cryptoContext() = cryptoContextRSANet "Test"
+let cryptoContext() = cryptoContextDummy

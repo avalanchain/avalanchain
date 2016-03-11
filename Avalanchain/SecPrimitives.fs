@@ -11,10 +11,13 @@ type Serialized = byte array
 and Serializer<'TData> = 'TData -> Serialized
 and Deserializer<'TData> = Serialized -> 'TData 
 
+[<StructuredFormatDisplay("{AsString}")>]
 type Hash = Hash of Serialized // TODO: Add boundaries, algorithm, etc
     with 
-        member inline this.Bytes = match this with Hash h -> h
         static member inline Zero = Hash([||])
+        member inline this.Bytes = match this with Hash h -> h
+        member inline m.AsString = m.ToString()
+        override this.ToString() = Convert.ToBase64String(this.Bytes)
 
 [<CustomEquality; CustomComparison>]
 type Hashed<'TData> = { Hash: Hash; Value: 'TData }

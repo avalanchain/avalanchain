@@ -5,6 +5,8 @@ open Akkling
 open Avalanchain.Quorum
 open Extension
 open NodeCommand
+open Avalanchain.NodeContext
+open Chessie.ErrorHandling
 
 
 let createNodeActor<'TS, 'TD when 'TS: equality and 'TD: equality> (system: IActorRefFactory) nodePath =
@@ -47,3 +49,13 @@ let createNodeActor<'TS, 'TD when 'TS: equality and 'TD: equality> (system: IAct
                         return! loop()
                     }
                 loop())
+
+let test system =
+    let nodeExtension = ChainNode.Get system
+    let nodeStore = nodeExtension.NodeStore
+
+    let sf = [|1.0; 2.0; 3.0|]
+                |> StreamFlow.ofArray "/flow" nodeStore [ExecutionGroup.Default] 
+                >>= StreamFlow.map ExecutionPolicy.Pass (fun x -> ok (x*x))
+
+    printfn "res ->> %A" sf

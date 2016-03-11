@@ -35,7 +35,6 @@ and StreamState<'TState when 'TState: equality> = {
     Nonce: Nonce
 }
 and EventStreamReader<'TState when 'TState: equality> = {
-    Ref: Hashed<EventStreamRef>
     Reader: 'TState -> unit
     //EmitsTo: Hashed<EventStreamRef> list //TODO: Add EmitTo
     ExecutionPolicy: ExecutionPolicy 
@@ -46,7 +45,9 @@ and StateRef = Hash
 and Snapshot<'TState when 'TState: equality> = HashedState<'TState>
 
 type EventStreamFrame<'TState, 'TData when 'TData: equality and 'TState: equality> = {
-    Def: Hashed<EventStreamDef<'TState, 'TData>>
+    //Def: Hashed<EventStreamDef<'TState, 'TData>>
+    Ref: Hashed<EventStreamRef>
+    DefHash: Hash
     TimeStamp: DateTimeOffset
     Event: MerkledEvent<'TData>
     State: MerkledState<'TState>
@@ -54,8 +55,10 @@ type EventStreamFrame<'TState, 'TData when 'TData: equality and 'TState: equalit
     Proofs: Set<Hashed<ExecutionProof>>
     //StreamStatus: EventStreamStatus<'TData>
 } with 
-    member inline this.Path = this.Def.Value.Ref.Value.Path
-    member inline this.Version = this.Def.Value.Ref.Value.Version
+    //member inline this.Path = this.Def.Value.Ref.Value.Path
+    //member inline this.Version = this.Def.Value.Ref.Value.Version
+    member inline this.Path = this.Ref.Value.Path
+    member inline this.Version = this.Ref.Value.Version
 //    member inline this.Hash = this.Def.Value.Ref.Hash
 and HashedFrame<'TState, 'TData when 'TData: equality and 'TState: equality> = Hashed<EventStreamFrame<'TState, 'TData>> //* EventSpine
 and MerkledFrame<'TState, 'TData when 'TData: equality and 'TState: equality> = Merkled<EventStreamFrame<'TState, 'TData>>
@@ -152,6 +155,7 @@ type IEventStream<'TState, 'TData when 'TData: equality and 'TState: equality> =
     abstract member GetFromNonce : Nonce -> DataResult<HashedFrame<'TState, 'TData> seq>
     //abstract member Get<'TData> : Hash -> Hashed<'TData> option
     abstract member Push : HashedEvent<'TData> -> EventProcessingResult<'TState, 'TData>
+    //abstract member Push : 'TData -> EventProcessingResult<'TState, 'TData>
     // TODO: Change this to more functional approach
 //    abstract member Subscribe : IEventStream<'TState, 'TData> -> unit
 //    abstract member Unsubscribe : IEventStream<'TState, 'TData> -> unit
