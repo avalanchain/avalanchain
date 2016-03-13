@@ -136,21 +136,36 @@ type CloudStream<'T> = {
     Position: Async<int64>
     Item: uint64 -> Async<'T option>
     GetFrom: uint64 -> Async<'T seq>
-    FlowProcess: Cloud<LocalCloud<CloudFlow<unit>>>
+    FlowProcess: ICloudProcess<unit>
 }
 
 let enqueueFlow<'T> queue (emit: StreamFrame<'T> -> unit) = cloud { 
     let mutable i = 0UL
     let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
     let! dict = CloudDictionary.New<StreamFrame<'T>>(streamId + "-enqueued")
-    return! CloudFlow.OfCloudQueue(queue, 4)
+    let! flowProcess = 
+        CloudFlow.OfCloudQueue(queue, 4)
             |> CloudFlow.map (fun v -> 
                                     let msg = { Nonce = i + 1UL; Value = v }
                                     i <- i + 1UL
                                     dict.ForceAdd(i.ToString(), msg)
                                     msg)
             |> CloudFlow.iter emit
-            |> Cloud.CreateProcess
+            |> Cloud.CreateProcess 
+    let ret = {
+        Position = async { 
+                        let! size = dict.GetCountAsync()
+                        return size - 1L }
+        Item = (fun nonce -> dict.TryFindAsync(nonce.ToString()))
+        GetFrom = (fun nonce -> async { 
+                                        let! enumerable = dict.GetEnumerableAsync()  // TODO: Check performance 
+                                        return enumerable 
+                                                |> Seq.skip (nonce |> int)
+                                                |> Seq.map (fun kv -> kv.Value) })
+        FlowProcess = flowProcess
+    }
+
+    return ret 
 }
 
 let createCloudStream<'T> (queue: CloudQueue<'T>) emit = 
