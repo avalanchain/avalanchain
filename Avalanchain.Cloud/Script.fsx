@@ -58,7 +58,7 @@ let createPersistedReplayable<'T>() = cloud {
 }
 
 
-let (queue, replayable) = createPersistedReplayable<string>() |> cluster.Run
+let (queue1, replayable) = createPersistedReplayable<string>() |> cluster.Run
 
 
 
@@ -133,18 +133,34 @@ type StreamFrame<'T> = {
 }
         
 type CloudStream<'T> = {
+    Id: string
     Position: Async<int64>
     Item: uint64 -> Async<'T option>
     GetFrom: uint64 -> Async<'T seq>
-    FlowProcess: ICloudProcess<unit>
+    //FlowProcess: ICloudProcess<unit>
 }
+
+let buildStreamDef streamId (dict: CloudDictionary<StreamFrame<'T>>) = {
+    Id = streamId
+    Position = async { 
+                    let! size = dict.GetCountAsync()
+                    return size - 1L }
+    Item = (fun nonce -> dict.TryFindAsync(nonce.ToString()))
+    GetFrom = (fun nonce -> async { 
+                                    let! enumerable = dict.GetEnumerableAsync()  // TODO: Check performance 
+                                    return enumerable 
+                                            |> Seq.skip (nonce |> int)
+                                            |> Seq.map (fun kv -> kv.Value) })
+    //FlowProcess = flowProcess
+}
+
 
 let enqueueFlow<'T> queue (emit: StreamFrame<'T> -> unit) = cloud { 
     let mutable i = 0UL
     let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
     let! dict = CloudDictionary.New<StreamFrame<'T>>(streamId + "-enqueued")
     let! flowProcess = 
-        CloudFlow.OfCloudQueue(queue, 4)
+        CloudFlow.OfCloudQueue(queue, 1)
             |> CloudFlow.map (fun v -> 
                                     let msg = { Nonce = i + 1UL; Value = v }
                                     i <- i + 1UL
@@ -152,21 +168,22 @@ let enqueueFlow<'T> queue (emit: StreamFrame<'T> -> unit) = cloud {
                                     msg)
             |> CloudFlow.iter emit
             |> Cloud.CreateProcess 
-    let ret = {
-        Position = async { 
-                        let! size = dict.GetCountAsync()
-                        return size - 1L }
-        Item = (fun nonce -> dict.TryFindAsync(nonce.ToString()))
-        GetFrom = (fun nonce -> async { 
-                                        let! enumerable = dict.GetEnumerableAsync()  // TODO: Check performance 
-                                        return enumerable 
-                                                |> Seq.skip (nonce |> int)
-                                                |> Seq.map (fun kv -> kv.Value) })
-        FlowProcess = flowProcess
-    }
 
-    return ret 
+    return buildStreamDef streamId dict 
 }
+
+let queue = CloudQueue.New<string>() |> cluster.Run
+//let streamRef = enqueueFlow queue (fun d -> local {Cloud.Logf "data - '%A'" d |> ignore} |> ignore ) |> cluster.CreateProcess
+//send queue "aaaaaa1"
+let streamRef = enqueueFlow queue (ignore) |> cluster.CreateProcess
+streamRef.ShowInfo()
+let res = streamRef.Result
+let pos = res.Position |> Async.RunSynchronously
+let all = res.GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+
+all.Length
+
+for i in 0UL .. 99999UL do send queue ("item" + i.ToString())
 
 let createCloudStream<'T> (queue: CloudQueue<'T>) emit = 
     cloud { 
