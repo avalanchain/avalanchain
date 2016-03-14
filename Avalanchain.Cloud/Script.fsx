@@ -134,96 +134,139 @@ type StreamFrame<'T> = {
         
 type CloudStream<'T> = {
     Id: string
-    Position: Async<int64>
+    Position: unit -> Async<int64>
     Item: uint64 -> Async<'T option>
     GetFrom: uint64 -> Async<'T seq>
-    //FlowProcess: ICloudProcess<unit>
+    FlowProcess: ICloudProcess<unit>
 }
 
-let buildStreamDef streamId (dict: CloudDictionary<StreamFrame<'T>>) = {
+let buildStreamDef streamId (dict: CloudDictionary<StreamFrame<'T>>) flowProcess = {
     Id = streamId
-    Position = async { 
-                    let! size = dict.GetCountAsync()
-                    return size - 1L }
+    Position = fun () -> async { let! size = dict.GetCountAsync()
+                                 return size - 1L }
     Item = (fun nonce -> dict.TryFindAsync(nonce.ToString()))
     GetFrom = (fun nonce -> async { 
                                     let! enumerable = dict.GetEnumerableAsync()  // TODO: Check performance 
                                     return enumerable 
                                             |> Seq.skip (nonce |> int)
                                             |> Seq.map (fun kv -> kv.Value) })
-    //FlowProcess = flowProcess
+    FlowProcess = flowProcess
 }
 
 
-let enqueueFlow<'T> queue (emit: StreamFrame<'T> -> unit) = cloud { 
+let enqueueFlow<'T> queue = cloud { 
     let mutable i = 0UL
     let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
     let! dict = CloudDictionary.New<StreamFrame<'T>>(streamId + "-enqueued")
     let! flowProcess = 
         CloudFlow.OfCloudQueue(queue, 1)
-            |> CloudFlow.map (fun v -> 
-                                    let msg = { Nonce = i + 1UL; Value = v }
-                                    i <- i + 1UL
-                                    dict.ForceAdd(i.ToString(), msg)
-                                    msg)
-            |> CloudFlow.iter emit
-            |> Cloud.CreateProcess 
+        |> CloudFlow.iter (fun v -> 
+                                let msg = { Nonce = i + 1UL; Value = v }
+                                i <- i + 1UL
+                                dict.ForceAdd(i.ToString(), msg))
+        |> Cloud.CreateProcess 
 
-    return buildStreamDef streamId dict 
+    return buildStreamDef streamId dict flowProcess
 }
 
 let queue = CloudQueue.New<string>() |> cluster.Run
 //let streamRef = enqueueFlow queue (fun d -> local {Cloud.Logf "data - '%A'" d |> ignore} |> ignore ) |> cluster.CreateProcess
 //send queue "aaaaaa1"
-let streamRef = enqueueFlow queue (ignore) |> cluster.CreateProcess
+let streamRef = enqueueFlow queue |> cluster.CreateProcess
 streamRef.ShowInfo()
 let res = streamRef.Result
-let pos = res.Position |> Async.RunSynchronously
+let pos = res.Position() |> Async.RunSynchronously
 let all = res.GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
 
 all.Length
 
-for i in 0UL .. 99999UL do send queue ("item" + i.ToString())
+res.FlowProcess.Status
 
-let createCloudStream<'T> (queue: CloudQueue<'T>) emit = 
+for i in 0UL .. 8999UL do send queue ("item" + i.ToString())
+
+let createLocalStream<'TS, 'TD> (stream: CloudStream<StreamFrame<'TD>>) (f: StreamFrame<'TD> -> 'TS) = 
     cloud { 
 //        let! sync = CloudAtom.New<string>("")
 //        sync.
         let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
-        let! dict = CloudDictionary.New<StreamFrame<'T>>(streamId + "-data")
-        let position = 0UL
-        let flow = local {
-            let flow: CloudFlow<unit> = 
-                (queue, 1) 
-                |> CloudFlow.OfCloudQueue
-                |> CloudFlow.map (fun v -> { Nonce = position; Value = v })
-                |> CloudFlow.map (fun f -> 
-                                    dict.ForceAdd(f.Nonce.ToString(), f)
-                                    f)
-                |> CloudFlow.map (emit)
-            return flow
-        } 
-        let! currentWorker = Cloud.CurrentWorker
-        let! flowProcess = Cloud.StartChild (flow, currentWorker)
+        let! dict = CloudDictionary.New<StreamFrame<'TS>>(streamId + "-data")
 
-        let ret = {
-            Position = async { let! size = dict.GetCountAsync()
-                               return size - 1L }
-            Item = (fun nonce -> dict.TryFindAsync(nonce.ToString()))
-            GetFrom = (fun nonce -> async { 
-                                            let! enumerable = dict.GetEnumerableAsync()  // TODO: Check performance 
-                                            return enumerable 
-                                                    |> Seq.skip (nonce |> int)
-                                                    |> Seq.map (fun kv -> kv.Value) })
-            FlowProcess = flowProcess
+        let rec loop position = local {
+            let! newPosition = stream.Position() |> Cloud.OfAsync
+            if newPosition > position then
+                let! missing = stream.GetFrom((position + 1L) |> uint64) |> Cloud.OfAsync
+                return! local {
+                    let mutable lastPosition = position
+                    for d in missing do 
+                        dict.ForceAdd(d.Nonce.ToString(), { Nonce = d.Nonce; Value = f (d) }) 
+                        lastPosition <- Math.Max(lastPosition, position)
+                    return! loop lastPosition
+                }
+            else
+                do! Async.Sleep 100 |> Cloud.OfAsync
+                return! loop position
         }
 
-        return ret 
+        let! flowProcess = (loop -1L) |> Cloud.CreateProcess 
+
+        return buildStreamDef streamId dict flowProcess
     }
 
-let streamRef = createCloudStream queue (printfn "data - '%A'") |> cluster.CreateProcess
-send queue "aaaaaa1"
+let nestedRef = createLocalStream res (fun sf -> sf.Nonce) |> cluster.CreateProcess
+//send queue "aaaaaa1"
 streamRef.ShowInfo()
+let res2 = nestedRef.Result
+let pos2 = res2.Position() |> Async.RunSynchronously
+let all2 = res2.GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+
+all2.Length
+all2.[0].Value
+
+res2.FlowProcess.Status
+
+let nestedRef3 = createLocalStream<uint64, string> res (fun sf -> sf.Nonce) |> cluster.CreateProcess
+//send queue "aaaaaa1"
+nestedRef3.ShowInfo()
+let res3 = nestedRef3.Result
+let pos3 = res3.Position() |> Async.RunSynchronously
+let all3 = res3.GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+
+all3.Length
+
+res3.FlowProcess.Status
+
+
+let createEverywhereStream<'TS, 'TD> (stream: CloudStream<StreamFrame<'TD>>) (f: StreamFrame<'TD> -> 'TS) = 
+    cloud {
+        return! createLocalStream stream f 
+    } 
+    |> Cloud.ParallelEverywhere
+    
+
+let evrRef = createEverywhereStream<uint64, string> res (fun sf -> sf.Nonce) |> cluster.CreateProcess
+//send queue "aaaaaa1"
+evrRef.ShowInfo()
+let evr = evrRef.Result
+let posevr0 = evr.[0].Position() |> Async.RunSynchronously
+let posevr1 = evr.[1].Position() |> Async.RunSynchronously
+let posevr2 = evr.[2].Position() |> Async.RunSynchronously
+let posevr3 = evr.[3].Position() |> Async.RunSynchronously
+let allevr0 = evr.[0].GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+let allevr1 = evr.[1].GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+let allevr2 = evr.[2].GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+let allevr3 = evr.[3].GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+
+allevr0.Length
+allevr1.Length
+allevr2.Length
+allevr3.Length
+
+evr.[0].FlowProcess.Status
+
+
+////////////////////////////////////////////////////////
+
+
 
 let createSingleStream<'T> (queue: CloudQueue<'T>) maxBatchSize emit = 
     cloud { 
