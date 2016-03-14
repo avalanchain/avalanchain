@@ -40,32 +40,41 @@ let sendRandomBatch (queue: CloudQueue<string>) m n =
     let words = [| for i in 0 .. n -> [| for i in 0 .. m -> (m * n) % 256 |> char |] |> (fun chars -> new String(chars)) |]
     sendBatch queue words
 
-//type PersistedReplayable<'T>() =
+let asdfasdfs =
+    let mutable a1 = 0
+
+    let a () =
+        a1 <- a1 + 1
+        a1
+
+    a
+
+////type PersistedReplayable<'T>() =
+////    let id = Guid.NewGuid().ToString()
+////    let position = CloudAtom.New<uint64> (0UL, "pointer", id)
+////    //member __.
+////
+//let createPersistedReplayable<'T>() = cloud {
 //    let id = Guid.NewGuid().ToString()
-//    let position = CloudAtom.New<uint64> (0UL, "pointer", id)
-//    //member __.
+//    let! queue = CloudQueue.New<'T>()
+//    let! persistedFlow = 
+//        //(queue, 1) 
+//        //|> CloudFlow.OfCloudQueue
+//        [| "aaa"; "bbb"; "ccc"|]
+//        |> CloudFlow.OfArray
+//        |> CloudFlow.persist StorageLevel.MemoryAndDisk
+//    return queue, persistedFlow
+//}
 //
-let createPersistedReplayable<'T>() = cloud {
-    let id = Guid.NewGuid().ToString()
-    let! queue = CloudQueue.New<'T>()
-    let! persistedFlow = 
-        //(queue, 1) 
-        //|> CloudFlow.OfCloudQueue
-        [| "aaa"; "bbb"; "ccc"|]
-        |> CloudFlow.OfArray
-        |> CloudFlow.persist StorageLevel.MemoryAndDisk
-    return queue, persistedFlow
-}
-
-
-let (queue1, replayable) = createPersistedReplayable<string>() |> cluster.Run
-
-
-
-cluster.ShowProcesses()
-
-
-let dict = replayable.ToEnumerable().ToArray()
+//
+//let (queue1, replayable) = createPersistedReplayable<string>() |> cluster.Run
+//
+//
+//
+//cluster.ShowProcesses()
+//
+//
+//let dict = replayable.ToEnumerable().ToArray()
 
 ////////////////////////////////////////////
 
@@ -134,55 +143,149 @@ type StreamFrame<'T> = {
         
 type CloudStream<'T> = {
     Id: string
-    Position: unit -> Async<int64>
-    Item: uint64 -> Async<'T option>
-    GetFrom: uint64 -> Async<'T seq>
+    Position: unit -> Cloud<int64>
+    Item: uint64 -> Cloud<'T option>
+    GetFrom: uint64 -> Cloud<'T seq>
+    GetFramesFrom: uint64 -> Cloud<StreamFrame<'T> seq>
     FlowProcess: ICloudProcess<unit>
 }
 
-let buildStreamDef streamId (dict: CloudDictionary<StreamFrame<'T>>) flowProcess = {
-    Id = streamId
-    Position = fun () -> async { let! size = dict.GetCountAsync()
-                                 return size - 1L }
-    Item = (fun nonce -> dict.TryFindAsync(nonce.ToString()))
-    GetFrom = (fun nonce -> async { 
-                                    let! enumerable = dict.GetEnumerableAsync()  // TODO: Check performance 
-                                    return enumerable 
-                                            |> Seq.skip (nonce |> int)
-                                            |> Seq.map (fun kv -> kv.Value) })
-    FlowProcess = flowProcess
-}
+let enqueueStream<'T> (getter: (unit -> Cloud<int64>) -> Cloud<'T[]>) maxBatchSize = 
+    cloud { 
+        let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
+        let! position = CloudAtom.New<int64>(-1L, "position", streamId)
+        //let! chanks = CloudAtom.New<'T list>([], "chanks", streamId)
+        let! tail = CloudAtom.New<ResizeArray<StreamFrame<'T>>>(new ResizeArray<StreamFrame<'T>>(), "tail", streamId)
+        let positionGetter () = cloud { 
+            let! v = tail.GetValueAsync() |> Cloud.OfAsync
+            return int64(v.Count - 1) 
+        }
+        let! flowProcess = 
+            let rec loop () = cloud { 
+                let! msgs = getter positionGetter
+                if msgs.Length > 0 then
+                    //let! batch = CloudValue.NewArray<'T> (msgs, StorageLevel.MemoryAndDisk)
+                    do! tail.UpdateAsync (fun t -> 
+                                            let pos = t.Count
+                                            t.AddRange (msgs |> Seq.mapi (fun i v -> { Nonce = uint64(i + pos); Value = v }))
+                                            t) |> Cloud.OfAsync
+                    do! Cloud.Sleep 10 // Required in order not to block downstreams
+                else 
+                    do! Cloud.Sleep 100
+                return! loop()
+            } 
+            loop() 
+            |> Cloud.CreateProcess
+
+        return {
+            Id = streamId
+            Position = positionGetter
+            Item = (fun nonce -> cloud { 
+                                    let! v = tail.GetValueAsync() |> Cloud.OfAsync
+                                    return if nonce < uint64(v.Count) then Some (v.[nonce |> int].Value) else None })
+            GetFrom = (fun nonce -> cloud { 
+                                    let! v = tail.GetValueAsync() |> Cloud.OfAsync
+                                    return v.Skip(nonce |> int).Select(fun kv -> kv.Value) })
+            GetFramesFrom = (fun nonce -> cloud { 
+                                    let! v = tail.GetValueAsync() |> Cloud.OfAsync
+                                    return v.Skip(nonce |> int).Select(fun kv -> kv) })
+            FlowProcess = flowProcess
+        }
+    }
+
+let streamOfQueue<'T> (queue: CloudQueue<'T>) maxBatchSize = 
+    let getter = fun _ -> cloud { return! queue.DequeueBatchAsync(maxBatchSize) |> Cloud.OfAsync }
+    enqueueStream getter maxBatchSize
+
+let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamFrame<'TD> -> 'TS) = 
+    cloud { 
+        let rec loop () = cloud {
+            let getter newPosition currentPosition = cloud {
+                let! np = newPosition()
+                let! cp = currentPosition()
+                if cp < np then
+                    let! msgs = stream.GetFramesFrom((cp + 1L) |> uint64) 
+                    return msgs (*|> Seq.take maxBatchSize *) |> Seq.map f |> Seq.toArray
+                else 
+                    return [||]
+            }
+            return! enqueueStream (getter stream.Position) maxBatchSize
 
 
-let enqueueFlow<'T> queue = cloud { 
-    let mutable i = 0UL
-    let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
-    let! dict = CloudDictionary.New<StreamFrame<'T>>(streamId + "-enqueued")
-    let! flowProcess = 
-        CloudFlow.OfCloudQueue(queue, 1)
-        |> CloudFlow.iter (fun v -> 
-                                let msg = { Nonce = i + 1UL; Value = v }
-                                i <- i + 1UL
-                                dict.ForceAdd(i.ToString(), msg))
-        |> Cloud.CreateProcess 
-
-    return buildStreamDef streamId dict flowProcess
-}
+        } 
+        return! loop () 
+    }
+    
 
 let queue = CloudQueue.New<string>() |> cluster.Run
 //let streamRef = enqueueFlow queue (fun d -> local {Cloud.Logf "data - '%A'" d |> ignore} |> ignore ) |> cluster.CreateProcess
 //send queue "aaaaaa1"
-let streamRef = enqueueFlow queue |> cluster.CreateProcess
+let streamRef = streamOfQueue queue 1000 |> cluster.CreateProcess
 streamRef.ShowInfo()
 let res = streamRef.Result
-let pos = res.Position() |> Async.RunSynchronously
-let all = res.GetFrom 0UL |> Async.RunSynchronously |> Seq.toArray
+let pos = res.Position() |> cluster.Run
+let all = res.GetFrom 0UL |> cluster.Run |> Seq.toArray
 
 all.Length
 
 res.FlowProcess.Status
 
-for i in 0UL .. 8999UL do send queue ("item" + i.ToString())
+for i in 0UL .. 9999UL do send queue ("item" + i.ToString())
+
+
+
+let nestedRef = streamOfStream res 1000 (fun sf -> sf.Nonce + 1000000UL) |> cluster.CreateProcess
+//send queue "aaaaaa1"
+streamRef.ShowInfo()
+let res2 = nestedRef.Result
+let pos2 = res2.Position() |> cluster.Run
+let all2 = res2.GetFrom 0UL |> cluster.Run |> Seq.toArray
+
+all2.Length
+//all2.[0].Value
+
+res2.FlowProcess.Status
+
+
+let nestedRef3 = streamOfStream<string, uint64> res2 30 (fun sf -> "str - " + sf.Value.ToString() ) |> cluster.CreateProcess
+//send queue "aaaaaa1"
+nestedRef3.ShowInfo()
+let res3 = nestedRef3.Result
+let pos3 = res3.Position() |> cluster.Run
+let all3 = res3.GetFrom 0UL |> cluster.Run |> Seq.toArray
+
+all3.Length
+
+
+let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamFrame<'TD> -> 'TS) = 
+    cloud {
+        return! streamOfStream stream maxBatchSize f 
+    } 
+    |> Cloud.ParallelEverywhere
+    
+
+let evrRef = everywhereStream<string, string> res3 200 (fun sf -> "everywhere " + sf.Value) |> cluster.CreateProcess
+//send queue "aaaaaa1"
+evrRef.ShowInfo()
+let evr = evrRef.Result
+let posevr0 = evr.[0].Position() |> cluster.Run
+let posevr1 = evr.[1].Position() |> cluster.Run
+let posevr2 = evr.[2].Position() |> cluster.Run
+let posevr3 = evr.[3].Position() |> cluster.Run
+let allevr0 = evr.[0].GetFrom 0UL |> cluster.Run |> Seq.toArray
+let allevr1 = evr.[1].GetFrom 0UL |> cluster.Run |> Seq.toArray
+let allevr2 = evr.[2].GetFrom 0UL |> cluster.Run |> Seq.toArray
+let allevr3 = evr.[3].GetFrom 0UL |> cluster.Run |> Seq.toArray
+
+allevr0.Length
+allevr1.Length
+allevr2.Length
+allevr3.Length
+
+
+
+
+
 
 let createLocalStream<'TS, 'TD> (stream: CloudStream<StreamFrame<'TD>>) (f: StreamFrame<'TD> -> 'TS) = 
     cloud { 
@@ -191,10 +294,10 @@ let createLocalStream<'TS, 'TD> (stream: CloudStream<StreamFrame<'TD>>) (f: Stre
         let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
         let! dict = CloudDictionary.New<StreamFrame<'TS>>(streamId + "-data")
 
-        let rec loop position = local {
-            let! newPosition = stream.Position() |> Cloud.OfAsync
+        let rec loop position = cloud {
+            let! newPosition = stream.Position() 
             if newPosition > position then
-                let! missing = stream.GetFrom((position + 1L) |> uint64) |> Cloud.OfAsync
+                let! missing = stream.GetFrom((position + 1L) |> uint64) 
                 return! local {
                     let mutable lastPosition = position
                     for d in missing do 
@@ -212,7 +315,7 @@ let createLocalStream<'TS, 'TD> (stream: CloudStream<StreamFrame<'TD>>) (f: Stre
         return buildStreamDef streamId dict flowProcess
     }
 
-let nestedRef = createLocalStream res (fun sf -> sf.Nonce) |> cluster.CreateProcess
+let nestedRef = createLocalStream res (fun sf -> sf.Nonce + 1000000UL) |> cluster.CreateProcess
 //send queue "aaaaaa1"
 streamRef.ShowInfo()
 let res2 = nestedRef.Result
@@ -224,7 +327,7 @@ all2.[0].Value
 
 res2.FlowProcess.Status
 
-let nestedRef3 = createLocalStream<uint64, string> res (fun sf -> sf.Nonce) |> cluster.CreateProcess
+let nestedRef3 = createLocalStream<string, uint64> res2 (fun sf -> "str - " + sf.Value.ToString() ) |> cluster.CreateProcess
 //send queue "aaaaaa1"
 nestedRef3.ShowInfo()
 let res3 = nestedRef3.Result
@@ -243,7 +346,7 @@ let createEverywhereStream<'TS, 'TD> (stream: CloudStream<StreamFrame<'TD>>) (f:
     |> Cloud.ParallelEverywhere
     
 
-let evrRef = createEverywhereStream<uint64, string> res (fun sf -> sf.Nonce) |> cluster.CreateProcess
+let evrRef = createEverywhereStream<string, string> res3 (fun sf -> "everywhere " + sf.Value) |> cluster.CreateProcess
 //send queue "aaaaaa1"
 evrRef.ShowInfo()
 let evr = evrRef.Result
