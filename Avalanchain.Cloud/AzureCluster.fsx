@@ -21,7 +21,7 @@ module Config =
 
     // You can download your publication settings file at 
     //     https://manage.windowsazure.com/publishsettings
-    let pubSettingsFile = @"C:\path\to\your.publishsettings"
+    let pubSettingsFile = @"C:\Work\BizSpark Plus-3-14-2016-credentials.publishsettings"
 
     // If your publication settings defines more than one subscription,
     // you will need to specify which one you will be using here.
@@ -29,14 +29,14 @@ module Config =
 
     // Your prefered Azure service name for the cluster.
     // NB: must be a valid DNS prefix unique across Azure.
-    let clusterName = "enter a valid and unique cloud service name"
+    let clusterName = "AValanchainCluster"
 
     // Your prefered Azure region. Assign this to a data center close to your location.
     let region = Region.North_Europe
     // Your prefered VM size
     let vmSize = VMSize.Large
     // Your prefered cluster count
-    let vmCount = 4
+    let vmCount = 2
 
     // set to true if you would like to provision
     // the custom cloud service bundled with the StarterKit
