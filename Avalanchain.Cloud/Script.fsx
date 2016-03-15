@@ -193,20 +193,67 @@ module ChunkedCloudStream =
                 
                 return {
                     ChunkSize = chunkSize |> uint64
-                    //Chunks: CloudValue<'T>[]
                     Chunks = chunks
                     Tail = [| for i in chunkCount * chunkSize .. 1 .. data.Length - 1 do yield data.[i] |]
                 }
             }
         }
 
-let st = ChunkedCloudStream.State.Create 5000 [| for i in 0 .. 1000000 do yield i |] |> cluster.Run
+        member this.Add (data: 'T) : Cloud<State<'T>> = cloud {
+            return! local {
+                if (uint64(this.Tail.Length) >= this.ChunkSize) then failwith (sprintf "Corrupted state! Tail length (%d) is greater than chunk size (%d)." this.Tail.Length this.ChunkSize)
+                    
+
+                let newTail = (Array.append this.Tail [| data |])
+                
+                if uint64(newTail.Length) = this.ChunkSize then
+                    let! chunk = CloudValue.New(newTail)
+                    return {
+                        ChunkSize = this.ChunkSize
+                        Chunks = (Array.append this.Chunks [| chunk |])
+                        Tail = [||]
+                    }
+                else
+                    return {
+                        ChunkSize = this.ChunkSize
+                        Chunks = this.Chunks
+                        Tail = newTail
+                    }
+            }
+        }
+
+        member this.AddRange (data: 'T[]) : Cloud<State<'T>> = cloud {
+            let rec adder (state: State<'T>) remaining = local {
+                match remaining with 
+                | [||] -> 
+                    return state 
+                | x -> 
+                    let (h, t) = x |> Array.splitAt 1 
+                    let! st = (state.Add h.[0]) |> Cloud.AsLocal
+                    return! adder st t
+            }
+            return! adder this data
+
+        }
+
+let st = [| for i in 0 .. 10000 do yield i |]
+            |> ChunkedCloudStream.State.Create 500
+            |> cluster.Run
             
-let a = st.GetFrom 5UL 1000001UL |> cluster.Run
+let a = st.GetFrom 0UL 10000001UL |> cluster.Run
 let al = a.Length
 let notseq = Array.zip (a |> Array.take (a.Length - 1)) (a |> Array.skip 1) 
                 |> Array.filter (fun (a, b) -> a + 1 <> b)
 
+let aa = st.Add 123212 |> cluster.Run
+
+let aa1 = aa.AddRange [| for i in 0 .. 10000 do yield i + 200000 |] |> cluster.Run
+
+let aa2 = aa.Add 123212 |> cluster.Run
+
+aa1.Size
+
+[|0; 1; 2|] |> Array.splitAt 1
 
 //    type ChunkedCloudStream<'T> (chunkSize: uint64) = 
 //        let! position = CloudAtom.New<int64>(-1L, "position", streamId)
