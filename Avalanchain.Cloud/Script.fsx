@@ -29,7 +29,7 @@ open Avalanchain.EventStream
 open FSharp.Control
 
 // Initialize client object to an MBrace cluster
-//let cluster = Config.GetCluster() 
+let cluster = Config.GetCluster() 
 //cluster.KillAllWorkers()
 
 let send (queue: CloudQueue<'T>) data = queue.Enqueue data
@@ -145,47 +145,67 @@ type CloudStream<'T> = {
 module ChunkedCloudStream =
     type State<'T> = {
         ChunkSize: uint64
-        //Chunks: CloudValue<'T>[]
-        Chunks: 'T[][]
+        Chunks: CloudValue<'T[]>[]
+        //Chunks: 'T[][]
         Tail: 'T[]
     }
     with 
         member inline private this.ChunkedSize = this.ChunkSize * uint64(this.Chunks.LongLength)
         member inline this.Size = this.ChunkedSize + uint64(this.Tail.LongLength)
-        member this.GetFrom nonce pageSize : 'T[] = 
-            if nonce >= this.Size then [||]
-            else 
-                let size = Math.Min(pageSize, (this.Size - nonce))
-                let fromTailStart = Math.Max(0L, (int64(nonce) - int64(this.ChunkedSize))) |> uint64
-                let fromTailEnd = Math.Max(0L, (int64(nonce + size) - int64(this.ChunkedSize))) |> uint64
-                let startChunk = nonce / this.ChunkSize
-                let endChunk = Math.Min((nonce + size) / this.ChunkSize, uint64(this.Chunks.LongLength) - 1UL)
-                [| 
-                    for i in startChunk .. endChunk do 
-                        let chunkStart = (if nonce > (i * this.ChunkSize) then nonce - (i * this.ChunkSize) else 0UL) |> int32
-                        let chunkEnd = if (nonce + size) < ((i + 1UL) * this.ChunkSize) 
-                                        then (nonce + size - (i * this.ChunkSize) |> int32)
-                                        else (this.ChunkSize |> int32)
-                        for j in chunkStart .. 1 .. chunkEnd - 1 do yield (this.Chunks.[i |> int].[j |> int])
+        member this.GetFrom nonce pageSize : Cloud<'T[]> = cloud {
+            return! local {
+                return
+                    if nonce >= this.Size then [||]
+                    else 
+                        let size = Math.Min(pageSize, (this.Size - nonce))
+                        let fromTailStart = Math.Max(0L, (int64(nonce) - int64(this.ChunkedSize))) |> uint64
+                        let fromTailEnd = Math.Max(0L, (int64(nonce + size) - int64(this.ChunkedSize))) |> uint64
+                        let startChunk = nonce / this.ChunkSize |> int32
+                        let endChunk = Math.Min((nonce + size) / this.ChunkSize, uint64(this.Chunks.LongLength) - 1UL) |> int32
+
+                        let chunks = [|for i in startChunk .. endChunk -> this.Chunks.[i |> int].GetValueAsync()|] 
+                                        |> Async.Parallel 
+                                        |> Async.RunSynchronously
+
+                        [| 
+                            for i in 0 .. 1 .. (endChunk - startChunk) do 
+                                let chunkStart = (if nonce > (uint64(i + startChunk) * this.ChunkSize) then nonce - (uint64(i + startChunk) * this.ChunkSize) else 0UL) |> int32
+                                let chunkEnd = if (nonce + size) < (uint64(i + startChunk + 1) * this.ChunkSize) 
+                                                then (nonce + size - (uint64(i + startChunk) * this.ChunkSize) |> int32)
+                                                else (this.ChunkSize |> int32)
+                                for j in chunkStart .. 1 .. chunkEnd - 1 do yield (chunks.[i].[j |> int])
                         
-                    if fromTailEnd > fromTailStart then
-                        for i in fromTailStart .. fromTailEnd - 1UL do yield this.Tail.[i |> int]
-                |]
-
-        static member Create chunkSize (data: 'T[]) = 
-            let chunkCount = (data.Length / chunkSize)
-            let chunkedSize = chunkCount * chunkSize
-            {
-                ChunkSize = chunkSize |> uint64
-                //Chunks: CloudValue<'T>[]
-                Chunks = [| for i in 0 .. 1 .. chunkCount - 1 -> [| for j in 0 .. 1 .. chunkSize - 1 do yield data.[i * chunkSize + j] |] |]
-                Tail = [| for i in chunkCount * chunkSize .. 1 .. data.Length - 1 do yield data.[i] |]
+                            if fromTailEnd > fromTailStart then
+                                for i in fromTailStart .. fromTailEnd - 1UL do 
+                                    yield this.Tail.[i |> int]
+                        |]
             }
+        }
 
-//let st = ChunkedCloudStream.State.Create 5 [| for i in 0 .. 1000000 do yield i |] 
+        static member Create chunkSize (data: 'T[]) = cloud {
+            return! local {
+                let chunkCount = (data.Length / chunkSize)
+                let chunkedSize = chunkCount * chunkSize
+                let chunks = Array.zeroCreate chunkCount
+                for i in 0 .. 1 .. chunkCount - 1 do
+                    let! chunk = CloudValue.New([| for j in 0 .. 1 .. chunkSize - 1 do yield data.[i * chunkSize + j] |]) 
+                    chunks.[i] <- chunk
+                
+                return {
+                    ChunkSize = chunkSize |> uint64
+                    //Chunks: CloudValue<'T>[]
+                    Chunks = chunks
+                    Tail = [| for i in chunkCount * chunkSize .. 1 .. data.Length - 1 do yield data.[i] |]
+                }
+            }
+        }
+
+let st = ChunkedCloudStream.State.Create 5000 [| for i in 0 .. 1000000 do yield i |] |> cluster.Run
             
-//let a = st.GetFrom 0UL 1000001UL 
-
+let a = st.GetFrom 5UL 1000001UL |> cluster.Run
+let al = a.Length
+let notseq = Array.zip (a |> Array.take (a.Length - 1)) (a |> Array.skip 1) 
+                |> Array.filter (fun (a, b) -> a + 1 <> b)
 
 
 //    type ChunkedCloudStream<'T> (chunkSize: uint64) = 
