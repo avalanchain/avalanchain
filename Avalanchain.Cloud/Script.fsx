@@ -137,8 +137,8 @@ type CloudStream<'T> = {
     Id: string
     Position: unit -> Cloud<int64>
     Item: uint64 -> Cloud<'T option>
-    GetFrom: uint64 -> Cloud<'T seq>
-    GetFramesFrom: uint64 -> Cloud<StreamFrame<'T> seq>
+    GetPage: uint64 -> uint32 -> Cloud<'T[]>
+    GetFramesPage: uint64 -> uint32 -> Cloud<StreamFrame<'T>[]>
     FlowProcess: ICloudProcess<unit>
 }
 
@@ -152,7 +152,8 @@ module ChunkedCloudStream =
     with 
         member inline private this.ChunkedSize = this.ChunkSize * uint64(this.Chunks.LongLength)
         member inline this.Size = this.ChunkedSize + uint64(this.Tail.LongLength)
-        member this.GetFrom nonce pageSize : Cloud<'T[]> = cloud {
+
+        member this.GetPage nonce pageSize : Cloud<'T[]> = cloud {
             return! local {
                 return
                     if nonce >= this.Size then [||]
@@ -181,20 +182,26 @@ module ChunkedCloudStream =
                         |]
             }
         }
+        member inline this.Item with get(i: uint64) : Cloud<'T option> = 
+                                        cloud { 
+                                            let! arr = this.GetPage i 1UL
+                                            return if arr |> Array.isEmpty then None else Some arr.[0]
+                                        }
 
-        static member Create chunkSize (data: 'T[]) = cloud {
+        static member Create (chunkSize: uint32) (data: 'T[]) = cloud {
             return! local {
-                let chunkCount = (data.Length / chunkSize)
-                let chunkedSize = chunkCount * chunkSize
+                let cs = int(chunkSize)
+                let chunkCount = (data.Length / cs)
+                let chunkedSize = chunkCount * cs
                 let chunks = Array.zeroCreate chunkCount
                 for i in 0 .. 1 .. chunkCount - 1 do
-                    let! chunk = CloudValue.New([| for j in 0 .. 1 .. chunkSize - 1 do yield data.[i * chunkSize + j] |]) 
+                    let! chunk = CloudValue.New([| for j in 0 .. 1 .. cs - 1 do yield data.[i * cs + j] |]) 
                     chunks.[i] <- chunk
                 
                 return {
                     ChunkSize = chunkSize |> uint64
                     Chunks = chunks
-                    Tail = [| for i in chunkCount * chunkSize .. 1 .. data.Length - 1 do yield data.[i] |]
+                    Tail = [| for i in chunkCount * cs .. 1 .. data.Length - 1 do yield data.[i] |]
                 }
             }
         }
@@ -236,24 +243,24 @@ module ChunkedCloudStream =
 
         }
 
-let st = [| for i in 0 .. 10000 do yield i |]
-            |> ChunkedCloudStream.State.Create 500
-            |> cluster.Run
-            
-let a = st.GetFrom 0UL 10000001UL |> cluster.Run
-let al = a.Length
-let notseq = Array.zip (a |> Array.take (a.Length - 1)) (a |> Array.skip 1) 
-                |> Array.filter (fun (a, b) -> a + 1 <> b)
-
-let aa = st.Add 123212 |> cluster.Run
-
-let aa1 = aa.AddRange [| for i in 0 .. 10000 do yield i + 200000 |] |> cluster.Run
-
-let aa2 = aa.Add 123212 |> cluster.Run
-
-aa1.Size
-
-[|0; 1; 2|] |> Array.splitAt 1
+//let st = [| for i in 0 .. 10000 do yield i |]
+//            |> ChunkedCloudStream.State.Create 500
+//            |> cluster.Run
+//            
+//let a = st.GetFrom 0UL 10000001UL |> cluster.Run
+//let al = a.Length
+//let notseq = Array.zip (a |> Array.take (a.Length - 1)) (a |> Array.skip 1) 
+//                |> Array.filter (fun (a, b) -> a + 1 <> b)
+//
+//let aa = st.Add 123212 |> cluster.Run
+//
+//let aa1 = aa.AddRange [| for i in 0 .. 10000 do yield i + 200000 |] |> cluster.Run
+//
+//let aa2 = aa.Add 123212 |> cluster.Run
+//
+//aa1.Size
+//
+//[|0; 1; 2|] |> Array.splitAt 1
 
 //    type ChunkedCloudStream<'T> (chunkSize: uint64) = 
 //        let! position = CloudAtom.New<int64>(-1L, "position", streamId)
@@ -262,48 +269,52 @@ aa1.Size
 let enqueueStream<'T> (getter: (unit -> Cloud<int64>) -> Cloud<'T[]>) maxBatchSize = 
     cloud { 
         let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
-        let! position = CloudAtom.New<int64>(-1L, "position", streamId)
-        //let! chanks = CloudAtom.New<'T list>([], "chanks", streamId)
-        let! tail = CloudAtom.New<ResizeArray<StreamFrame<'T>>>(new ResizeArray<StreamFrame<'T>>(), "tail", streamId)
-        let positionGetter () = cloud { 
-            let! v = tail.GetValueAsync() |> Cloud.OfAsync
-            return int64(v.Count - 1) 
-        }
+        let! initialState = ChunkedCloudStream.State.Create maxBatchSize [||]
+        let! stateAtom = CloudAtom.New<ChunkedCloudStream.State<StreamFrame<'T>>>(initialState, "state", streamId)
+        let! positionAtom = CloudAtom.New<int64>(-1L, "position", streamId)
+        let positionGetter () = cloud { return! positionAtom.GetValueAsync() |> Cloud.OfAsync }
         let! flowProcess = 
-            let rec loop () = cloud { 
-                let! msgs = getter positionGetter
+            let rec loop (currentState: ChunkedCloudStream.State<StreamFrame<'T>>) = local { 
+                let! msgs = getter positionGetter |> Cloud.AsLocal
                 if msgs.Length > 0 then
-                    //let! batch = CloudValue.NewArray<'T> (msgs, StorageLevel.MemoryAndDisk)
-                    do! tail.UpdateAsync (fun t -> 
-                                            let pos = t.Count
-                                            t.AddRange (msgs |> Seq.mapi (fun i v -> { Nonce = uint64(i + pos); Value = v }))
-                                            t) |> Cloud.OfAsync
+                    let pos = int64(currentState.Size) - 1L
+                    let newFrames = msgs |> Array.mapi (fun i v -> { Nonce = uint64(int64(i) + pos); Value = v })
+                    let! newState = currentState.AddRange newFrames |> Cloud.AsLocal
+                    do! stateAtom.ForceAsync(newState) |> Cloud.OfAsync  // The order of State and Position updates is important!
+                    do! positionAtom.ForceAsync(int64(newState.Size) - 1L) |> Cloud.OfAsync
                     do! Cloud.Sleep 10 // Required in order not to block downstreams
+                    return! loop newState
                 else 
                     do! Cloud.Sleep 100
-                return! loop()
+                    return! loop currentState
             } 
-            loop() 
+            loop initialState
             |> Cloud.CreateProcess
 
+        let getFramesPage = (fun nonce page -> cloud { 
+                                    let! v = stateAtom.GetValueAsync() |> Cloud.OfAsync
+                                    return! v.GetPage nonce (uint64(page)) })
         return {
             Id = streamId
             Position = positionGetter
             Item = (fun nonce -> cloud { 
-                                    let! v = tail.GetValueAsync() |> Cloud.OfAsync
-                                    return if nonce < uint64(v.Count) then Some (v.[nonce |> int].Value) else None })
-            GetFrom = (fun nonce -> cloud { 
-                                    let! v = tail.GetValueAsync() |> Cloud.OfAsync
-                                    return v.Skip(nonce |> int).Select(fun kv -> kv.Value) })
-            GetFramesFrom = (fun nonce -> cloud { 
-                                    let! v = tail.GetValueAsync() |> Cloud.OfAsync
-                                    return v.Skip(nonce |> int).Select(fun kv -> kv) })
+                                    let! pos = positionGetter()
+                                    if int64(nonce) <= pos then 
+                                        let! v = stateAtom.GetValueAsync() |> Cloud.OfAsync
+                                        let! vv = (v.[nonce])
+                                        return vv |> Option.bind (fun vvv -> Some vvv.Value) 
+                                    else return None })
+            GetPage = (fun nonce page -> cloud { 
+                                    return! local {
+                                        let! v = getFramesPage nonce page |> Cloud.AsLocal
+                                        return v |> Array.map (fun kv -> kv.Value) }})
+            GetFramesPage = getFramesPage
             FlowProcess = flowProcess
         }
     }
 
 let streamOfQueue<'T> (queue: CloudQueue<'T>) maxBatchSize = 
-    let getter = fun _ -> cloud { return! queue.DequeueBatchAsync(maxBatchSize) |> Cloud.OfAsync }
+    let getter = fun _ -> cloud { return! queue.DequeueBatchAsync(int(maxBatchSize)) |> Cloud.OfAsync }
     enqueueStream getter maxBatchSize
 
 let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamFrame<'TD> -> 'TS) = 
@@ -311,7 +322,7 @@ let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamF
         let rec loop () = cloud {
             let getter currentPosition = cloud {
                 let! cp = currentPosition()
-                let! msgs = stream.GetFramesFrom((cp + 1L) |> uint64) 
+                let! msgs = stream.GetFramesPage ((cp + 1L) |> uint64) maxBatchSize
                 return msgs (*|> Seq.take maxBatchSize *) |> Seq.map f |> Seq.toArray
             }
             return! enqueueStream getter maxBatchSize
@@ -324,11 +335,11 @@ let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamF
 let queue = CloudQueue.New<string>() |> cluster.Run
 //let streamRef = enqueueFlow queue (fun d -> local {Cloud.Logf "data - '%A'" d |> ignore} |> ignore ) |> cluster.CreateProcess
 //send queue "aaaaaa1"
-let streamRef = streamOfQueue queue 1000 |> cluster.CreateProcess
+let streamRef = streamOfQueue queue 1000u |> cluster.CreateProcess
 streamRef.ShowInfo()
 let res = streamRef.Result
 let pos = res.Position() |> cluster.Run
-let all = res.GetFrom 0UL |> cluster.Run |> Seq.toArray
+let all = res.GetPage 0UL 1000u |> cluster.Run |> Seq.toArray
 
 all.Length
 
@@ -338,12 +349,12 @@ for i in 0UL .. 99999UL do send queue ("item" + i.ToString())
 
 
 
-let nestedRef = streamOfStream res 1000 (fun sf -> sf.Nonce + 1000000UL) |> cluster.CreateProcess
+let nestedRef = streamOfStream res 1000u (fun sf -> sf.Nonce + 1000000UL) |> cluster.CreateProcess
 //send queue "aaaaaa1"
 streamRef.ShowInfo()
 let res2 = nestedRef.Result
 let pos2 = res2.Position() |> cluster.Run
-let all2 = res2.GetFrom 0UL |> cluster.Run |> Seq.toArray
+let all2 = res2.GetPage 0UL 1000u |> cluster.Run |> Seq.toArray
 
 all2.Length
 //all2.[0].Value
@@ -351,12 +362,12 @@ all2.Length
 res2.FlowProcess.Status
 
 
-let nestedRef3 = streamOfStream<string, uint64> res2 30 (fun sf -> "str - " + sf.Value.ToString() ) |> cluster.CreateProcess
+let nestedRef3 = streamOfStream<string, uint64> res2 3000u (fun sf -> "str - " + sf.Value.ToString() ) |> cluster.CreateProcess
 //send queue "aaaaaa1"
 nestedRef3.ShowInfo()
 let res3 = nestedRef3.Result
 let pos3 = res3.Position() |> cluster.Run
-let all3 = res3.GetFrom 0UL |> cluster.Run |> Seq.toArray
+let all3 = res3.GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
 
 all3.Length
 
@@ -368,7 +379,7 @@ let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: Strea
     |> Cloud.ParallelEverywhere
     
 
-let evrRef = everywhereStream<string, string> res3 200 (fun sf -> "everywhere " + sf.Value) |> cluster.CreateProcess
+let evrRef = everywhereStream<string, string> res3 2000u (fun sf -> "everywhere " + sf.Value) |> cluster.CreateProcess
 //send queue "aaaaaa1"
 evrRef.ShowInfo()
 let evr = evrRef.Result
@@ -376,10 +387,10 @@ let posevr0 = evr.[0].Position() |> cluster.Run
 let posevr1 = evr.[1].Position() |> cluster.Run
 let posevr2 = evr.[2].Position() |> cluster.Run
 let posevr3 = evr.[3].Position() |> cluster.Run
-let allevr0 = evr.[0].GetFrom 0UL |> cluster.Run |> Seq.toArray
-let allevr1 = evr.[1].GetFrom 0UL |> cluster.Run |> Seq.toArray
-let allevr2 = evr.[2].GetFrom 0UL |> cluster.Run |> Seq.toArray
-let allevr3 = evr.[3].GetFrom 0UL |> cluster.Run |> Seq.toArray
+let allevr0 = evr.[0].GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
+let allevr1 = evr.[1].GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
+let allevr2 = evr.[2].GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
+let allevr3 = evr.[3].GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
 
 allevr0.Length
 allevr1.Length
