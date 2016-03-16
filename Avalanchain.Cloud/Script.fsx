@@ -8,6 +8,7 @@
 #r "../packages/FsPickler.1.7.2/lib/net45/FsPickler.dll"
 #r "../packages/FsPickler.Json.1.7.2/lib/net45/FsPickler.Json.dll"
 #r "../packages/Base58Check.0.2.0/lib/Net40/Base58Check.dll"
+#r "../packages/Streams.0.4.0/lib/net45/Streams.dll"
 #r "packages/FSharp.Control.AsyncSeq/lib/net45/FSharp.Control.AsyncSeq.dll"
 
 #r "bin/Debug/Avalanchain.dll"
@@ -27,6 +28,7 @@ open Chessie.ErrorHandling
 open Avalanchain.Quorum
 open Avalanchain.EventStream
 open FSharp.Control
+open Nessos.Streams
 
 // Initialize client object to an MBrace cluster
 let cluster = Config.GetCluster() 
@@ -324,20 +326,22 @@ let streamOfQueue<'T> (queue: CloudQueue<'T>) maxBatchSize = cloud {
         return! enqueueStream getter maxBatchSize
     }
 
-let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamFrame<'TD> -> 'TS) = 
+let streamOfStreamFM<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamFrame<'TD> -> Stream<'TS>) = 
     cloud { 
         let rec loop () = cloud {
             let getter currentPosition = cloud {
                 let! cp = currentPosition()
                 let! msgs = stream.GetFramesPage ((cp + 1L) |> uint64) maxBatchSize 
-                return msgs (*|> Seq.take maxBatchSize *) |> Seq.map f |> Seq.toArray
+                return msgs (*|> Seq.take maxBatchSize *) |> Stream.ofArray |> Stream.map f |> Stream.collect id |> Stream.toArray
             }
             return! enqueueStream getter maxBatchSize
-
-
         } 
         return! loop () 
     }
+
+let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) maxBatchSize (f: StreamFrame<'TD> -> 'TS) = 
+    streamOfStreamFM<'TS, 'TD> stream maxBatchSize (fun x -> [f x] |> Stream.ofList)
+
 
 type StreamSink<'T> = {
     Push: 'T -> Cloud<unit> // TODO: replace with enqueueing result
@@ -370,6 +374,39 @@ let streamOfSink<'T> maxBatchSize = cloud {
         return (sink, stream)
     }
 
+module ChainStream =
+    let inline ofArray chunkSize (source: 'T[]) : Cloud<CloudStream<'T>> = cloud {
+        let! (sink, sr) = streamOfSink chunkSize
+        do! sink.PushBatch source
+        return sr          
+    }
+
+    let inline ofQueue chunkSize (queue: CloudQueue<'T>) : Cloud<CloudStream<'T>> = 
+        streamOfQueue<'T> queue chunkSize          
+
+    let inline filter chunkSize (predicate: StreamFrame<'TD> -> bool) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TD>> =
+       streamOfStreamFM<'TD, 'TD> stream chunkSize (fun d -> (if predicate d then [d.Value] else []) |> Stream.ofList)
+
+    let inline map chunkSize (mapF: StreamFrame<'TD> -> 'TS) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TS>> =
+       streamOfStreamFM<'TS, 'TD> stream chunkSize (fun d -> [mapF d] |> Stream.ofList)
+
+    let inline toArray (stream: CloudStream<'TD>) : Cloud<'TD []> = // TODO: add toObservable
+       stream.GetPage 0UL UInt32.MaxValue
+
+//    let inline fold (foldF:'State->'T->'State) (state:'State) (stream:Stream<'T>) =
+//       let acc = ref state
+//       stream (fun v -> acc := foldF !acc v)
+//       !acc
+//
+//    let inline reduce (reducer: ^T -> ^T -> ^T) (stream: Stream< ^T >) : ^T
+//          when ^T : (static member Zero : ^T) =
+//       fold (fun s v -> reducer s v) LanguagePrimitives.GenericZero stream
+//
+//    let inline sum (stream : Stream< ^T>) : ^T
+//          when ^T : (static member Zero : ^T)
+//          and ^T : (static member (+) : ^T * ^T -> ^T) =
+//       fold (+) LanguagePrimitives.GenericZero stream
+
 let (sink, sr) = streamOfSink 1000u |> cluster.Run
 let srPos = sr.Position() |> cluster.Run
 let srAll = sr.GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
@@ -387,6 +424,8 @@ let st = sink.CurrentState() |> cluster.Run
 
 st |> fst
 (st |> snd).Length
+
+[|0;1;2;3;4;5;6|] |> Array.take 5
 
 ////////////////
     
