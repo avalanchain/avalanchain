@@ -411,41 +411,46 @@ let streamOfSink<'T> initialValue maxBatchSize = cloud {
         let! stream = enqueueStream getter initialValue maxBatchSize
         return (sink, stream)
     }
-//
-//module ChainStream =
-//    let inline ofArray chunkSize (source: 'T[]) : Cloud<CloudStream<'T>> = cloud {
-//        let! (sink, sr) = streamOfSink None chunkSize
-//        do! sink.PushBatch source
-//        return sr          
-//    }
-//
-//    let inline ofQueue chunkSize (queue: CloudQueue<'T>) : Cloud<CloudStream<'T>> = 
-//        streamOfQueue<'T> queue chunkSize          
-//
-//    let inline filter chunkSize (predicate: StreamFrame<'TD> -> bool) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TD>> =
-//       streamOfStreamFM<'TD, 'TD> stream None chunkSize predicate (fun t d -> d.Value)
-//
-//    let inline map chunkSize (mapF: StreamFrame<'TD> -> 'TS) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TS>> =
-//       streamOfStreamFM<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d)
-//
-//    let inline toArray (stream: CloudStream<'TD>) : Cloud<'TD []> = // TODO: add toObservable
-//       stream.GetPage 0UL UInt32.MaxValue
-//
-//    let inline fold (foldF:'State->'T->'State) (state:'State) (stream:Stream<'T>) =
-//       let acc = ref state
-//       stream (fun v -> acc := foldF !acc v)
-//       !acc
-//
-//    let inline reduce (reducer: ^T -> ^T -> ^T) (stream: Stream< ^T >) : ^T
-//          when ^T : (static member Zero : ^T) =
-//       fold (fun s v -> reducer s v) LanguagePrimitives.GenericZero stream
+
+type ChainStream<'T> = Cloud<CloudStream<'T>> -> unit
+
+module ChainStream =
+    let inline ofArray chunkSize (source: 'T[]) : Cloud<CloudStream<'T>> = cloud {
+        let! (sink, sr) = streamOfSink None chunkSize
+        do! sink.PushBatch source
+        return sr          
+    }
+
+    let inline ofQueue chunkSize (queue: CloudQueue<'T>) : Cloud<CloudStream<'T>> = 
+        streamOfQueue<'T> queue None chunkSize          
+
+    let inline filter chunkSize (predicate: 'TD -> bool) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TD>> =
+        streamOfStreamFM<'TD, 'TD> stream None chunkSize (fun df -> predicate df.Value) (fun t d -> d.Value)
+
+    let inline map chunkSize (mapF: 'TD -> 'TS) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TS>> =
+        streamOfStreamFM<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d.Value)
+
+    let inline toArray (stream: CloudStream<'TD>) : Cloud<'TD []> = // TODO: add toObservable
+        stream.GetPage 0UL UInt32.MaxValue
+
+    let inline fold chunkSize (foldF: 'TS -> 'TD -> 'TS) (state: 'TS) (stream: CloudStream<'TD>) =
+        streamOfStreamFM<'TS, 'TD> stream (Some state) chunkSize (fun _ -> true) (fun t d -> foldF t d.Value)
+
+    let inline reduce chunkSize (reducer: 'T -> 'T -> 'T) (stream:CloudStream<'T>) =
+        streamOfStreamFM<'T, 'T> stream None chunkSize (fun _ -> true) (fun t d -> reducer t d.Value)
 //
 //    let inline sum (stream : Stream< ^T>) : ^T
 //          when ^T : (static member Zero : ^T)
 //          and ^T : (static member (+) : ^T * ^T -> ^T) =
 //       fold (+) LanguagePrimitives.GenericZero stream
-//
-let (sink, sr) = streamOfSink (Some "") 20000u |> cluster.Run
+
+[|for i in 0UL .. 99999UL do yield "item" + i.ToString()|]
+|> ChainStream.ofArray 10000u
+
+
+
+
+let (sink, sr) = streamOfSink (Some "") 10000u |> cluster.Run
 let srPos = sr.Position() |> cluster.Run
 //let srAll = sr.GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
 //
