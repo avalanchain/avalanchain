@@ -29,6 +29,9 @@ open Avalanchain.Quorum
 open Avalanchain.EventStream
 open FSharp.Control
 open Nessos.Streams
+open MBrace.Runtime
+open MBrace.Core
+open MBrace.Core
 
 // Initialize client object to an MBrace cluster
 let cluster = Config.GetCluster() 
@@ -139,6 +142,7 @@ type CloudStream<'T> = {
     Id: string
     Position: unit -> Cloud<int64>
     Item: uint64 -> Cloud<'T option>
+    Current: unit -> Cloud<'T option>
     GetPage: uint64 -> uint32 -> Cloud<'T[]>
     GetFramesPage: uint64 -> uint32 -> Cloud<StreamFrame<'T>[]>
     FlowProcess: ICloudProcess<unit>
@@ -152,7 +156,8 @@ module ChunkedCloudStream =
         Chunks: CloudValue<'T[]>[]
         //Chunks: 'T[][]
         Tail: 'T[]
-        Last: 'T
+        Last: 'T option
+        LastSinkNonce: int64
     }
     with 
         member inline private this.ChunkedSize = this.ChunkSize * uint64(this.Chunks.LongLength)
@@ -169,7 +174,7 @@ module ChunkedCloudStream =
                         let startChunk = nonce / this.ChunkSize |> int32
                         let endChunk = Math.Min((nonce + size) / this.ChunkSize, uint64(this.Chunks.LongLength) - 1UL) |> int32
 
-                        let chunks = [|for i in startChunk .. endChunk -> this.Chunks.[i |> int].GetValueAsync()|] 
+                        let chunks = [|for i in startChunk .. 1 .. endChunk -> this.Chunks.[i |> int].GetValueAsync()|] 
                                         |> Async.Parallel 
                                         |> Async.RunSynchronously
 
@@ -207,7 +212,8 @@ module ChunkedCloudStream =
                     ChunkSize = chunkSize |> uint64
                     Chunks = chunks
                     Tail = [| for i in chunkCount * cs .. 1 .. data.Length - 1 do yield data.[i] |]
-                    Last = if data |> Array.isEmpty then Unchecked.defaultof<'T> else (data |> Array.last) 
+                    Last = if data |> Array.isEmpty then None else (data |> Array.last |> Some) 
+                    LastSinkNonce = if data |> Array.isEmpty then -1L else (data.LongLength - 1L)
                 }
             }
         }
@@ -221,19 +227,18 @@ module ChunkedCloudStream =
                 
                 if uint64(newTail.Length) = this.ChunkSize then
                     let! chunk = CloudValue.New(newTail, StorageLevel.MemoryAndDisk)
-                    return {
-                        ChunkSize = this.ChunkSize
-                        Chunks = (Array.append this.Chunks [| chunk |])
-                        Tail = [||]
-                        Last = data
-                    }
+                    return {this with
+                                Chunks = (Array.append this.Chunks [| chunk |])
+                                Tail = [||]
+                                Last = Some data
+                                LastSinkNonce = -1L
+                            }
                 else
-                    return {
-                        ChunkSize = this.ChunkSize
-                        Chunks = this.Chunks
-                        Tail = newTail
-                        Last = data
-                    }
+                    return {this with
+                                Tail = newTail
+                                Last = Some data
+                                LastSinkNonce = this.LastSinkNonce + 1L
+                            }
             }
         }
 
@@ -250,6 +255,10 @@ module ChunkedCloudStream =
             return! adder this data
 
         }
+
+        member this.NewSinkNonce (nonce: int64) : State<'T> = {this with LastSinkNonce = nonce}
+
+
 //
 //        member this.AddRangeF (data: ('T -> 'T)[]) : Cloud<State<'T>> = cloud {
 //            let rec adder (state: State<'T>) (remaining: ('T -> 'T)[]) = local {
@@ -293,28 +302,31 @@ let a = cloud { return! cc.GetPage 10UL 100000UL } |> cluster.RunLocally
 //        let! position = CloudAtom.New<int64>(-1L, "position", streamId)
 
 
-let enqueueStream<'T> (getter: (unit -> LocalCloud<StreamFrame<'T>>) -> LocalCloud<StreamFrame<'T>[]>) (initialValue: 'T option) maxBatchSize = 
+let enqueueStream<'T> (getter: (unit -> LocalCloud<StreamFrame<'T> option * int64>) -> LocalCloud<StreamFrame<'T>[] * (int64 option)>) maxBatchSize = 
     cloud { 
         let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
-        let! initialState = ChunkedCloudStream.State.Create maxBatchSize (match initialValue with Some v -> [| { Nonce = 0UL; Value = v } |] | None -> [||])
+        let! initialState = ChunkedCloudStream.State.Create maxBatchSize ([||])
         let! stateAtom = CloudAtom.New<ChunkedCloudStream.State<StreamFrame<'T>>>(initialState, "state", streamId)
         //let! positionAtom = CloudAtom.New<int64>(-1L, "position", streamId)
         //let positionGetter () = cloud { return! positionAtom.GetValueAsync() |> Cloud.OfAsync }
         let positionGetter () = cloud { let! state = stateAtom.GetValueAsync() |> Cloud.OfAsync
                                         return (state.Size |> int64) - 1L}
         let lastGetter () = local { let! state = stateAtom.GetValueAsync() |> Cloud.OfAsync
-                                    return state.Last }
+                                    return state.Last, state.LastSinkNonce }
         let! flowProcess = 
             let rec loop () = local { 
                 try 
-                    let! msgs = getter lastGetter //|> Cloud.AsLocal
-                    //let msgs = [| {Nonce = 0UL; Value = Unchecked.defaultof<'T>} |]
-                    if msgs.Length > 0 then
+                    let! (msgs, sinkPos) = getter lastGetter //|> Cloud.AsLocal
+                    if msgs.Length > 0 || sinkPos.IsSome then
                         let! currentState = stateAtom.GetValueAsync() |> Cloud.OfAsync // TODO: Rethink possible race
-                             //msgs |> Array.mapi (fun i v -> { Nonce = uint64(int64(i) + pos); Value = v })
-                        let! newState = currentState.AddRange msgs |> Cloud.AsLocal
-                        do! stateAtom.ForceAsync(newState) |> Cloud.OfAsync  // The order of State and Position updates is important!
-    //                    do! positionAtom.ForceAsync(int64(newState.Size) - 1L) |> Cloud.OfAsync
+                        let! newState = 
+                            if msgs.Length > 0 then currentState.AddRange msgs |> Cloud.AsLocal
+                            else local { return currentState }
+                        let newStateWithSinkNonce = 
+                            match sinkPos with 
+                            | Some nonce -> newState.NewSinkNonce nonce
+                            | None -> newState
+                        do! stateAtom.ForceAsync(newStateWithSinkNonce) |> Cloud.OfAsync  // The order of State and Position updates is important!
 
                         do! Cloud.Sleep 1 // Required in order not to block downstreams
                         return! loop ()
@@ -340,6 +352,9 @@ let enqueueStream<'T> (getter: (unit -> LocalCloud<StreamFrame<'T>>) -> LocalClo
                                         let! vv = (v.[nonce])
                                         return vv |> Option.bind (fun vvv -> Some vvv.Value) 
                                     else return None })
+            Current = (fun unit -> cloud { 
+                                    let! v = stateAtom.GetValueAsync() |> Cloud.OfAsync
+                                    return v.Last |> Option.bind (fun vvv -> Some vvv.Value) })
             GetPage = (fun nonce page -> cloud { 
                                     return! local {
                                         let! v = getFramesPage nonce page |> Cloud.AsLocal
@@ -349,108 +364,246 @@ let enqueueStream<'T> (getter: (unit -> LocalCloud<StreamFrame<'T>>) -> LocalClo
         }
     }
 
-let streamOfQueue<'T> (queue: CloudQueue<'T>) initialValue maxBatchSize = cloud {
-        let getter getLast = local {let! last = getLast()
-                                    let! newValue = queue.DequeueBatchAsync(int(maxBatchSize)) |> Cloud.OfAsync
-                                    return newValue |> Array.mapi (fun i v -> { Nonce = last.Nonce + uint64(i); Value = v }) }
-        return! enqueueStream getter initialValue maxBatchSize
+let streamOfQueue<'T> (queue: CloudQueue<'T>) maxBatchSize = cloud {
+        let getter (getLast: unit -> LocalCloud<StreamFrame<'T> option * int64>) = 
+            local { let! last = getLast()
+                    let! newValue = queue.DequeueBatchAsync(int(maxBatchSize)) |> Cloud.OfAsync
+                    let lastNonce = snd last
+                    return 
+                        (newValue |> Array.mapi (fun i v -> { Nonce = lastNonce + int64(i) |> uint64; Value = v }), Some(lastNonce + newValue.LongLength)) }
+        return! enqueueStream getter maxBatchSize
     }
 
-let streamOfStreamFM<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: StreamFrame<'TD> -> bool) (foldF: 'TS -> StreamFrame<'TD> -> 'TS) = 
+let streamOfStreamFM<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: StreamFrame<'TD> -> bool) (foldF: 'TS option -> StreamFrame<'TD> -> 'TS) = // lastState -> data -> newState
     cloud { 
-        let getter getLast = local {
+        let getter (getLast: unit -> LocalCloud<StreamFrame<'TS> option * int64>) = local {
             let! last = getLast()
-            let! msgs = stream.GetFramesPage (last.Nonce + 1UL) maxBatchSize |> Cloud.AsLocal
-            return [| 
-                        let filtered = msgs.Take(maxBatchSize |> int).Where(preFilter).ToArray() // Should be done with Linq as Array.take fails on too short arrays
-                        let mutable state = last.Value
-                        let mutable i = last.Nonce
-                        for m in filtered do
-                            state <- foldF state m
-                            i <- i + 1UL
-                            yield { Nonce = i; Value = state }
-                    |]
+            let lastNonce = snd last 
+            let! msgs = stream.GetFramesPage (lastNonce + 1L |> uint64) maxBatchSize |> Cloud.AsLocal
+            if msgs |> Array.isEmpty then 
+                return [||], None
+            else
+                let batch = msgs.Take(maxBatchSize |> int).ToArray() // Should be done with Linq as Array.take fails on too short arrays
+                return [| 
+                            let filtered = batch |> Array.filter preFilter
+                            let mutable (state: 'TS option) = 
+                                match fst last, initialValue with 
+                                | Some s, _ -> Some s.Value
+                                | None, None -> None
+                                | None, Some iv -> Some iv
+                            let mutable i = lastNonce
+                            for m in filtered do
+                                state <- foldF state m |> Some
+                                i <- i + 1L
+                                yield { Nonce = uint64(i); Value = state.Value }
+                        |], Some(lastNonce + batch.LongLength)
         }
-        return! enqueueStream getter initialValue maxBatchSize
-    }
+        return! enqueueStream getter maxBatchSize
+    } 
 
-let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS -> StreamFrame<'TD> -> 'TS) = 
+let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS option -> StreamFrame<'TD> -> 'TS) = 
     streamOfStreamFM<'TS, 'TD> stream initialValue maxBatchSize (fun _ -> true) f
 
 
 type StreamSink<'T> = {
     Push: 'T -> Cloud<unit> // TODO: replace with enqueueing result
     PushBatch: 'T[] -> Cloud<unit>
-    CurrentState: unit -> Cloud<uint64 * ('T * uint64)[]>
+    CurrentState: unit -> Cloud<int64 * ('T * int64)[]>
 }
 
-let streamOfSink<'T> initialValue maxBatchSize = cloud {
+let streamOfSink<'T> maxBatchSize = cloud {
         let! streamId = CloudAtom.CreateRandomContainerName()
-        let! sinkAtom = CloudAtom.New<uint64 * ('T * uint64)[]>((0UL, [||]), "sink", streamId)
-        let getter getLast = local { 
-                                    return! local {
-                                        let! last = getLast()
-                                        let! (pos, msgs) = sinkAtom.GetValueAsync() |> Cloud.OfAsync
-                                        let batch = msgs.Take(maxBatchSize |> int).ToArray()
-                                        if (Array.isEmpty batch) then 
-                                            return [||]
-                                        else
-                                            let newPos = batch |> Array.last |> snd
-                                            do! sinkAtom.UpdateAsync(fun (p, t) -> 
-                                                                        let newT = t |> Array.skipWhile (fun x -> snd x <= newPos) 
-                                                                        (newPos, newT)
-                                                                    ) |> Cloud.OfAsync
-                                            return batch |> Array.mapi (fun i m -> { Nonce = last.Nonce + uint64(i); Value = fst m })
-                                    }
-                                }
+        let! sinkAtom = CloudAtom.New<int64 * ('T * int64)[]>((-1L, [||]), "sink", streamId)
+        let getter (getLast: unit -> LocalCloud<StreamFrame<'T> option * int64>) : LocalCloud<StreamFrame<'T>[] * int64 option> = 
+            local { 
+                    return! local {
+                        let! last = getLast()
+                        let! (pos, msgs) = sinkAtom.GetValueAsync() |> Cloud.OfAsync
+                        let batch = msgs.Take(maxBatchSize |> int).ToArray()
+                        if (Array.isEmpty batch) then 
+                            return [||], None
+                        else
+                            let newPos = batch |> Array.last |> snd
+                            let lastNonce = snd last 
+                            do! sinkAtom.UpdateAsync(fun (p, t) -> 
+                                                        let newT = t |> Array.skipWhile (fun x -> snd x <= newPos) 
+                                                        (newPos, newT)
+                                                    ) |> Cloud.OfAsync
+                            return (batch |> Array.mapi (fun i m -> { Nonce = lastNonce + int64(i) |> uint64; Value = fst m }), Some(newPos))
+                    }
+                }
         let sink = {
-            Push = (fun (t: 'T) -> cloud { do! Cloud.OfAsync <| sinkAtom.UpdateAsync(fun (pos, et) -> (pos, Array.append et [| (t, pos + uint64(et.Length) + 1UL) |] )) })
-            PushBatch = (fun t -> cloud { do! Cloud.OfAsync <| sinkAtom.UpdateAsync(fun (pos, et) -> (pos, t |> Array.mapi (fun i e -> (e, pos + uint64(i + et.Length) + 1UL)) |> Array.append et )) })
+            Push = (fun (t: 'T) -> cloud { do! Cloud.OfAsync <| sinkAtom.UpdateAsync(fun (pos, et) -> (pos, Array.append et [| (t, pos + et.LongLength + 1L) |] )) })
+            PushBatch = (fun t -> cloud { do! Cloud.OfAsync <| sinkAtom.UpdateAsync(fun (pos, et) -> (pos, t |> Array.mapi (fun i e -> (e, pos + int64(i) + et.LongLength + 1L)) |> Array.append et )) })
             CurrentState = (fun () -> cloud { return! sinkAtom.GetValueAsync() |> Cloud.OfAsync })
         }
-        let! stream = enqueueStream getter initialValue maxBatchSize
+        let! stream = enqueueStream getter maxBatchSize
         return (sink, stream)
     }
 
-type ChainStream<'T> = Cloud<CloudStream<'T>> -> unit
+let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: StreamFrame<'TD> -> bool) (foldF: 'TS option -> StreamFrame<'TD> -> 'TS) = 
+    cloud {
+        return! streamOfStreamFM stream initialValue maxBatchSize preFilter foldF 
+    } 
+    |> Cloud.ParallelEverywhere
+
+
 
 module ChainStream =
+    let inline ofSink<'T> maxBatchSize = streamOfSink<'T> maxBatchSize
+
+    let inline ofStream (stream: CloudStream<'T>) : Cloud<CloudStream<'T>> = cloud { return stream }
+
     let inline ofArray chunkSize (source: 'T[]) : Cloud<CloudStream<'T>> = cloud {
-        let! (sink, sr) = streamOfSink None chunkSize
+        let! (sink, sr) = streamOfSink chunkSize
         do! sink.PushBatch source
         return sr          
     }
 
     let inline ofQueue chunkSize (queue: CloudQueue<'T>) : Cloud<CloudStream<'T>> = 
-        streamOfQueue<'T> queue None chunkSize          
+        streamOfQueue<'T> queue chunkSize          
 
-    let inline filter chunkSize (predicate: 'TD -> bool) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TD>> =
-        streamOfStreamFM<'TD, 'TD> stream None chunkSize (fun df -> predicate df.Value) (fun t d -> d.Value)
+    let inline filter chunkSize (predicate: 'TD -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>> = cloud {
+        let! stream = cloudStream
+        return! streamOfStreamFM<'TD, 'TD> stream None chunkSize (fun df -> predicate df.Value) (fun t d -> d.Value)
+    }
 
-    let inline map chunkSize (mapF: 'TD -> 'TS) (stream: CloudStream<'TD>) : Cloud<CloudStream<'TS>> =
-        streamOfStreamFM<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d.Value)
+    let inline filterFrame chunkSize (predicate: StreamFrame<'TD> -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>> = cloud {
+        let! stream = cloudStream
+        return! streamOfStreamFM<'TD, 'TD> stream None chunkSize predicate (fun t d -> d.Value)
+    }
 
-    let inline toArray (stream: CloudStream<'TD>) : Cloud<'TD []> = // TODO: add toObservable
-        stream.GetPage 0UL UInt32.MaxValue
+    let inline map chunkSize (mapF: 'TD -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>> = cloud {
+        let! stream = cloudStream
+        return! streamOfStreamFM<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d.Value)
+    }
 
-    let inline fold chunkSize (foldF: 'TS -> 'TD -> 'TS) (state: 'TS) (stream: CloudStream<'TD>) =
-        streamOfStreamFM<'TS, 'TD> stream (Some state) chunkSize (fun _ -> true) (fun t d -> foldF t d.Value)
+    let inline mapFrame chunkSize (mapF: StreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>> = cloud {
+        let! stream = cloudStream
+        return! streamOfStreamFM<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d)
+    }
 
-    let inline reduce chunkSize (reducer: 'T -> 'T -> 'T) (stream:CloudStream<'T>) =
-        streamOfStreamFM<'T, 'T> stream None chunkSize (fun _ -> true) (fun t d -> reducer t d.Value)
-//
-//    let inline sum (stream : Stream< ^T>) : ^T
-//          when ^T : (static member Zero : ^T)
-//          and ^T : (static member (+) : ^T * ^T -> ^T) =
-//       fold (+) LanguagePrimitives.GenericZero stream
+    let inline fold chunkSize (foldF: 'TS -> 'TD -> 'TS) (state: 'TS) (cloudStream: Cloud<CloudStream<'TD>>) = cloud {
+        let! stream = cloudStream
+        return! streamOfStreamFM<'TS, 'TD> stream (Some state) chunkSize (fun _ -> true) (fun t d -> foldF (match t with None -> state | Some v -> v) d.Value)
+    }
 
-[|for i in 0UL .. 99999UL do yield "item" + i.ToString()|]
-|> ChainStream.ofArray 10000u
+    let inline reduce chunkSize (reducer: 'T -> 'T -> 'T) (cloudStream: Cloud<CloudStream<'T>>) : Cloud<CloudStream<'T>> 
+                when 'T : (static member Zero : 'T) = 
+        fold chunkSize reducer LanguagePrimitives.GenericZero cloudStream
+
+    let inline sum chunkSize (cloudStream: Cloud<CloudStream<'T>>) : Cloud<CloudStream<'T>> 
+          when 'T : (static member Zero : 'T)
+          and 'T : (static member (+) : 'T * 'T -> 'T) =
+        fold chunkSize (+) LanguagePrimitives.GenericZero cloudStream
+
+    let inline toArray (cloudStream: Cloud<CloudStream<'T>>) : Cloud<'T []> = cloud { // TODO: add toObservable
+        let! stream = cloudStream
+        return! stream.GetPage 0UL UInt32.MaxValue
+    }
+
+    let inline toEverywhere chunkSize initialValue (preFilter: StreamFrame<'TD> -> bool) (foldF: 'TS option -> StreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) = cloud {
+        let! stream = cloudStream
+        return! everywhereStream<'TS, 'TD> stream initialValue chunkSize preFilter foldF
+    }
+
+    let inline filterEverywhere chunkSize (predicate: 'TD -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>[]> = cloud {
+        let! stream = cloudStream
+        return! everywhereStream<'TD, 'TD> stream None chunkSize (fun df -> predicate df.Value) (fun t d -> d.Value)
+    }
+
+    let inline filterFrameEverywhere chunkSize (predicate: StreamFrame<'TD> -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>[]> = cloud {
+        let! stream = cloudStream
+        return! everywhereStream<'TD, 'TD> stream None chunkSize predicate (fun t d -> d.Value)
+    }
+
+    let inline mapEverywhere chunkSize (mapF: 'TD -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>[]> = cloud {
+        let! stream = cloudStream
+        return! everywhereStream<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d.Value)
+    }
+
+    let inline mapFrameEverywhere chunkSize (mapF: StreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>[]> = cloud {
+        let! stream = cloudStream
+        return! everywhereStream<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d)
+    }
+
+    let inline foldEverywhere chunkSize (foldF: 'TS -> 'TD -> 'TS) (state: 'TS) (cloudStream: Cloud<CloudStream<'TD>>) = cloud {
+        let! stream = cloudStream
+        return! everywhereStream<'TS, 'TD> stream (Some state) chunkSize (fun _ -> true) (fun t d -> foldF (match t with None -> state | Some v -> v) d.Value)
+    }
+
+    let inline reduceEverywhere chunkSize (reducer: 'T -> 'T -> 'T) (cloudStream: Cloud<CloudStream<'T>>) : Cloud<CloudStream<'T>[]> 
+                when 'T : (static member Zero : 'T) = 
+        foldEverywhere chunkSize reducer LanguagePrimitives.GenericZero cloudStream
+
+    let inline sumEverywhere chunkSize (cloudStream: Cloud<CloudStream<'T>>) : Cloud<CloudStream<'T>[]> 
+          when 'T : (static member Zero : 'T)
+          and 'T : (static member (+) : 'T * 'T -> 'T) =
+        foldEverywhere chunkSize (+) LanguagePrimitives.GenericZero cloudStream
 
 
 
 
-let (sink, sr) = streamOfSink (Some "") 10000u |> cluster.Run
+let sink, topChain = ChainStream.ofSink<string> 10000u |> cluster.Run
+
+let topChainPos = topChain.Position() |> cluster.Run
+
+let topChainCurrent = topChain.Current() |> cluster.Run
+              
+
+let chain = ChainStream.ofStream topChain
+            //|> ChainStream.mapFrame 1000u (fun v -> v.Nonce )
+            |> ChainStream.filter 1000u (fun v -> v.Last().ToString() |> Int32.Parse |> fun ch -> ch % 2 = 0 )
+            |> ChainStream.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
+            |> ChainStream.mapFrame 1000u (fun v -> v.Nonce )
+            |> cluster.Run
+
+let chainPos = chain.Position() |> cluster.Run
+
+let chainCurrent = chain.Current() |> cluster.Run
+
+//let chainAll = chain.GetFramesPage 0UL 1000000u |> cluster.Run
+
+
+sink.PushBatch [|for i in 0UL .. 99999UL do yield "item" + i.ToString()|] |> cluster.Run
+
+
+let sum = chain 
+            |> ChainStream.ofStream
+            |> ChainStream.sum 1000u 
+            |> cluster.Run
+
+let sumPos = chain.Position() |> cluster.Run
+let sumCurrent = chain.Current() |> cluster.Run
+
+let sumEverywhere = chain 
+                    |> ChainStream.ofStream
+                    |> ChainStream.sumEverywhere 1000u 
+                    |> cluster.Run
+
+let sumEvrPos = [| for node in sumEverywhere -> node.Position() |> cluster.Run |]
+let sumCurrent = [| for node in sumEverywhere -> node.Current() |> cluster.Run |]
+
+
+
+
+
+
+
+strAll.Length
+strAll |> Array.map (fun x -> x.Nonce) |> Array.distinct |> Array.length
+strAll.[strAll.Length - 3]
+
+
+let str = [|for i in 0UL .. 99999UL do yield "item" + i.ToString()|]
+            |> ChainStream.ofArray 10000u
+
+
+99999UL % 2UL = 0UL
+
+////
+
+let (sink, sr) = streamOfSink 10000u |> cluster.Run
 let srPos = sr.Position() |> cluster.Run
 //let srAll = sr.GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
 //
@@ -517,13 +670,6 @@ let all3 = res3.GetPage 0UL 1000000u |> cluster.Run |> Seq.toArray
 
 all3.Length
 
-
-let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS -> StreamFrame<'TD> -> 'TS) = 
-    cloud {
-        return! streamOfStream stream initialValue maxBatchSize f 
-    } 
-    |> Cloud.ParallelEverywhere
-    
 
 let evrRef = everywhereStream<string, string> res3 (Some "aa") 2000u (fun _ sf -> "everywhere " + sf.Value) |> cluster.CreateProcess
 //send queue "aaaaaa1"
