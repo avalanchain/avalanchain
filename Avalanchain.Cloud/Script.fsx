@@ -549,11 +549,13 @@ let sink, topChain = ChainStream.ofSink<string> 10000u |> cluster.Run
 let topChainPos = topChain.Position() |> cluster.Run
 
 let topChainCurrent = topChain.Current() |> cluster.Run
+let topChainAll = topChain.GetFramesPage 0UL 1000000u |> cluster.Run
+topChainAll.Length
               
 
 let chain = ChainStream.ofStream topChain
-            //|> ChainStream.mapFrame 1000u (fun v -> v.Nonce )
-            |> ChainStream.filter 1000u (fun v -> v.Last().ToString() |> Int32.Parse |> fun ch -> ch % 2 = 0 )
+            |> ChainStream.mapFrame 1000u (fun v -> v.Nonce )
+            |> ChainStream.filter 1000u (fun v -> v.ToString() |> Int32.Parse |> fun ch -> ch % 2 = 0 )
             |> ChainStream.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
             |> ChainStream.mapFrame 1000u (fun v -> v.Nonce )
             |> cluster.Run
@@ -582,7 +584,7 @@ let sumEverywhere = chain
                     |> cluster.Run
 
 let sumEvrPos = [| for node in sumEverywhere -> node.Position() |> cluster.Run |]
-let sumCurrent = [| for node in sumEverywhere -> node.Current() |> cluster.Run |]
+let sumEvrCurrent = [| for node in sumEverywhere -> node.Current() |> cluster.Run |]
 
 
 
@@ -590,16 +592,36 @@ let sumCurrent = [| for node in sumEverywhere -> node.Current() |> cluster.Run |
 
 
 
-strAll.Length
-strAll |> Array.map (fun x -> x.Nonce) |> Array.distinct |> Array.length
-strAll.[strAll.Length - 3]
+
+
+
+
+
 
 
 let str = [|for i in 0UL .. 99999UL do yield "item" + i.ToString()|]
             |> ChainStream.ofArray 10000u
 
 
-99999UL % 2UL = 0UL
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ////
 
