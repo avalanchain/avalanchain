@@ -25,10 +25,10 @@ open System.IO
 open MBrace.Core
 open MBrace.Flow
 open MBrace.Library
-open Avalanchain.NodeContext
 open Chessie.ErrorHandling
 open Avalanchain.Quorum
 open Avalanchain.EventStream
+open Avalanchain.NodeContext
 open FSharp.Control
 open Nessos.Streams
 open MBrace.Runtime
@@ -47,69 +47,6 @@ let sendRandomBatch (queue: CloudQueue<string>) m n =
     sendBatch queue words
 
 
-//type Confirmation<'T> = {
-//    NodeId: string
-//    ValueId: ValueId
-//    Value: 'T
-//    Notifier: 'T -> unit
-//}
-//and ValueId = string
-//
-//type ConfirmationResult<'T> =
-//    | InvalidConfirmation
-//    | ConfirmedSame
-//    | ConfirmedDifferent of 'T
-//    | NotConfirmedYet
-//
-//type ConfirmationCounter<'T when 'T: equality> (policy: ExecutionPolicy, validator, policyChecker) =
-//    let mutable confirmations = []
-//    let mutable invalidConfirmations = []
-//    let mutable pendingConfirmations = []
-//    let mutable confirmedValue = None
-//    member __.Policy = policy
-//    member __.AddConfirmation (confirmation: Confirmation<'T>) = 
-//        if not <| validator confirmation then 
-//            invalidConfirmations <- confirmation :: invalidConfirmations
-//            InvalidConfirmation
-//        else
-//            confirmations <- confirmation :: confirmations
-//            match confirmedValue with
-//            | Some v -> 
-//                if confirmation.Value = v then ConfirmedSame
-//                else ConfirmedDifferent v
-//            | None ->
-//                confirmedValue <- policyChecker policy confirmations // TODO: Add possibility for reconfirmations
-//                match confirmedValue with
-//                | Some v -> 
-//                    for pc in pendingConfirmations do pc.Notifier v // Notifying pendings
-//                    if confirmation.Value = v then ConfirmedSame
-//                    else ConfirmedDifferent v
-//                | None -> 
-//                    pendingConfirmations <- confirmation :: pendingConfirmations
-//                    NotConfirmedYet
-//    member __.Confirmations with get() = confirmations
-//    member __.InvalidConfirmations with get() = invalidConfirmations
-//    member __.PendingConfirmations with get() = pendingConfirmations
-//            
-//  
-//let ofQueue (queue: CloudQueue<'T>) f = 
-//    asyncSeq { 
-//        let centroidsSoFar = ResizeArray()
-//        while true do
-//            match queue.TryDequeue() with
-//            | Some d ->                  
-//                    yield d
-//                    do! Async.Sleep 1
-//            | None -> do! Async.Sleep 1
-//    }
-//    |> AsyncSeq.map(f)   
-            
-
-
-
-
-
-
 
 let sink, topChain = ChainFlow.ofSink<string> 10000u |> cluster.Run
 
@@ -121,10 +58,11 @@ topChainAll.Length
               
 
 let chain = ChainFlow.ofStream topChain
-            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
-            |> ChainFlow.filter 1000u (fun v -> v.ToString() |> Int32.Parse |> fun ch -> ch % 2 = 0 )
+            //|> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
+            //|> ChainFlow.filter 1000u (fun v -> true )
             |> ChainFlow.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
-            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
+//            |> ChainFlow.filter 1000u (fun v -> v.ToString() |> Int64.Parse |> fun ch -> ch % 2L <> 0L )
+//            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
             |> cluster.Run
 
 let chainPos = chain.Position() |> cluster.Run

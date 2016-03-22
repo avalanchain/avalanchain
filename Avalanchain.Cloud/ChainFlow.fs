@@ -21,27 +21,27 @@ module ChainFlow =
 
     let inline filter chunkSize (predicate: 'TD -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>> = cloud {
         let! stream = cloudStream
-        return! streamOfStreamFM<'TD, 'TD> stream None chunkSize (fun df -> predicate df.Value) (fun t d -> d.Value)
+        return! streamOfStreamFold<'TD, 'TD> stream None chunkSize (fun df -> predicate df.Value) (fun t d -> d.Value)
     }
 
-    let inline filterFrame chunkSize (predicate: StreamFrame<'TD> -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>> = cloud {
+    let inline filterFrame chunkSize (predicate: IStreamFrame<'TD> -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>> = cloud {
         let! stream = cloudStream
-        return! streamOfStreamFM<'TD, 'TD> stream None chunkSize predicate (fun t d -> d.Value)
+        return! streamOfStreamFold<'TD, 'TD> stream None chunkSize predicate (fun t d -> d.Value)
     }
 
     let inline map chunkSize (mapF: 'TD -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>> = cloud {
         let! stream = cloudStream
-        return! streamOfStreamFM<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d.Value)
+        return! streamOfStreamFold<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d.Value)
     }
 
-    let inline mapFrame chunkSize (mapF: StreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>> = cloud {
+    let inline mapFrame chunkSize (mapF: IStreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>> = cloud {
         let! stream = cloudStream
-        return! streamOfStreamFM<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d)
+        return! streamOfStreamFold<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d)
     }
 
     let inline fold chunkSize (foldF: 'TS -> 'TD -> 'TS) (state: 'TS) (cloudStream: Cloud<CloudStream<'TD>>) = cloud {
         let! stream = cloudStream
-        return! streamOfStreamFM<'TS, 'TD> stream (Some state) chunkSize (fun _ -> true) (fun t d -> foldF (match t with None -> state | Some v -> v) d.Value)
+        return! streamOfStreamFold<'TS, 'TD> stream (Some state) chunkSize (fun _ -> true) (fun t d -> foldF (match t with None -> state | Some v -> v) d.Value)
     }
 
     let inline reduce chunkSize (reducer: 'T -> 'T -> 'T) (cloudStream: Cloud<CloudStream<'T>>) : Cloud<CloudStream<'T>> 
@@ -58,7 +58,7 @@ module ChainFlow =
         return! stream.GetPage 0UL UInt32.MaxValue
     }
 
-    let inline toEverywhere chunkSize initialValue (preFilter: StreamFrame<'TD> -> bool) (foldF: 'TS option -> StreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) = cloud {
+    let inline toEverywhere chunkSize initialValue (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) = cloud {
         let! stream = cloudStream
         return! everywhereStream<'TS, 'TD> stream initialValue chunkSize preFilter foldF
     }
@@ -68,7 +68,7 @@ module ChainFlow =
         return! everywhereStream<'TD, 'TD> stream None chunkSize (fun df -> predicate df.Value) (fun t d -> d.Value)
     }
 
-    let inline filterFrameEverywhere chunkSize (predicate: StreamFrame<'TD> -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>[]> = cloud {
+    let inline filterFrameEverywhere chunkSize (predicate: IStreamFrame<'TD> -> bool) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TD>[]> = cloud {
         let! stream = cloudStream
         return! everywhereStream<'TD, 'TD> stream None chunkSize predicate (fun t d -> d.Value)
     }
@@ -78,7 +78,7 @@ module ChainFlow =
         return! everywhereStream<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d.Value)
     }
 
-    let inline mapFrameEverywhere chunkSize (mapF: StreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>[]> = cloud {
+    let inline mapFrameEverywhere chunkSize (mapF: IStreamFrame<'TD> -> 'TS) (cloudStream: Cloud<CloudStream<'TD>>) : Cloud<CloudStream<'TS>[]> = cloud {
         let! stream = cloudStream
         return! everywhereStream<'TS, 'TD> stream None chunkSize (fun _ -> true) (fun _ d -> mapF d)
     }

@@ -65,7 +65,6 @@
     <Compile Include="KVStore.fs" />
     <Compile Include="Quorum.fs" />
     <Compile Include="EventStream.fs" />
-    <Compile Include="Frame.fs" />
     <Compile Include="FrameSynchronizer.fs" />
     <Compile Include="EventProcessor.fs" />
     <Compile Include="NodeContext.fs" />

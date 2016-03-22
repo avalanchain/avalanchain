@@ -9,20 +9,52 @@ open FSharpx.Collections
 open MBrace.Core
 open MBrace.Flow
 open MBrace.Library
+open Avalanchain
+open Avalanchain.SecKeys
+open Avalanchain.Utils
 
 
-type StreamFrame<'T> = {
-    Nonce: uint64
+type StreamFrameData<'T> = {
+    Nonce: Nonce
     Value: 'T
 }
-        
+and HashedFrameData<'T> = Hashed<StreamFrameData<'T>>
+
+
+type IStreamFrame<'T> = 
+    abstract member Nonce: Nonce
+    abstract member Value: 'T
+    abstract member Hash: Hash
+    abstract member MerkledHash: Hash
+
+
+type MerkledHash = {
+    MH: Hash  // Merkle Hash = Hash(PMH, OH)
+    OH: Hash // Own Hash
+    PMH: Hash // Parent Merkle Hash
+}
+
+type StreamFrame<'T> = {
+    Frame: HashedFrameData<'T>
+    Hash: Hash
+    Merkled: MerkledHash
+    Timestamp: DateTimeOffset
+}
+with 
+    interface IStreamFrame<'T> with
+        member this.Hash = this.Frame.Hash
+        member this.Nonce = this.Frame.Value.Nonce
+        member this.Value = this.Frame.Value.Value
+        member this.MerkledHash = this.Merkled.MH
+
+
 type CloudStream<'T> = {
     Id: string
     Position: unit -> Cloud<int64>
     Item: uint64 -> Cloud<'T option>
     Current: unit -> Cloud<'T option>
     GetPage: uint64 -> uint32 -> Cloud<'T[]>
-    GetFramesPage: uint64 -> uint32 -> Cloud<StreamFrame<'T>[]>
+    GetFramesPage: uint64 -> uint32 -> Cloud<IStreamFrame<'T>[]>
     FlowProcess: ICloudProcess<unit>
 }
 
@@ -33,12 +65,30 @@ type StreamSink<'T> = {
 }
 
 module ChunkedCloudStream =
+   
+    let buildFrame<'T> parentMH nonce value = 
+        let ct = Utils.cryptoContext
+        let objectHasher data = dataHasher (picklerSerializer) ct data
+
+        let frame = {
+            Nonce = nonce
+            Value = value
+        }
+        let hashedFrame = (frame |> objectHasher)
+        let ownHash = hashedFrame.Hash
+        let mh = ((parentMH, ownHash) |> objectHasher).Hash
+        {
+            Frame = hashedFrame
+            Hash = hashedFrame.Hash
+            Merkled = { PMH = parentMH; OH = ownHash; MH = mh }
+            Timestamp = DateTimeOffset.UtcNow
+        } :> IStreamFrame<'T>
+
     type State<'T> = {
 //        States: CloudValue<State<'T>>[]
 //        StateSize: uint64
         ChunkSize: uint64
         Chunks: CloudValue<'T[]>[]
-        //Chunks: 'T[][]
         Tail: 'T[]
         Last: 'T option
         LastSinkNonce: int64
@@ -143,11 +193,11 @@ module ChunkedCloudStream =
         member this.NewSinkNonce (nonce: int64) : State<'T> = {this with LastSinkNonce = nonce}
 
 
-    let enqueueStream<'T> (getter: (unit -> LocalCloud<StreamFrame<'T> option * int64>) -> LocalCloud<StreamFrame<'T>[] * (int64 option)>) maxBatchSize = 
+    let enqueueStream<'T> (getter: (unit -> LocalCloud<IStreamFrame<'T> option * int64>) -> LocalCloud<IStreamFrame<'T>[] * (int64 option)>) maxBatchSize = 
         cloud { 
             let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
             let! initialState = State.Create maxBatchSize ([||])
-            let! stateAtom = CloudAtom.New<State<StreamFrame<'T>>>(initialState, "state", streamId)
+            let! stateAtom = CloudAtom.New<State<IStreamFrame<'T>>>(initialState, "state", streamId)
             //let! positionAtom = CloudAtom.New<int64>(-1L, "position", streamId)
             //let positionGetter () = cloud { return! positionAtom.GetValueAsync() |> Cloud.OfAsync }
             let positionGetter () = cloud { let! state = stateAtom.GetValueAsync() |> Cloud.OfAsync
@@ -206,18 +256,21 @@ module ChunkedCloudStream =
         }
 
     let streamOfQueue<'T> (queue: CloudQueue<'T>) maxBatchSize = cloud {
-            let getter (getLast: unit -> LocalCloud<StreamFrame<'T> option * int64>) = 
+            let getter (getLast: unit -> LocalCloud<IStreamFrame<'T> option * int64>) = 
                 local { let! last = getLast()
                         let! newValue = queue.DequeueBatchAsync(int(maxBatchSize)) |> Cloud.OfAsync
                         let lastNonce = snd last
+                        let parentMH = match fst last with 
+                                                | None -> Hash.Zero
+                                                | Some p -> p.MerkledHash
                         return 
-                            (newValue |> Array.mapi (fun i v -> { Nonce = lastNonce + int64(i) |> uint64; Value = v }), Some(lastNonce + newValue.LongLength)) }
+                            (newValue |> Array.mapi (fun i v -> buildFrame parentMH (lastNonce + int64(i) |> uint64) v), Some(lastNonce + newValue.LongLength)) }
             return! enqueueStream getter maxBatchSize
         }
 
-    let streamOfStreamFM<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: StreamFrame<'TD> -> bool) (foldF: 'TS option -> StreamFrame<'TD> -> 'TS) = // lastState -> data -> newState
+    let streamOfStreamFold<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = // lastState -> data -> newState
         cloud { 
-            let getter (getLast: unit -> LocalCloud<StreamFrame<'TS> option * int64>) = local {
+            let getter (getLast: unit -> LocalCloud<IStreamFrame<'TS> option * int64>) = local {
                 let! last = getLast()
                 let lastNonce = snd last 
                 let! msgs = stream.GetFramesPage (lastNonce + 1L |> uint64) maxBatchSize |> Cloud.AsLocal
@@ -233,23 +286,28 @@ module ChunkedCloudStream =
                                     | None, None -> None
                                     | None, Some iv -> Some iv
                                 let mutable i = lastNonce
+                                let mutable parentMH = match fst last with 
+                                                        | None -> Hash.Zero
+                                                        | Some p -> p.MerkledHash
                                 for m in filtered do
                                     state <- foldF state m |> Some
                                     i <- i + 1L
-                                    yield { Nonce = uint64(i); Value = state.Value }
+                                    let frame = buildFrame parentMH (uint64(i)) (state.Value)
+                                    parentMH <- frame.MerkledHash
+                                    yield frame
                             |], Some(lastNonce + batch.LongLength)
             }
             return! enqueueStream getter maxBatchSize
         } 
 
-    let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS option -> StreamFrame<'TD> -> 'TS) = 
-        streamOfStreamFM<'TS, 'TD> stream initialValue maxBatchSize (fun _ -> true) f
+    let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
+        streamOfStreamFold<'TS, 'TD> stream initialValue maxBatchSize (fun _ -> true) f
 
 
     let streamOfSink<'T> maxBatchSize = cloud {
             let! streamId = CloudAtom.CreateRandomContainerName()
             let! sinkAtom = CloudAtom.New<int64 * ('T * int64)[]>((-1L, [||]), "sink", streamId)
-            let getter (getLast: unit -> LocalCloud<StreamFrame<'T> option * int64>) : LocalCloud<StreamFrame<'T>[] * int64 option> = 
+            let getter (getLast: unit -> LocalCloud<IStreamFrame<'T> option * int64>) : LocalCloud<IStreamFrame<'T>[] * int64 option> = 
                 local { 
                         return! local {
                             let! last = getLast()
@@ -264,7 +322,10 @@ module ChunkedCloudStream =
                                                             let newT = t |> Array.skipWhile (fun x -> snd x <= newPos) 
                                                             (newPos, newT)
                                                         ) |> Cloud.OfAsync
-                                return (batch |> Array.mapi (fun i m -> { Nonce = lastNonce + int64(i) |> uint64; Value = fst m }), Some(newPos))
+                                let parentMH = match fst last with 
+                                                | None -> Hash.Zero
+                                                | Some p -> p.MerkledHash
+                                return (batch |> Array.mapi (fun i m -> buildFrame parentMH (lastNonce + int64(i) |> uint64) (fst m)), Some(newPos))
                         }
                     }
             let sink = {
@@ -276,9 +337,9 @@ module ChunkedCloudStream =
             return (sink, stream)
         }
 
-    let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: StreamFrame<'TD> -> bool) (foldF: 'TS option -> StreamFrame<'TD> -> 'TS) = 
+    let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
         cloud {
-            return! streamOfStreamFM stream initialValue maxBatchSize preFilter foldF 
+            return! streamOfStreamFold stream initialValue maxBatchSize preFilter foldF 
         } 
         |> Cloud.ParallelEverywhere
 

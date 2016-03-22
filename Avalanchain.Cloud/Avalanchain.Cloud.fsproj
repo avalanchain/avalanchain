@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="CloudStream.fs" />
+    <Compile Include="Confirmation.fs" />
     <Compile Include="ChainFlow.fs" />
     <None Include="AzureCluster.fsx" />
     <None Include="ThespianCluster.fsx" />
