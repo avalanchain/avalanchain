@@ -12,6 +12,8 @@ open MBrace.Library
 open Avalanchain
 open Avalanchain.SecKeys
 open Avalanchain.Utils
+open Avalanchain.StreamEvent
+
 
 
 type StreamFrameData<'T> = {
@@ -39,6 +41,8 @@ type StreamFrame<'T> = {
     Hash: Hash
     Merkled: MerkledHash
     Timestamp: DateTimeOffset
+    SubmitterKey: SigningPublicKey
+    SubmitterSignature: SubmitterSignature
 }
 with 
     interface IStreamFrame<'T> with
@@ -46,6 +50,91 @@ with
         member this.Nonce = this.Frame.Value.Nonce
         member this.Value = this.Frame.Value.Value
         member this.MerkledHash = this.Merkled.MH
+
+type CloudStream = {
+    Id: string
+    Position: unit -> Cloud<int64>
+    CurrentJson: unit -> Cloud<string>
+    ItemJson: uint64 -> Cloud<string>
+    GetPageJson: uint64 -> uint32 -> Cloud<string[]>
+    GetFramesPageJson: uint64 -> uint32 -> Cloud<string[]>
+    GetCurrentPageJson: uint32 -> Cloud<string[]>
+    GetCurrentFramesPageJson: uint32 -> Cloud<string[]>
+}
+
+type NodeContext = {
+    WorkerId: string
+    Streams: CloudDictionary<CloudStream>
+}
+
+type ClusterContext(nodeContextDict: CloudDictionary<NodeContext>) = 
+    //let nodeContextDict = local { return! CloudDictionary.New<NodeContext>("nodes") }
+    member this.AddStream (stream: CloudStream) = local {
+        let! cw = Cloud.CurrentWorker 
+        let! streamsOpt = nodeContextDict.TryFindAsync (cw.Id) |> Cloud.OfAsync
+        match streamsOpt with 
+        | Some nodeContext -> 
+            do! nodeContext.Streams.ForceAddAsync(stream.Id + "##" + Guid.NewGuid().ToString(), stream) |> Cloud.OfAsync
+        | None -> 
+            let! streams = CloudDictionary.New<CloudStream>("streams")
+            do! streams.ForceAddAsync(stream.Id + "##" + Guid.NewGuid().ToString(), stream) |> Cloud.OfAsync
+            do! nodeContextDict.ForceAddAsync(cw.Id, { WorkerId = cw.Id; Streams = streams }) |> Cloud.OfAsync
+    }
+    member this.Streams = local {
+        let! cw = Cloud.CurrentWorker 
+        let! streamsOpt = nodeContextDict.TryFindAsync (cw.Id) |> Cloud.OfAsync
+        match streamsOpt with 
+        | Some nodeContext -> 
+            let! ret = nodeContext.Streams.GetEnumerableAsync() |> Cloud.OfAsync
+            return ret.ToArray()
+        | None -> 
+            return [||]
+    }
+
+    member this.AllStreams() = local { 
+        let! nodesKV = nodeContextDict.GetEnumerableAsync() |> Cloud.OfAsync
+        let streamDicts = nodesKV |> Seq.map(fun kv -> kv.Value.Streams)
+        let streamKVs = 
+            nodesKV 
+            |> Seq.map(fun kv -> 
+                        let streams = 
+                            kv.Value.Streams.GetEnumerableAsync() 
+                            |> Async.RunSynchronously
+                            |> Seq.map(fun kv -> kv.Key, kv.Value)
+                            |> Seq.toArray
+
+                        kv.Key, (streams))
+            |> Seq.toArray
+
+        return streamKVs 
+    }
+
+    member this.AllStreams2() = local { 
+        let! nodesKV = nodeContextDict.GetEnumerableAsync() |> Cloud.OfAsync
+        let streamDicts = nodesKV |> Seq.map(fun kv -> kv.Value.Streams)
+        let! streamKVs = 
+            streamDicts 
+                |> Cloud.Sequential.collect (fun sd -> 
+                                                let streams = sd.GetEnumerableAsync() |> Cloud.OfAsync
+                                                streams :> Cloud<Generic.KeyValuePair<string, CloudStream> seq>) |> Cloud.AsLocal
+
+        return streamKVs |> Array.map(fun kv -> kv.Value)
+    }
+
+
+type ChainNode private() =
+    member this.CryptoContext = Utils.cryptoContext
+    member this.Serializer<'T> (data: 'T) = picklerSerializer data
+    member this.Derializer<'T> data = picklerDeserializer data
+    member this.JsonSerializer<'T> (data: 'T) = picklerJsonSerializer data
+    member this.JsonDerializer<'T> data = picklerJsonDeserializer data
+    member this.DataHasher<'T> (data: 'T) = data |> dataHasher (this.Serializer) this.CryptoContext
+
+    static member Instance = new ChainNode()
+//    static member AllStreams = cloud {
+//        return! local { let! workerRef = Cloud.CurrentWorker
+//                        return workerRef, ChainNode.Instance.Streams } |> Cloud.ParallelEverywhere
+//    }
 
 
 type CloudStream<'T> = {
@@ -55,8 +144,12 @@ type CloudStream<'T> = {
     Current: unit -> Cloud<'T option>
     GetPage: uint64 -> uint32 -> Cloud<'T[]>
     GetFramesPage: uint64 -> uint32 -> Cloud<IStreamFrame<'T>[]>
+    GetCurrentPage: uint32 -> Cloud<'T[]>
+    GetCurrentFramesPage: uint32 -> Cloud<IStreamFrame<'T>[]>
     FlowProcess: ICloudProcess<unit>
+    ClusterContext: ClusterContext
 }
+           
 
 type StreamSink<'T> = {
     Push: 'T -> Cloud<unit> // TODO: replace with enqueueing result
@@ -65,23 +158,50 @@ type StreamSink<'T> = {
 }
 
 module ChunkedCloudStream =
-   
-    let buildFrame<'T> parentMH nonce value = 
-        let ct = Utils.cryptoContext
-        let objectHasher data = dataHasher (picklerSerializer) ct data
+    let toStream genericStream = {
+        Id = genericStream.Id
+        Position = genericStream.Position
+        CurrentJson = fun nonce -> cloud {
+            let! item = genericStream.Current()
+            return item |> ChainNode.Instance.JsonSerializer
+        }
+        ItemJson = fun nonce -> cloud {
+            let! item = genericStream.Item nonce
+            return item |> ChainNode.Instance.JsonSerializer
+        }
+        GetPageJson = fun nonce pageSize -> cloud {
+            let! item = genericStream.GetPage nonce pageSize
+            return item |> Array.map (ChainNode.Instance.JsonSerializer)
+        }
+        GetFramesPageJson = fun nonce pageSize -> cloud {
+            let! item = genericStream.GetFramesPage nonce pageSize
+            return item |> Array.map (ChainNode.Instance.JsonSerializer)
+        }
+        GetCurrentPageJson = fun pageSize -> cloud {
+            let! item = genericStream.GetCurrentPage pageSize
+            return item |> Array.map (ChainNode.Instance.JsonSerializer)
+        }
+        GetCurrentFramesPageJson = fun pageSize -> cloud {
+            let! item = genericStream.GetCurrentFramesPage pageSize
+            return item |> Array.map (ChainNode.Instance.JsonSerializer)
+        }
+    }
 
+    let buildFrame<'T> parentMH nonce value = 
         let frame = {
             Nonce = nonce
             Value = value
         }
-        let hashedFrame = (frame |> objectHasher)
+        let hashedFrame = (frame |> ChainNode.Instance.DataHasher)
         let ownHash = hashedFrame.Hash
-        let mh = ((parentMH, ownHash) |> objectHasher).Hash
+        let mh = ((parentMH, ownHash) |> ChainNode.Instance.DataHasher).Hash
         {
             Frame = hashedFrame
             Hash = hashedFrame.Hash
             Merkled = { PMH = parentMH; OH = ownHash; MH = mh }
             Timestamp = DateTimeOffset.UtcNow
+            SubmitterKey = ChainNode.Instance.CryptoContext.SigningPublicKey
+            SubmitterSignature = ChainNode.Instance.CryptoContext.HashSigner hashedFrame.Hash
         } :> IStreamFrame<'T>
 
     type State<'T> = {
@@ -193,13 +313,11 @@ module ChunkedCloudStream =
         member this.NewSinkNonce (nonce: int64) : State<'T> = {this with LastSinkNonce = nonce}
 
 
-    let enqueueStream<'T> (getter: (unit -> LocalCloud<IStreamFrame<'T> option * int64>) -> LocalCloud<IStreamFrame<'T>[] * (int64 option)>) maxBatchSize = 
+    let enqueueStream<'T> streamPath clusterContext (getter: (unit -> LocalCloud<IStreamFrame<'T> option * int64>) -> LocalCloud<IStreamFrame<'T>[] * (int64 option)>) maxBatchSize = 
         cloud { 
-            let! streamId = CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
+            let streamId = streamPath //CloudAtom.CreateRandomContainerName() // TODO: Replace with node/stream pubkey
             let! initialState = State.Create maxBatchSize ([||])
             let! stateAtom = CloudAtom.New<State<IStreamFrame<'T>>>(initialState, "state", streamId)
-            //let! positionAtom = CloudAtom.New<int64>(-1L, "position", streamId)
-            //let positionGetter () = cloud { return! positionAtom.GetValueAsync() |> Cloud.OfAsync }
             let positionGetter () = cloud { let! state = stateAtom.GetValueAsync() |> Cloud.OfAsync
                                             return (state.Size |> int64) - 1L}
             let lastGetter () = local { let! state = stateAtom.GetValueAsync() |> Cloud.OfAsync
@@ -207,7 +325,7 @@ module ChunkedCloudStream =
             let! flowProcess = 
                 let rec loop () = local { 
                     try 
-                        let! (msgs, sinkPos) = getter lastGetter //|> Cloud.AsLocal
+                        let! (msgs, sinkPos) = getter lastGetter 
                         if msgs.Length > 0 || sinkPos.IsSome then
                             let! currentState = stateAtom.GetValueAsync() |> Cloud.OfAsync // TODO: Rethink possible race
                             let! newState = 
@@ -225,7 +343,6 @@ module ChunkedCloudStream =
                             do! Cloud.Sleep 100
                             return! loop ()
                     with 
-                        //| e -> Environment.Exit(-1) //Cloud.Logf "%A" e
                         | e -> printfn "Exception!!! %A" e 
                 } 
                 loop () |> Cloud.CreateProcess
@@ -233,7 +350,11 @@ module ChunkedCloudStream =
             let getFramesPage = (fun nonce page -> cloud { 
                                         let! v = stateAtom.GetValueAsync() |> Cloud.OfAsync
                                         return! v.GetPage nonce (uint64(page)) })
-            return {
+            let getPage = (fun nonce page -> cloud { 
+                                        return! local {
+                                            let! v = getFramesPage nonce page |> Cloud.AsLocal
+                                            return v |> Array.map (fun kv -> kv.Value) }})
+            let (genericStream: CloudStream<'T>) = {
                 Id = streamId
                 Position = positionGetter
                 Item = (fun nonce -> cloud { 
@@ -246,16 +367,28 @@ module ChunkedCloudStream =
                 Current = (fun unit -> cloud { 
                                         let! v = stateAtom.GetValueAsync() |> Cloud.OfAsync
                                         return v.Last |> Option.bind (fun vvv -> Some vvv.Value) })
-                GetPage = (fun nonce page -> cloud { 
-                                        return! local {
-                                            let! v = getFramesPage nonce page |> Cloud.AsLocal
-                                            return v |> Array.map (fun kv -> kv.Value) }})
+                GetPage = getPage
+                GetCurrentPage = (fun pageSize -> cloud { 
+                                    let! pos = positionGetter()
+                                    if pos >= 0L then 
+                                        return! getPage ((Math.Max(pos - int64(pageSize), 0L)) |> uint64) pageSize
+                                    else return [||] })
+                GetCurrentFramesPage = (fun pageSize -> cloud { 
+                                    let! pos = positionGetter()
+                                    if pos >= 0L then 
+                                        return! getFramesPage ((Math.Max(pos - int64(pageSize), 0L)) |> uint64) pageSize
+                                    else return [||] })
                 GetFramesPage = getFramesPage
                 FlowProcess = flowProcess
+                ClusterContext = clusterContext
             }
+
+            do! genericStream |> toStream |> clusterContext.AddStream 
+
+            return genericStream
         }
 
-    let streamOfQueue<'T> (queue: CloudQueue<'T>) maxBatchSize = cloud {
+    let streamOfQueue<'T> clusterContext (queue: CloudQueue<'T>) maxBatchSize = cloud {
             let getter (getLast: unit -> LocalCloud<IStreamFrame<'T> option * int64>) = 
                 local { let! last = getLast()
                         let! newValue = queue.DequeueBatchAsync(int(maxBatchSize)) |> Cloud.OfAsync
@@ -265,10 +398,10 @@ module ChunkedCloudStream =
                                                 | Some p -> p.MerkledHash
                         return 
                             (newValue |> Array.mapi (fun i v -> buildFrame parentMH (lastNonce + int64(i) |> uint64) v), Some(lastNonce + newValue.LongLength)) }
-            return! enqueueStream getter maxBatchSize
+            return! enqueueStream "ofQueue" clusterContext getter maxBatchSize
         }
 
-    let streamOfStreamFold<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = // lastState -> data -> newState
+    let streamOfStreamFold<'TS, 'TD> streamPath (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = // lastState -> data -> newState
         cloud { 
             let getter (getLast: unit -> LocalCloud<IStreamFrame<'TS> option * int64>) = local {
                 let! last = getLast()
@@ -297,15 +430,15 @@ module ChunkedCloudStream =
                                     yield frame
                             |], Some(lastNonce + batch.LongLength)
             }
-            return! enqueueStream getter maxBatchSize
+            return! enqueueStream (stream.Id + "/" + streamPath) stream.ClusterContext getter maxBatchSize
         } 
 
-    let streamOfStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
-        streamOfStreamFold<'TS, 'TD> stream initialValue maxBatchSize (fun _ -> true) f
+    let streamOfStream<'TS, 'TD> streamPath (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
+        streamOfStreamFold<'TS, 'TD> streamPath stream initialValue maxBatchSize (fun _ -> true) f
 
 
-    let streamOfSink<'T> maxBatchSize = cloud {
-            let! streamId = CloudAtom.CreateRandomContainerName()
+    let streamOfSink<'T> clusterContext maxBatchSize = cloud {
+            let streamId = "ofSink" //CloudAtom.CreateRandomContainerName()
             let! sinkAtom = CloudAtom.New<int64 * ('T * int64)[]>((-1L, [||]), "sink", streamId)
             let getter (getLast: unit -> LocalCloud<IStreamFrame<'T> option * int64>) : LocalCloud<IStreamFrame<'T>[] * int64 option> = 
                 local { 
@@ -333,13 +466,13 @@ module ChunkedCloudStream =
                 PushBatch = (fun t -> cloud { do! Cloud.OfAsync <| sinkAtom.UpdateAsync(fun (pos, et) -> (pos, t |> Array.mapi (fun i e -> (e, pos + int64(i) + et.LongLength + 1L)) |> Array.append et )) })
                 CurrentState = (fun () -> cloud { return! sinkAtom.GetValueAsync() |> Cloud.OfAsync })
             }
-            let! stream = enqueueStream getter maxBatchSize
+            let! stream = enqueueStream streamId clusterContext getter maxBatchSize
             return (sink, stream)
         }
 
     let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
         cloud {
-            return! streamOfStreamFold stream initialValue maxBatchSize preFilter foldF 
+            return! streamOfStreamFold "everywhere" stream initialValue maxBatchSize preFilter foldF 
         } 
         |> Cloud.ParallelEverywhere
 

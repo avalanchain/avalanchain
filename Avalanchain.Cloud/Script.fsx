@@ -47,8 +47,10 @@ let sendRandomBatch (queue: CloudQueue<string>) m n =
     sendBatch queue words
 
 
+let nodeContextDict = cloud { return! CloudDictionary.New<NodeContext>("nodes") } |> cluster.Run
+let clusterContext = ClusterContext(nodeContextDict)
 
-let sink, topChain = ChainFlow.ofSink<string> 10000u |> cluster.Run
+let sink, topChain = ChainFlow.ofSink<string> clusterContext 10000u |> cluster.Run
 
 let topChainPos = topChain.Position() |> cluster.Run
 
@@ -58,11 +60,11 @@ topChainAll.Length
               
 
 let chain = ChainFlow.ofStream topChain
-            //|> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
-            //|> ChainFlow.filter 1000u (fun v -> true )
-            |> ChainFlow.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
+            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
+            |> ChainFlow.filter 1000u (fun v -> true )
+            //|> ChainFlow.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
 //            |> ChainFlow.filter 1000u (fun v -> v.ToString() |> Int64.Parse |> fun ch -> ch % 2L <> 0L )
-//            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
+            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
             |> cluster.Run
 
 let chainPos = chain.Position() |> cluster.Run
@@ -74,6 +76,15 @@ let chainCurrent = chain.Current() |> cluster.Run
 
 sink.PushBatch [|for i in 0UL .. 99999UL do yield "item" + i.ToString()|] |> cluster.Run
 
+clusterContext.AllStreams() |> cluster.Run
+
+let pos = cloud { 
+            let! streams = clusterContext.AllStreams() 
+            return! ((streams.[0] |> snd).[0] |> snd).Position()} |> cluster.Run
+
+let last = cloud { 
+            let! streams = clusterContext.AllStreams() 
+            return! ((streams.[0] |> snd).[0] |> snd).GetPageJson 0UL 5u} |> cluster.Run
 
 let sum = chain 
             |> ChainFlow.ofStream
@@ -82,6 +93,10 @@ let sum = chain
 
 let sumPos = chain.Position() |> cluster.Run
 let sumCurrent = chain.Current() |> cluster.Run
+let sumCurrentPage = chain.GetCurrentPage 20u |> cluster.Run
+let sumCurrentFramesPage = chain.GetCurrentFramesPage 20u |> cluster.Run
+
+sumCurrentFramesPage.Length
 
 let sumEverywhere = chain 
                     |> ChainFlow.ofStream
@@ -105,7 +120,7 @@ let sumEvrCurrent = [| for node in sumEverywhere -> node.Current() |> cluster.Ru
 
 
 let str = [|for i in 0UL .. 99999UL do yield "item" + i.ToString()|]
-            |> ChainFlow.ofArray 10000u
+            |> ChainFlow.ofArray clusterContext 10000u
 
 
 
