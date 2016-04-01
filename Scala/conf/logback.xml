@@ -1,0 +1,23 @@
+<configuration scan="true">
+
+  <appender name="StdOut" class="ch.qos.logback.core.ConsoleAppender">
+    <layout class="ch.qos.logback.classic.PatternLayout">
+      <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%-40thread] %-45logger{28} - %msg%n</Pattern>
+    </layout>
+  </appender>
+
+  <appender name="Metrics" class="ch.qos.logback.core.ConsoleAppender">
+    <layout class="ch.qos.logback.classic.PatternLayout">
+      <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} Metrics: %msg%n</Pattern>
+    </layout>
+  </appender>
+
+  <logger name="metrics" level="INFO" additivity="false">
+    <appender-ref ref="Metrics" />
+  </logger>
+
+  <root level="INFO">
+    <appender-ref ref="StdOut" />
+  </root>
+
+</configuration>
