@@ -54,6 +54,11 @@ type Proof = {
     ValueHash: Hash
 }
 
+type SignedProof<'T> = {
+    Value: 'T
+    Proof: Proof
+}
+
 type ProofVerifier = Proof -> bool
 
 type Encryption =

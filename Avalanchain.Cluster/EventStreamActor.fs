@@ -41,7 +41,7 @@ let createActor<'TD> (system: IActorRefFactory) name =
             actor { 
                 let! msg = mailbox.Receive()
                 match msg with 
-                    | Command cmd -> return Persist ((cmd |> toEvent))
+                    | Command cmd -> return Persist (cmd |> toEvent)
                     | Event e -> 
                         match e with
                         | NodeRefEvent.Command c -> 

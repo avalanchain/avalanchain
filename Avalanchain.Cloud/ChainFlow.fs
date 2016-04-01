@@ -96,3 +96,6 @@ module ChainFlow =
             when 'T : (static member Zero : 'T)
             and 'T : (static member (+) : 'T * 'T -> 'T) =
         foldEverywhere chunkSize (+) LanguagePrimitives.GenericZero cloudStream
+
+
+type ChainClusterClient = MBraceClient

@@ -33,7 +33,7 @@
 //#r "../packages/"
 //#r "../packages/"
 
-#I "bin/Debug/"
+//#I "bin/Debug/"
 
 //#r "bin/Debug/Newtonsoft.Json.dll"
 //#r "bin/Debug/Akka.dll"
@@ -49,7 +49,7 @@
 ////#r "bin/Debug/Akka.Cluster.Tools.dll"
 //#r "bin/Debug/Akkling.Cluster.Sharding.dll"
 #r "bin/Debug/Avalanchain.dll"
-#r "System.Runtime.dll"
+//#r "bin/Debug/System.Runtime.dll"
 
 #load "Messages.fs"
 #load "AutomaticCluster.fs"
@@ -120,7 +120,8 @@ let configWithPort port =
           }
         }
         """)
-    config.WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
+    //config.WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
+    config
     
    
 
