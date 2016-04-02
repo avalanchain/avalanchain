@@ -25,7 +25,7 @@ implicit val materializer = ActorMaterializer()
 
 
 val sourceFromIterable = Source(List(1,2,3))
-val sourceFromFuture = Source(Future.successful("hello"))
+val sourceFromFuture = Source.fromFuture(Future.successful("hello"))
 val sourceWithSingleElement = Source.single("just one")
 val sourceEmittingTheSameElement = Source.repeat("again and again")
 val emptySource = Source.empty
