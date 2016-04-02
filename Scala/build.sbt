@@ -2,7 +2,7 @@ import com.typesafe.sbt.digest.Import._
 import com.typesafe.sbt.gzip.Import._
 import com.typesafe.sbt.rjs.Import._
 
-name := """activator-reactive-fx"""
+name := """avalanchain"""
 
 version := "1.0-SNAPSHOT"
 
