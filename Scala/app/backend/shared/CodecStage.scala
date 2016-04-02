@@ -1,7 +1,7 @@
 package backend.shared
 
 import akka.stream.BidiShape
-import akka.stream.scaladsl.{BidiFlow, Flow, FlowGraph}
+import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL}
 import akka.util.ByteString
 import backend._
 import backend.PricerMsg._
@@ -10,7 +10,7 @@ import backend.PricerMsg._
   * Conversion between websocket and pricer dialects.
   */
 object CodecStage {
-  def apply() = BidiFlow.fromGraph(FlowGraph.create() { b =>
+  def apply() = BidiFlow.fromGraph(GraphDSL.create() { b =>
     val in = b.add(Flow[ByteString].map(fromBytes))
     val out = b.add(Flow[PricerMsg].map(toBytes))
     BidiShape.fromFlows(in, out)

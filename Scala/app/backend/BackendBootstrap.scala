@@ -10,22 +10,23 @@ import play.api.{Application, GlobalSettings}
 /**
   * Bootstrap for all components.
   */
-object BackendBootstrap extends GlobalSettings {
+object BackendBootstrap //extends GlobalSettings
+{
 
-  override def onStart(app: Application): Unit = {
-
-    implicit val sys = ActorSystem("backend", ConfigFactory.load("backend.conf"))
-
-    StreamRegistry.start()
-
-    Pricer.start()
-
-    PricerConnectionManager.start()
-
-    Distributor.start()
-
-    CPUMonitor.start()
-
-  }
+//  override def onStart(app: Application): Unit = {
+//
+//    implicit val sys = ActorSystem("backend", ConfigFactory.load("backend.conf"))
+//
+//    StreamRegistry.start()
+//
+//    Pricer.start()
+//
+//    PricerConnectionManager.start()
+//
+//    Distributor.start()
+//
+//    CPUMonitor.start()
+//
+//  }
 
 }

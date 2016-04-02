@@ -1,7 +1,7 @@
 package backend.distributor
 
 import akka.stream._
-import akka.stream.scaladsl.{BidiFlow, Flow, FlowGraph}
+import akka.stream.scaladsl.{BidiFlow, Flow, GraphDSL}
 import akka.stream.stage._
 import backend.PricerMsg
 
@@ -10,7 +10,7 @@ import scala.language.postfixOps
 
 object ShapingStage {
 
-  def apply(msgSec: Int) = BidiFlow.fromGraph(FlowGraph.create() { b =>
+  def apply(msgSec: Int) = BidiFlow.fromGraph(GraphDSL.create() { b =>
     val in = b.add(Flow[PricerMsg])
     val out = b.add(Flow.fromGraph(new SimpleThrottledFlow(msgSec)))
     BidiShape.fromFlows(in, out)

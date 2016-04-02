@@ -28,8 +28,10 @@ scalacOptions := Seq(
 
 val scalaLoggingVersion = "3.1.0"
 val logbackVersion = "1.1.2"
-val akkaVersion = "2.3.13"
-val akkaHTTPVersion = "2.0-M2"
+val akkaVersion = "2.4.3"
+val akkaHTTPVersion = "2.0.4"
+val akkaPersistenceVersion = "2.4.3"
+val akkaStreamVersion = "2.0.4"
 
 val webjarsJqueryVersion = "2.1.4"
 val webjarsBootswatchVersion = "3.3.5+4"
@@ -47,6 +49,8 @@ val loggingLogback  = "ch.qos.logback"              %  "logback-classic"        
 val akkaSlf4j       = "com.typesafe.akka"           %% "akka-slf4j"                     % akkaVersion
 val akkaHttpCore    = "com.typesafe.akka"           %% "akka-http-core-experimental"    % akkaHTTPVersion
 val akkaHttp        = "com.typesafe.akka"           %% "akka-http-experimental"         % akkaHTTPVersion
+val akkaPersistence = "com.typesafe.akka"           %% "akka-persistence"               % akkaPersistenceVersion
+val akkaStream      = "com.typesafe.akka"           %% "akka-stream-experimental"       % akkaStreamVersion
 val scalaMetrics    = "nl.grons"                    %% "metrics-scala"                  % scalaMetricsVersion
 
 val webjarsJquery   = "org.webjars"                 %  "jquery"                         % webjarsJqueryVersion
@@ -60,12 +64,13 @@ val webjarsLoDash   = "org.webjars"                 %  "lodash"                 
 
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-stream-experimental" % "2.0-M2",
+  akkaStream,
   loggingLogback,
   loggingScala,
   akkaSlf4j,
   akkaHttpCore,
   akkaHttp,
+  akkaPersistence,
   scalaMetrics,
   webjarsBootstrap,
   webjarsJquery,

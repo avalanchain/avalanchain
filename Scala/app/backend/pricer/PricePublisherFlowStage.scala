@@ -72,7 +72,7 @@ private class PricePublisherFlowStage(serverId: Int)(implicit sys: ActorSystem) 
         grab(in) match {
           case StreamRequest(id) => startPublishingPricesFor(id)
           case StreamCancel(id) => stopPublishingPricesFor(id)
-          case KillServerRequest() => sys.shutdown()
+          case KillServerRequest() => sys.terminate()
           case Pong(id) =>
             val diff = ((System.nanoTime() % Int.MaxValue) - id) / 2
             if (diff > 0 && diff < 60L * 1000 * 1000000) latency.update(diff, TimeUnit.NANOSECONDS)
