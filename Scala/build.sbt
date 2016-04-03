@@ -29,9 +29,10 @@ scalacOptions := Seq(
 val scalaLoggingVersion = "3.1.0"
 val logbackVersion = "1.1.2"
 val akkaVersion = "2.4.3"
-val akkaHTTPVersion = "2.0.4"
+val akkaHTTPVersion = "2.4.3"
+val akkaHTTPCoreVersion = "2.0.4"
 val akkaPersistenceVersion = "2.4.3"
-val akkaStreamVersion = "2.0.4"
+val akkaStreamVersion = "2.4.3"
 
 val webjarsJqueryVersion = "2.1.4"
 val webjarsBootswatchVersion = "3.3.5+4"
@@ -44,14 +45,15 @@ val webjarsLoDashVersion = "3.10.1"
 val scalaMetricsVersion = "3.5.2_a2.3"
 
 
-val loggingScala    = "com.typesafe.scala-logging"  %% "scala-logging"                  % scalaLoggingVersion
-val loggingLogback  = "ch.qos.logback"              %  "logback-classic"                % logbackVersion
-val akkaSlf4j       = "com.typesafe.akka"           %% "akka-slf4j"                     % akkaVersion
-val akkaHttpCore    = "com.typesafe.akka"           %% "akka-http-core-experimental"    % akkaHTTPVersion
-val akkaHttp        = "com.typesafe.akka"           %% "akka-http-experimental"         % akkaHTTPVersion
-val akkaPersistence = "com.typesafe.akka"           %% "akka-persistence"               % akkaPersistenceVersion
-val akkaStream      = "com.typesafe.akka"           %% "akka-stream-experimental"       % akkaStreamVersion
-val scalaMetrics    = "nl.grons"                    %% "metrics-scala"                  % scalaMetricsVersion
+val loggingScala    = "com.typesafe.scala-logging"  %% "scala-logging"                       % scalaLoggingVersion
+val loggingLogback  = "ch.qos.logback"              %  "logback-classic"                     % logbackVersion
+val akkaSlf4j       = "com.typesafe.akka"           %% "akka-slf4j"                          % akkaVersion
+val akkaHttpCore    = "com.typesafe.akka"           %% "akka-http-core-experimental"         % akkaHTTPCoreVersion
+val akkaHttp        = "com.typesafe.akka"           %% "akka-http-experimental"              % akkaHTTPVersion
+val akkaStream      = "com.typesafe.akka"           %% "akka-stream"                         % akkaStreamVersion
+val akkaPersistence = "com.typesafe.akka"           %% "akka-persistence"                    % akkaPersistenceVersion
+val akkaPerQuery    = "com.typesafe.akka"           %% "akka-persistence-query-experimental" % akkaPersistenceVersion
+val scalaMetrics    = "nl.grons"                    %% "metrics-scala"                       % scalaMetricsVersion
 
 val webjarsJquery   = "org.webjars"                 %  "jquery"                         % webjarsJqueryVersion
 val webjarsBootstrap= "org.webjars"                 %  "bootstrap"                      % webjarsBootstrapVersion
@@ -61,10 +63,15 @@ val webjarsReactJs  = "org.webjars"                 %  "react"                  
 val webjarsJsSignals= "org.webjars"                 %  "js-signals"                     % webjarsJsSignalsVersion
 val webjarsLoDash   = "org.webjars"                 %  "lodash"                         % webjarsLoDashVersion
 
+val levelDb         = "org.iq80.leveldb"            % "leveldb"                         % "0.7"
+val levelDbFuse     = "org.fusesource.leveldbjni"   % "leveldbjni-all"                  % "1.8"
+
 
 
 libraryDependencies ++= Seq(
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value,
   akkaStream,
+  akkaPerQuery,
   loggingLogback,
   loggingScala,
   akkaSlf4j,
@@ -78,7 +85,9 @@ libraryDependencies ++= Seq(
   webjarsReqjs,
   webjarsReqjsTxt,
   webjarsJsSignals,
-  webjarsLoDash
+  webjarsLoDash,
+  levelDb,
+  levelDbFuse
 )
 
 includeFilter in(Assets, LessKeys.less) := "*.less"
@@ -86,6 +95,8 @@ excludeFilter in(Assets, LessKeys.less) := "_*.less"
 
 pipelineStages := Seq(rjs, digest, gzip)
 
-
+// Play provides two styles of routers, one expects its actions to be injected, the
+// other, legacy style, accesses its actions statically.
+routesGenerator := InjectedRoutesGenerator
 
 fork in run := true

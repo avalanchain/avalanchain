@@ -95,7 +95,7 @@ private trait ManuallyControlledStreamProducer extends StrictLogging {
   _: GraphStageLogic =>
 
   def in: Inlet[PricerMsg]
-  def selfRef: akka.stream.stage.GraphStageLogic.StageActorRef
+  def selfRef: StageActorRef
 
 
   private var pricerStreamRef: Option[ActorRef] = None        // current location of the pricer stream
