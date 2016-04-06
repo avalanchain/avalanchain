@@ -1,0 +1,81 @@
+<!--
+* avalanchain - Responsive Admin Theme
+* Version 2.0
+*
+-->
+
+<!DOCTYPE html>
+<html ng-app="avalanchain">
+
+  <head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+      <!-- Page title set in pageTitle directive -->
+    <title page-title></title>
+
+      <!-- Font awesome -->
+    <link href="@routes.Assets.versioned("/Content/font-awesome/css/font-awesome.css")" rel="stylesheet">
+
+      <!-- Bootstrap and Fonts -->
+    <link href="@routes.Assets.versioned("/Content/css/bootstrap.min.css")" rel="stylesheet">
+    <link href="@routes.Assets.versioned("/Content/js/plugins/toastr/toastr.min.css")" rel="stylesheet" />
+      <!-- Main avalanchain CSS files -->
+    <link href="@routes.Assets.versioned("/Content/css/animate.css")" rel="stylesheet">
+    <link id="loadBefore" href="@routes.Assets.versioned("/Content/css/style.css")" rel="stylesheet">
+    <link href="@routes.Assets.versioned("/Content/css/main.css")" rel="stylesheet">
+
+  </head>
+
+    <!-- ControllerAs syntax -->
+    <!-- Main controller with serveral data used in avalanchain theme on diferent view -->
+  <body ng-controller="MainCtrl as main">
+
+      <!-- RenderBody()-->
+    <!-- Main view  -->
+  <div ui-view></div>
+
+    <!-- jQuery and Bootstrap -->
+  <script src="@routes.Assets.versioned("/Content/js/jquery/jquery-2.1.1.min.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/plugins/jquery-ui/jquery-ui.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/bootstrap/bootstrap.min.js")"></script>
+
+    <!-- MetsiMenu -->
+  <script src="@routes.Assets.versioned("/Content/js/plugins/metisMenu/jquery.metisMenu.js")"></script>
+
+    <!-- SlimScroll -->
+  <script src="@routes.Assets.versioned("/Content/js/plugins/slimscroll/jquery.slimscroll.min.js")"></script>
+
+    <!-- Peace JS -->
+  <script src="@routes.Assets.versioned("/Content/js/plugins/pace/pace.min.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/plugins/toastr/toastr.min.js")"></script>
+
+    <!-- Custom and plugin javascript -->
+  <script src="/Content/js/avalanchain.js"></script>
+
+    <!-- Main Angular scripts-->
+  <script src="@routes.Assets.versioned("/Content/js/angular/angular.min.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/plugins/oclazyload/dist/ocLazyLoad.min.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/ui-router/angular-ui-router.min.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/bootstrap/ui-bootstrap-tpls-0.12.0.min.js")"></script>
+
+
+    <!-- Anglar App Script -->
+  <script src="@routes.Assets.versioned("/Content/js/app.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/config.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/directives.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/controllers.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/services/common.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/services/logger.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/js/services/datasevice.js")"></script>
+
+  <script src="@routes.Assets.versioned("/Content/views/dashboard/dashboard.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/views/dashboard/dashboard_2.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/views/nodes/nodes.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/views/streams/streams.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/views/clusters/clusters.js")"></script>
+  <script src="@routes.Assets.versioned("/Content/views/doctor/doctor.js")"></script>
+  </body>
+</html>
+
