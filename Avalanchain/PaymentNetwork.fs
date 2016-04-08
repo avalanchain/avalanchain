@@ -141,7 +141,12 @@ module PaymentNetwork =
             
             member x.All(): PaymentBalances * seq<StoredTransaction> = initialBalances, (storedTransactions |> List.rev |> Seq.ofList) 
             member x.AccountState(ref: PaymentAccountRef): PaymentAmount option * seq<StoredTransaction> = 
-                initialBalances.Balances.TryFind ref, (storedTransactions |> List.rev |> Seq.ofList)
+                initialBalances.Balances.TryFind 
+                    ref, (storedTransactions 
+                            |> List.filter(fun t -> 
+                                            (t.Result |> failed |> not) && 
+                                            (t.Result |> returnOrFail |> (fun t1 -> t1.From = ref || fst(t1.To.[0]) = ref))) 
+                            |> List.rev |> Seq.ofList)
             member x.Submit(transaction: PaymentTransaction): StoredTransaction = 
                 let newTransaction = transaction |> applyTransaction (balances())
                 storedTransactions <- newTransaction :: storedTransactions
