@@ -17,18 +17,21 @@
                     <div class="col-lg-8">
                         <dl class="dl-horizontal">
                             <dt>Status:</dt>
-                            <dd><span class="{{'label '+ current.navigation}}">{{current.status}}</span></dd>
+                            <dd><span class="label label-primary">Active</span></dd>
                             <br />
                             <dt>ID:</dt>
-                            <dd>{{current.id}}</dd>
+                            <dd>{{current.name}}</dd>
                             <br />
-                            <dt>Transactions:</dt>
-                            <dd> {{current.transactions.length}}</dd>
+                            <dt>Adress:</dt>
+                            <dd> {{current.ref.address}}</dd>
+                            <dt>Balance:</dt>
+                            <dd> {{current.balance | number}}</dd>
+
                         </dl>
                     </div>
                     <div class="col-lg-4" id="cluster_info">
                         <dl class="dl-horizontal">
-                            <qrcode size="{{100}}" data="{{current.id}}"></qrcode>
+                            <qrcode size="{{100}}" data="{{current.ref.address}}"></qrcode>
                         </dl>
                     </div>
                 </div>
@@ -41,25 +44,27 @@
                                         <thead>
                                             <tr>
                                                 <th>Status</th>
-                                                <th>Title</th>
+                                                <th>Balance</th>
                                                 <th>Time</th>
                                                 <th>From</th>
                                                 <th>To</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr ng-repeat="transaction in current.transactions">
+                                            <tr ng-repeat="transaction in transactions">
                                                 <td>
-                                                    <span class="label label-primary"><i class="fa fa-check"></i> Completed</span>
+                                                    <span class="label label-primary"><i class="fa fa-check"></i> {{transaction.result.case}}</span>
                                                 </td>
-                                                <td> Send </td>
+                                                <td> {{transaction.result.fields[0].amount | number}} </td>
 
-                                                <td> 12.07.2014 10:10:1 </td>
+                                                <td>
+                                                    {{transaction.timeStamp | date:'yyyy-MM-dd HH:mm:ss '}}
+                                                </td>
 
-                                                <td> {{current.id}} </td>
+                                                <td> {{transaction.result.fields[0].fromAcc.address}} </td>
                                                 <td>
                                                     <p class="small">
-                                                        cured
+                                                        {{transaction.result.fields[0].toAcc.address}}
                                                     </p>
                                                 </td>
 
@@ -95,7 +100,7 @@
                         <label class="col-lg-2 control-label">From</label>
 
                         <div class="col-lg-10">
-                            <input type="text" placeholder="Id" ng-model="current.id" class="form-control" disabled>
+                            <input type="text" placeholder="Id" ng-model="current.ref.address" class="form-control" disabled>
                         </div>
                     </div>
                     <div class="form-group">
@@ -103,7 +108,7 @@
 
                         <div class="col-lg-10">
                             <select name="singleSelect" class="form-control m-b" ng-model="accountTo">
-                                <option ng-repeat="account in accounts" value="account.id">{{account.id}}</option>
+                                <option ng-repeat="account in accounts" value="account.id">{{account.ref.address}}</option>
                             </select>
                         </div>
                     </div>

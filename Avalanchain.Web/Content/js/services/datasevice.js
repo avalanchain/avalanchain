@@ -24,6 +24,7 @@
         var service = {
             getData: getData,
             sendPayment: sendPayment,
+            getTransactions: getTransactions,
             getAccounts: getAccounts,
             newAccount: newAccount,
             getAllAccounts: getAllAccounts,
@@ -43,22 +44,6 @@
             return dataProvider.get(sc, '/api/account/all', function (data, status) {
                 //$scope.GetAllProgresses = data;
             });
-            return $http.get('/api/account/all')
-                    .success(function (data, status, headers, config) {
-                        console.log("success data, status=" + JSON.stringify(data) + status);
-                        if (data.query.results == null) {
-                            console.log("No Valid Results could be Returned!!");
-                        }
-                        else {
-                            var res = data.query.results;
-                        }
-                    })
-
-                .error(function (data, status, headers, config) {
-                    var err = status + ", " + data;
-                    //$scope.result = "Request failed: " + err;
-                    return "error";
-                });
         }
 
         function sendPayment(parameters) {
@@ -81,19 +66,12 @@
         }
         
 
-        function getAccounts() {
-            var accounts = [];
-
-            for (var i = 0; i < 20; i++) {
-                accounts.push({
-                    status: i % 3 !== 0 ? 'active' : 'unactive',
-                    id: createGuid(),
-                    transactions:[1,2,3],
-                    balance:980+i
-                });
+        function getTransactions(address) {
+            var sc = {};
+            return dataProvider.get(sc, '/api/account/get/'+ address, function (data, status) {
+                //$scope.GetAllProgresses = data;
+            });
             }
-
-            return accounts;
         }
         function getYData() {
             var url = "http://query.yahooapis.com/v1/public/yql";
@@ -254,5 +232,5 @@
                 //return exception.catcher(msg)(e);
             }
         }
-    }
+    
 })();

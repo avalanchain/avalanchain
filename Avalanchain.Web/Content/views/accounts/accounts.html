@@ -1,7 +1,7 @@
 ﻿<div ng-controller="accounts">
     <div class="row wrapper border-bottom white-bg page-heading">
         <div class="col-lg-8">
-            <h2>Project list</h2>
+            <h2>Accounts</h2>
             <ol class="breadcrumb">
                 <li>
                     Home
@@ -54,7 +54,7 @@
                                 <tbody>
                                 <tr style="cursor: pointer" ng-repeat="account in accounts | filter:searchAccounts | pagination:(currentPage-1)*10 | limitTo:10" ng-click="showAccount(account)">
                                     <td class="project-status">
-                                        <span class="{{'label '+ account.navigation}}">{{account.status}}</span>
+                                        <span class="label label-primary">Active</span>
                                     </td>
                                     <td class="project-title">
                                         <strong><label class="label label-info">ID:</label>{{account.name}}</strong>

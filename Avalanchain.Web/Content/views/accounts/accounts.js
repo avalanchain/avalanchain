@@ -11,11 +11,15 @@
         vm.helloText = 'Welcome in Avalanchain';
         vm.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         $scope.searchAccounts = '';
-        $scope.valinside = false;   
-
+        $scope.valinside = false;
+        $scope.transactions = [];
         $scope.showAccount= function (value) {
             $scope.current = value;
             $scope.valinside = true;
+            return dataservice.getTransactions(value.ref.address).then(function (data) {
+                $scope.transactions = data.data.fields[0].transactions;
+                $scope.$digest();
+            });
         };
 
         $scope.newAccount = function() {
@@ -24,15 +28,14 @@
             });
         }
 
-        //$scope.pagination = function () {
-        //    return function (input, start) {
-        //        if (input) {
-        //            start = +start; //parse to int
-        //            return input.slice(start);
-        //        }
-        //        return [];
-        //    }
-        //}
+        $scope.getTransactions = function (address) {
+            $scope.transactions = [];
+            return dataservice.getTransactions(address).then(function(data) {
+                $scope.transactions = data.data;
+                $scope.$digest();
+            });
+        }
+    
 
         $scope.clean = function() {
             $scope.searchAccounts = '';
@@ -62,11 +65,9 @@
         function getAccounts() {
             return dataservice.getAllAccounts().then(function (data) {
                 $scope.accounts = addStatus(data.data);
-                //$scope.accounts = addStatus(dataservice.getAccounts());
                 $scope.maxSize = 5;
                 $scope.totalItems = $scope.accounts.length;
                 $scope.currentPage = 1;
-                //$scope.$digest();
             });
             
         }
