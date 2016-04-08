@@ -30,9 +30,15 @@ type Transaction = {
 }
 
 [<CLIMutable>]
+type Balance = {
+    address: string 
+    amount: PaymentAmount
+}
+
+[<CLIMutable>]
 type Balances = {
     //initial: Map<AccountRef, PaymentAmount>
-    balances: Map<AccountRef, PaymentAmount>
+    balances: Balance[]
 }
 
 [<CLIMutable>]

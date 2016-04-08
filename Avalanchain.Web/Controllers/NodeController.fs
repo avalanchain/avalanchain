@@ -28,6 +28,14 @@ type NodeController() =
         name = account.Name
     }
 
+
+    /// Gets a single value at the specified index.
+    [<Route("account/all")>]
+    [<HttpGet>]
+    member x.AccountsGet() =
+        PaymentNetwork.transactionStorage.Accounts() 
+        |> List.map accountToModel
+
     /// Gets a single value at the specified index.
     [<Route("account/get/{address}")>]
     [<HttpGet>]
@@ -53,8 +61,8 @@ type NodeController() =
         {
             Balances.balances = 
                 balances.Balances 
-                |> Seq.map(fun kv -> ({ AccountRef.address = kv.Key.Address }, kv.Value))
-                |> Map.ofSeq
+                |> Seq.map(fun kv -> { Balance.address = kv.Key.Address; amount = kv.Value })
+                |> Array.ofSeq
         }
 
     /// Gets a single value at the specified index.

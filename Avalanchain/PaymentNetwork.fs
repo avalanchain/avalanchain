@@ -90,11 +90,11 @@ module PaymentNetwork =
                     | [] -> { Result = ok(transaction); Balances = { Balances = blns }; TimeStamp = DateTimeOffset.UtcNow }
                     | t :: _ when snd t < 0m -> { Result = fail(UnexpectedNegativeAmount (snd t)); Balances = balances; TimeStamp = DateTimeOffset.UtcNow }
                     | t :: ts -> 
-                        let accoundRef = fst t
-                        let existingBalance = blns |> Map.tryFind accoundRef
+                        let accountRef = fst t
+                        let existingBalance = blns |> Map.tryFind accountRef
                         let newToBlns = match existingBalance with
-                                        | None -> blns.Add(accoundRef, snd t)
-                                        | Some eb -> blns.Add(accoundRef, (snd t) + eb)
+                                        | None -> blns.Add(accountRef, snd t)
+                                        | Some eb -> blns.Add(accountRef, (snd t) + eb)
                         let newFromBlns = newToBlns.Add(transaction.From, value - total)
                         applyTos newFromBlns ts
                 applyTos (balances.Balances) (transaction.To |> List.ofArray) 
@@ -136,6 +136,7 @@ module PaymentNetwork =
             member x.NewAccount(): PaymentAccount = 
                 let account = newAccount (Guid.NewGuid().ToString())
                 accounts <- account :: accounts
+                initialBalances <- { Balances = initialBalances.Balances.Add(account.Ref, 0M) }
                 account
             
             member x.All(): PaymentBalances * seq<StoredTransaction> = initialBalances, (storedTransactions |> List.rev |> Seq.ofList) 

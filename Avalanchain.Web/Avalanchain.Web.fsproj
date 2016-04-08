@@ -137,9 +137,7 @@
     <None Include="fonts\glyphicons-halflings-regular.svg" />
     <None Include="fonts\glyphicons-halflings-regular.eot" />
     <Compile Include="Models\Models.fs" />
-    <Compile Include="Models\Car.fs" />
     <Compile Include="Controllers\NodeController.fs" />
-    <Compile Include="Controllers\CarsController.fs" />
     <Content Include="Web.config" />
     <Compile Include="Startup.fs" />
     <Content Include="Index.html" />

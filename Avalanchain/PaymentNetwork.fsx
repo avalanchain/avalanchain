@@ -39,18 +39,25 @@ open Avalanchain.EventStream
 open Avalanchain.NodeContext
 open FSharp.Control
 open Avalanchain.PaymentNetwork
+open Avalanchain
 
 
 let accounts = [for i in 0 .. 200 do yield (newAccount (i.ToString()))]
 
-let balances1 = accounts |> List.map (fun a -> a.Ref.Address)
+//let balances1 = accounts |> List.map (fun a -> a.Ref.Address)
 
-let balances = accounts |> List.map (fun a -> a.Ref, 1000M) |> Map.ofList |> fun b -> { PaymentBalances.Balances = b }
+//let balances = accounts |> List.map (fun a -> a.Ref, 1000M) |> Map.ofList |> fun b -> { PaymentBalances.Balances = b }
 
 
-let storage = TransactionStorage balances :> ITransactionStorage
-let bot = tradingBot (storage) (new Random())
-            |> Async.StartAsTask
+let storage = PaymentNetwork.transactionStorage
+
+
+let balances = PaymentNetwork.transactionStorage.PaymentBalances()
+let bals = 
+    balances.Balances 
+    |> Seq.map(fun kv -> (kv.Key.Address, kv.Value))
+    |> Map.ofSeq
+
 
 
 printfn "%A" (storage.PaymentBalances().Balances |> Seq.map(fun kv -> kv.Value) |> Seq.filter(fun v -> v < 1000M) |> Seq.toList)
