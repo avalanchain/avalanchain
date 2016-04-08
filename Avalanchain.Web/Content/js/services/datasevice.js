@@ -15,15 +15,17 @@
         .module('avalanchain')
         .factory('dataservice', dataservice);
 
-    dataservice.$inject = ['$http', '$q', 'logger', 'dataProvider'];
+    dataservice.$inject = ['$http', '$q', 'common', 'dataProvider'];
     /* @ngInject */
 
 
-    function dataservice($http, $q, logger, dataProvider) {
+    function dataservice($http, $q, common, dataProvider) {
+        var logger = common.logger.getLogFn('dataservice');
         var service = {
             getData: getData,
             sendPayment: sendPayment,
             getAccounts: getAccounts,
+            newAccount: newAccount,
             getAllAccounts: getAllAccounts,
             getYData: getYData,
             addCluster: addCluster,
@@ -149,6 +151,22 @@
         }
         function clearAllProcesses() {
 
+        }
+
+        function newAccount()
+        {
+            return $http.post('/api/account/new')
+                    .success(function (data, status, headers, config) {
+                        console.log("success data, status=" + JSON.stringify(data) + status);
+                        logger.log("Account created: '" + JSON.stringify(data) + "'");
+                        return data;
+                    })
+
+                    .error(function (data, status, headers, config) {
+                        var err = status + ", " + data;
+                        //$scope.result = "Request failed: " + err;
+                        return "error";
+                    });
         }
 
         function createGuid() {

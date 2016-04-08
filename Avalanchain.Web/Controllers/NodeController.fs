@@ -46,7 +46,7 @@ type NodeController() =
     member x.AccountsGet() =
         let balances = PaymentNetwork.transactionStorage.PaymentBalances()
         PaymentNetwork.transactionStorage.Accounts() 
-        |> List.map (fun a -> a |> accountToModel balances.Balances.[a.Ref])
+        |> List.map (fun a -> a |> accountToModel (match balances.Balances.TryFind(a.Ref) with Some(b) -> b | None -> 0M))
 
     /// Gets a single value at the specified index.
     [<Route("account/get/{address}")>]

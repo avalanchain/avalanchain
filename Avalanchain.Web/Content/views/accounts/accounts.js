@@ -18,6 +18,12 @@
             $scope.valinside = true;
         };
 
+        $scope.newAccount = function() {
+            dataservice.newAccount().then(function (data) {
+                getAccounts();
+            });
+        }
+
         //$scope.pagination = function () {
         //    return function (input, start) {
         //        if (input) {

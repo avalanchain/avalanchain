@@ -15,7 +15,7 @@
 
         function activate() {
             common.activateController([], controllerId)
-                .then(function () { log('Activated Strems') });//log('Activated Admin View');
+                .then(function () { log('Activated Streams') });//log('Activated Admin View');
         }
     };
 
