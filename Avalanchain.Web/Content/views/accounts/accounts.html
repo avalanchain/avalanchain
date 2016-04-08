@@ -57,18 +57,15 @@
                                         <span class="{{'label '+ account.navigation}}">{{account.status}}</span>
                                     </td>
                                     <td class="project-title">
-                                        <a ui-sref="project_detail">{{account.id}}</a>
+                                        <strong><label class="label label-info">ID:</label>{{account.name}}</strong>
                                         <br/>
-                                        <small>Created 14.08.2014</small>
+                                        <small><label class="label label-warning">Address:</label>{{account.ref.address}}</small>
                                     </td>
                                     <td class="project-completion">
-                                        <small>Completion with: 48%</small>
-                                        <div class="progress progress-mini">
-                                            <div style="width: 48%;" class="progress-bar"></div>
-                                        </div>
+                                        <label class="label label-info">Public Key:</label><strong> {{ account.publicKey | limitTo: 40}}...</strong>
                                     </td>
                                     <td class="project-people">
-                                        Transactions: <label class="label label-info">{{account.transactions.length}}</label>
+                                        Balance: {{account.balance | number}}
                                     </td>
                                     <td class="project-actions">
                                         <a href="" class="btn btn-white btn-sm"><i class="fa fa-folder"></i> View </a>

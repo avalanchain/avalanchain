@@ -15,14 +15,16 @@
         .module('avalanchain')
         .factory('dataservice', dataservice);
 
-    dataservice.$inject = ['$http', '$q', 'logger'];
+    dataservice.$inject = ['$http', '$q', 'logger', 'dataProvider'];
     /* @ngInject */
 
 
-    function dataservice($http, $q, logger) {
+    function dataservice($http, $q, logger, dataProvider) {
         var service = {
             getData: getData,
+            sendPayment: sendPayment,
             getAccounts: getAccounts,
+            getAllAccounts: getAllAccounts,
             getYData: getYData,
             addCluster: addCluster,
             addNode: addNode,
@@ -32,6 +34,50 @@
         };
 
         return service;
+
+        function getAllAccounts() {
+            var accounts = [];
+            var sc = {};
+            return dataProvider.get(sc, '/api/account/all', function (data, status) {
+                //$scope.GetAllProgresses = data;
+            });
+            return $http.get('/api/account/all')
+                    .success(function (data, status, headers, config) {
+                        console.log("success data, status=" + JSON.stringify(data) + status);
+                        if (data.query.results == null) {
+                            console.log("No Valid Results could be Returned!!");
+                        }
+                        else {
+                            var res = data.query.results;
+                        }
+                    })
+
+                .error(function (data, status, headers, config) {
+                    var err = status + ", " + data;
+                    //$scope.result = "Request failed: " + err;
+                    return "error";
+                });
+        }
+
+        function sendPayment(parameters) {
+            return $http.post('/api/transaction/submit')
+                    .success(function (data, status, headers, config) {
+                        console.log("success data, status=" + JSON.stringify(data) + status);
+                        if (data.query.results == null) {
+                            console.log("No Valid Results could be Returned!!");
+                        }
+                        else {
+                            var res = data.query.results;
+                        }
+                    })
+
+                .error(function (data, status, headers, config) {
+                    var err = status + ", " + data;
+                    //$scope.result = "Request failed: " + err;
+                    return "error";
+                });
+        }
+        
 
         function getAccounts() {
             var accounts = [];
@@ -62,6 +108,10 @@
             str1 = str1.concat("&format=json&env=store://datatables.org/alltableswithkeys");//http://datatables.org/alltables.env
 
             var res;
+            var sc = {};
+            return dataProvider.get(sc, str1, function (data, status) {
+                //$scope.GetAllProgresses = data;
+            });
             return $http.get(str1)
                 .success(function (data, status, headers, config) {
                     console.log("success data, status=" + JSON.stringify(data) + status);

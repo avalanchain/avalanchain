@@ -54,13 +54,15 @@
 
 
         function getAccounts() {
-            //return dataservice.getAccounts().then(function (data) {
-            //    $scope.accounts = addStatus(data);
-            //});
-            $scope.accounts = addStatus(dataservice.getAccounts());
-            $scope.maxSize = 5;
-            $scope.totalItems = $scope.accounts.length;
-            $scope.currentPage = 1;
+            return dataservice.getAllAccounts().then(function (data) {
+                $scope.accounts = addStatus(data.data);
+                //$scope.accounts = addStatus(dataservice.getAccounts());
+                $scope.maxSize = 5;
+                $scope.totalItems = $scope.accounts.length;
+                $scope.currentPage = 1;
+                //$scope.$digest();
+            });
+            
         }
 
         
