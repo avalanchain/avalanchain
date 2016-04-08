@@ -379,6 +379,7 @@
     <Content Include="Content\js\services\common.js" />
     <Content Include="Content\js\services\datasevice.js" />
     <Content Include="Content\js\services\logger.js" />
+    <Content Include="Content\js\services\dataprovider.js" />
     <Content Include="Content\js\ui-router\angular-ui-router.js" />
     <Content Include="Content\js\ui-router\angular-ui-router.min.js" />
     <Content Include="Content\Site.css" />
@@ -419,11 +420,9 @@
     <Content Include="Scripts\jquery-1.9.0.js" />
     <Content Include="Scripts\jquery-1.9.0.min.js" />
     <Content Include="Scripts\jquery-1.9.0.min.map" />
-    <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="Scripts\main.js" />
     <Content Include="Scripts\modernizr-2.6.2.js" />
     <Content Include="Scripts\npm.js" />
-
     <!--<None Include="Scripts\jquery-1.9.0.intellisense.js" />-->
     <None Include="fonts\glyphicons-halflings-regular.woff" />
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
@@ -440,7 +439,6 @@
     <Content Include="Index.html" />
     <Content Include="packages.config" />
     <Content Include="readme.txt" />
-    <None Include="Properties\PublishProfiles\avlnchdemo - Web Deploy.pubxml" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Argu">
