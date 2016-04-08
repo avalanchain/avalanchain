@@ -145,7 +145,6 @@
     <Content Include="Index.html" />
     <Content Include="packages.config" />
     <Content Include="readme.txt" />
-    <Compile Include="Models\Chain\ChainClusterContext.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Argu">
@@ -295,11 +294,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Avalanchain.Cloud\Avalanchain.Cloud.fsproj">
-      <Name>Avalanchain.Cloud</Name>
-      <Project>{6da5cba1-4f23-4738-bd0b-27716fb3fc95}</Project>
-      <Private>True</Private>
-    </ProjectReference>
     <ProjectReference Include="..\Avalanchain\Avalanchain.fsproj">
       <Name>Avalanchain</Name>
       <Project>{441ef518-981f-41cc-9de6-ba9c5438ceec}</Project>

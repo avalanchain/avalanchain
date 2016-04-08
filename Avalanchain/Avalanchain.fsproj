@@ -68,12 +68,14 @@
     <Compile Include="FrameSynchronizer.fs" />
     <Compile Include="EventProcessor.fs" />
     <Compile Include="NodeContext.fs" />
+    <Compile Include="PaymentNetwork.fs" />
     <None Include="App.config" />
     <None Include="SecPrimitives.fsx" />
     <None Include="SecKeys.fsx" />
     <None Include="Utils.fsx" />
     <None Include="Projection.fsx" />
     <None Include="EventStream.fsx" />
+    <None Include="PaymentNetwork.fsx" />
     <None Include="Script1.fsx" />
     <None Include="ProjectionsStore.fsx" />
     <Content Include="packages.config" />

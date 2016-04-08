@@ -60,6 +60,7 @@
     <None Include="Script.fsx" />
     <Content Include="App.config" />
     <Content Include="packages.config" />
+    <None Include="PaymentNetwork.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Chessie">

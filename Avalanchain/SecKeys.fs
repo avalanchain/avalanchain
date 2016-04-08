@@ -189,5 +189,6 @@ let cryptoContextDHNet =
     }
 
 
-//let cryptoContext() = cryptoContextRSANet "Test"
-let cryptoContext() = cryptoContextDummy
+let cryptoContext() = cryptoContextRSANet "Test"
+let cryptoContextNamed name = cryptoContextRSANet name
+//let cryptoContext() = cryptoContextDummy
