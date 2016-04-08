@@ -3,6 +3,7 @@ namespace Avalanchain.Web.Controllers
 open System.Net
 open System.Net.Http
 open System.Web.Http
+open System.Linq
 
 open Avalanchain
 open Avalanchain.Web.Models
@@ -29,6 +30,16 @@ type NodeController() =
         balance = balance
     }
 
+    let storedTransToModel st = {
+        result = st.Result |> lift (fun t ->
+        {
+            fromAcc = { address = t.From.Address }
+            toAcc = { address = (t.To.[0] |> fst).Address }
+            amount = t.To.[0] |> snd 
+        })
+        timeStamp = st.TimeStamp
+    }
+
     /// Gets a single value at the specified index.
     [<Route("account/all")>]
     [<HttpGet>]
@@ -52,16 +63,7 @@ type NodeController() =
             name = account.Name
             balance = balance.Value
             transactions = transactions 
-                            |> Seq.map(fun t1 -> 
-                                        {
-                                            result = t1.Result |> lift (fun t ->
-                                            {
-                                                fromAcc = { address = t.From.Address }
-                                                toAcc = { address = (t.To.[0] |> fst).Address }
-                                                amount = t.To.[0] |> snd 
-                                            })
-                                            timeStamp = t1.TimeStamp
-                                        }) 
+                            |> Seq.map(storedTransToModel) 
                             |> Seq.toArray
         })
 
@@ -91,19 +93,19 @@ type NodeController() =
             From = { Address = transaction.fromAcc.address }
             To = [| { Address = transaction.toAcc.address }, transaction.amount |]
         }
-        let submittedTransaction = PaymentNetwork.transactionStorage.Submit trans
-        {
-            result = (submittedTransaction.Result 
-                        |> bind (fun r -> 
-                                let toAcc, amount = r.To.[0]
-                                ok({
-                                    fromAcc = { AccountRef.address = r.From.Address } 
-                                    toAcc = { AccountRef.address = toAcc.Address }
-                                    amount = amount
-                                })))
-            timeStamp = submittedTransaction.TimeStamp
-        }
+        PaymentNetwork.transactionStorage.Submit trans
+        |> storedTransToModel
     
+
+    /// Gets a single value at the specified index.
+    [<Route("transaction/last")>]
+    [<HttpGet>]
+    member x.TransactionLast(pageSize: uint32) = 
+        let _, transactions = PaymentNetwork.transactionStorage.All()
+        transactions.Take(pageSize |> int).ToArray()
+        |> Array.rev
+        |> Array.map(storedTransToModel)
+        
 
 
 

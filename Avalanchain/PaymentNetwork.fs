@@ -66,7 +66,7 @@ module PaymentNetwork =
 
     [<Interface>]
     type ITransactionStorage =
-        abstract member All: unit -> PaymentBalances * StoredTransaction seq // Initial balances + transactions
+        abstract member All: unit -> PaymentBalances * StoredTransaction list // Initial balances + transactions
         abstract member Submit: PaymentTransaction -> StoredTransaction
         abstract member AccountState: PaymentAccountRef -> PaymentAmount option * StoredTransaction seq // Initial balances + account transactions
         abstract member PaymentBalances: unit -> PaymentBalances
@@ -139,7 +139,7 @@ module PaymentNetwork =
                 initialBalances <- { Balances = initialBalances.Balances.Add(account.Ref, 0M) }
                 account
             
-            member x.All(): PaymentBalances * seq<StoredTransaction> = initialBalances, (storedTransactions |> List.rev |> Seq.ofList) 
+            member x.All(): PaymentBalances * StoredTransaction list = initialBalances, storedTransactions 
             member x.AccountState(ref: PaymentAccountRef): PaymentAmount option * seq<StoredTransaction> = 
                 initialBalances.Balances.TryFind 
                     ref, (storedTransactions 
