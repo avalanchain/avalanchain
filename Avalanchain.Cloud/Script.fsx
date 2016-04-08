@@ -1,6 +1,6 @@
 ﻿(*** hide ***)
 #load "ThespianCluster.fsx"
-//#load "AzureCluster.fsx"
+#load "AzureCluster.fsx"
 
 #r "../packages/Chessie.0.4.0/lib/net40/Chessie.dll"
 #r "../packages/FSharpx.Collections.1.14.0/lib/net40/FSharpx.Collections.dll"
