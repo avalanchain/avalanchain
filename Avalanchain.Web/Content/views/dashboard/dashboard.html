@@ -1,0 +1,87 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="Dashboard as dashboard">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="text-center m-t-lg">
+                <h1>
+                    {{dashboard.info}}
+                </h1>
+                
+            </div>
+        </div>
+    </div>
+    <div class="row">
+
+        <div class="col-lg-3">
+            <div ui-sref="index.dashboard" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-primary pull-right">Today</span>
+                    <h5>Users</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">1</h1>
+
+                    <div class="stat-percent font-bold text-navy">20% <i class="fa fa-level-down"></i></div>
+                    <small>New users</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div ui-sref="index.clusters" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-info pull-right">Monthly</span>
+                    <h5>Clusters</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">{{dashboard.clusters}}</h1>
+
+                    <div class="stat-percent font-bold text-info">40% <i class="fa fa-level-up"></i></div>
+                    <small>New orders</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div ui-sref="index.nodes" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-success pull-right">Monthly</span>
+                    <h5>Nodes</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">4</h1>
+
+                    <div class="stat-percent font-bold text-success">98% <i class="fa fa-bolt"></i></div>
+                    <small>Total income</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div ui-sref="index.streams" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-warning pull-right">Annual</span>
+                    <h5>Streams</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">120 40300</h1>
+
+                    <div class="stat-percent font-bold text-warning">16% <i class="fa fa-level-up"></i></div>
+                    <small>New orders</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Count </h5>
+
+                    <div ibox-tools></div>
+                </div>
+                <div class="ibox-content">
+                    <div class="flot-chart">
+                        <div flot class="flot-chart-content" dataset="dashboard.flotMultiData" options="dashboard.flotMultiOptions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
