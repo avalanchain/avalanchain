@@ -22,36 +22,54 @@ type NodeController() =
 //            StreamsCount = 1u //uint32 (node.Streams.StreamMap.Count)
 //        }
 
-    let accountToModel (account: PaymentAccount) = {
-        ref = { address = account.Ref.Address }
+    let accountToModel balance (account: PaymentAccount) = {
+        Account.ref = { address = account.Ref.Address }
         publicKey = account.PublicKey
         name = account.Name
+        balance = balance
     }
-
 
     /// Gets a single value at the specified index.
     [<Route("account/all")>]
     [<HttpGet>]
     member x.AccountsGet() =
+        let balances = PaymentNetwork.transactionStorage.PaymentBalances()
         PaymentNetwork.transactionStorage.Accounts() 
-        |> List.map accountToModel
+        |> List.map (fun a -> a |> accountToModel balances.Balances.[a.Ref])
 
     /// Gets a single value at the specified index.
     [<Route("account/get/{address}")>]
     [<HttpGet>]
-    member x.AccountGet(request: HttpRequestMessage, address: string) =
+    member x.AccountGet(address: string) =
         let accountOpt = PaymentNetwork.transactionStorage.Accounts() 
                             |> List.tryFind(fun a -> a.Ref.Address = address)
 
-        match accountOpt with
-        | Some a -> request.CreateResponse(a |> accountToModel)
-        | None -> request.CreateResponse(HttpStatusCode.NotFound)
+        accountOpt |> Option.map (fun account -> 
+        let balance, transactions = PaymentNetwork.transactionStorage.AccountState(account.Ref)
+        {
+            AccountDetail.ref = { address = account.Ref.Address }
+            publicKey = account.PublicKey
+            name = account.Name
+            balance = balance.Value
+            transactions = transactions 
+                            |> Seq.map(fun t1 -> 
+                                        {
+                                            result = t1.Result |> lift (fun t ->
+                                            {
+                                                fromAcc = { address = t.From.Address }
+                                                toAcc = { address = (t.To.[0] |> fst).Address }
+                                                amount = t.To.[0] |> snd 
+                                            })
+                                            timeStamp = t1.TimeStamp
+                                        }) 
+                            |> Seq.toArray
+        })
 
 
     /// Gets a single value at the specified index.
     [<Route("account/new")>]
     [<HttpPost>]
-    member x.AccountNew() = PaymentNetwork.transactionStorage.NewAccount() |> accountToModel
+    member x.AccountNew() = PaymentNetwork.transactionStorage.NewAccount() |> accountToModel 0M
 
     /// Gets a single value at the specified index.
     [<Route("balances/all")>]
@@ -68,11 +86,10 @@ type NodeController() =
     /// Gets a single value at the specified index.
     [<Route("transaction/submit")>]
     [<HttpPost>]
-    member x.SubmitTransaction(request: HttpRequestMessage, [<FromBody>] transaction: Transaction) =
-        let toAcc, amount = transaction.toAcc
+    member x.SubmitTransaction([<FromBody>] transaction: Transaction) =
         let trans = {
             From = { Address = transaction.fromAcc.address }
-            To = [| { Address = toAcc.address }, amount |]
+            To = [| { Address = transaction.toAcc.address }, transaction.amount |]
         }
         let submittedTransaction = PaymentNetwork.transactionStorage.Submit trans
         {
@@ -81,7 +98,8 @@ type NodeController() =
                                 let toAcc, amount = r.To.[0]
                                 ok({
                                     fromAcc = { AccountRef.address = r.From.Address } 
-                                    toAcc = { AccountRef.address = toAcc.Address }, amount
+                                    toAcc = { AccountRef.address = toAcc.Address }
+                                    amount = amount
                                 })))
             timeStamp = submittedTransaction.TimeStamp
         }

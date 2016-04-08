@@ -21,12 +21,14 @@ type Account = {
     ref: AccountRef
     publicKey: byte[]
     name: string
+    balance: PaymentAmount
 }
 
 [<CLIMutable>]
 type Transaction = {
     fromAcc: AccountRef
-    toAcc: AccountRef * PaymentAmount
+    toAcc: AccountRef
+    amount: PaymentAmount
 }
 
 [<CLIMutable>]
@@ -45,5 +47,14 @@ type Balances = {
 type StoredTransaction = {
     result: Result<Transaction, TransactionRejectionStatus>
     timeStamp: DateTimeOffset
+}
+
+[<CLIMutable>]
+type AccountDetail = {   
+    ref: AccountRef
+    publicKey: byte[]
+    name: string
+    balance: PaymentAmount
+    transactions: StoredTransaction[]
 }
 
