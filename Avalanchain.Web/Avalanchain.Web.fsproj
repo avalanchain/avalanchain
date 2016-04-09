@@ -20,6 +20,7 @@
     <Name>Avalanchain.Web</Name>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
+    <NameOfLastUsedPublishProfile>avlnchdemo - Web Deploy</NameOfLastUsedPublishProfile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
