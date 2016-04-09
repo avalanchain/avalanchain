@@ -100,14 +100,14 @@
                         <label class="col-lg-2 control-label">From</label>
 
                         <div class="col-lg-10">
-                            <input type="text" placeholder="Id" ng-model="payment.fromAcc" value="{{current.ref.address}}" class="form-control" disabled>
+                            <input type="text" placeholder="Id" ng-model="payment.fromAcc.address" value="{{current.ref.address}}" class="form-control" disabled>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-lg-2 control-label">To</label>
 
                         <div class="col-lg-10">
-                            <select name="singleSelect" class="form-control m-b" ng-model="payment.toAcc">
+                            <select name="singleSelect" class="form-control m-b" ng-model="payment.toAcc.address">
                                 <option ng-repeat="account in accounts">{{account.ref.address}}</option>
                             </select>
                         </div>

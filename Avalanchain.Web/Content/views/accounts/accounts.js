@@ -13,15 +13,23 @@
         $scope.searchAccounts = '';
         $scope.valinside = false;
         $scope.transactions = [];
-        $scope.payment = {};
-        $scope.showAccount= function (value) {
-            $scope.current = value;
-            $scope.valinside = true;
-            $scope.payment.fromAcc = value.ref.address;
-            return dataservice.getTransactions(value.ref.address).then(function (data) {
+        $scope.payment = {
+            fromAcc: {},
+            toAcc: {}
+        };
+
+        $scope.getTransactions = function (address) {
+            $scope.transactions = [];
+            return dataservice.getTransactions(address).then(function(data) {
                 $scope.transactions = data.data.fields[0].transactions;
                 $scope.$digest();
             });
+        }
+        $scope.showAccount = function (value) {
+            $scope.current = value;
+            $scope.valinside = true;
+            $scope.payment.fromAcc = value.ref;
+            return $scope.getTransactions($scope.payment.fromAcc.address);
         };
 
         $scope.newAccount = function() {
@@ -32,19 +40,10 @@
 
         $scope.sendPayment = function () {
             dataservice.sendPayment($scope.payment).then(function (data) {
-                $scope.getTransactions();
+                $scope.getTransactions($scope.current.ref.address);
                 getAccounts();
             });
         }
-
-        $scope.getTransactions = function (address) {
-            $scope.transactions = [];
-            return dataservice.getTransactions(address).then(function(data) {
-                $scope.transactions = data.data;
-                $scope.$digest();
-            });
-        }
-    
 
         $scope.clean = function() {
             $scope.searchAccounts = '';

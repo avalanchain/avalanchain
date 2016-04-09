@@ -146,7 +146,7 @@ module PaymentNetwork =
                             |> List.filter(fun t -> 
                                             (t.Result |> failed |> not) && 
                                             (t.Result |> returnOrFail |> (fun t1 -> t1.From = ref || fst(t1.To.[0]) = ref))) 
-                            |> List.rev |> Seq.ofList)
+                            |> Seq.ofList)
             member x.Submit(transaction: PaymentTransaction): StoredTransaction = 
                 let newTransaction = transaction |> applyTransaction (balances())
                 storedTransactions <- newTransaction :: storedTransactions
