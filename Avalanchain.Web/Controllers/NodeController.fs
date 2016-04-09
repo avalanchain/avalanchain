@@ -41,6 +41,12 @@ type NodeController() =
     }
 
     /// Gets a single value at the specified index.
+    [<Route("test/t1")>]
+    [<HttpGet>]
+    member x.TestT1() =
+        [for i in 0 .. 10 do yield "test " + i.ToString()]
+
+    /// Gets a single value at the specified index.
     [<Route("account/all")>]
     [<HttpGet>]
     member x.AccountsGet() =
