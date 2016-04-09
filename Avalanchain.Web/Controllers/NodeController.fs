@@ -40,7 +40,7 @@ type NodeController() =
         timeStamp = st.TimeStamp
     }
 
-    /// Gets a single value at the specified index.
+    /// Dummy test data.
     [<Route("test/t1")>]
     [<HttpGet>]
     member x.TestT1() =
