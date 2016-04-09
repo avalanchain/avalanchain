@@ -49,3 +49,5 @@
 #r "System.ServiceModel.dll"
 #r "System.Transactions.dll"
 #r "../../Avalanchain/bin/Debug/Avalanchain.dll"
+#r "../../packages/Newtonsoft.Json.8.0.3/lib/net45/Newtonsoft.Json.dll"
+#r "../../packages/FsPickler.2.0.0/lib/net45/FsPickler.dll"

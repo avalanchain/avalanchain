@@ -40,34 +40,34 @@
         function getAllAccounts() {
             var accounts = [];
             var sc = {};
-            return dataProvider.get(sc, '/api/account/all', function (data, status) {
+            return dataProvider.get(sc, '/api/account/all', function(data, status) {
                 //$scope.GetAllProgresses = data;
             });
         }
 
         function sendPayment(payment) {
             return $http.post('/api/transaction/submit', payment)
-                    .success(function (data, status, headers, config) {
-                        console.log("success data, status=" + JSON.stringify(data) + status);
-                        logger.log("Account created: '" + JSON.stringify(data) + "'");
-                        return data;
-                    })
-
-                    .error(function (data, status, headers, config) {
-                        var err = status + ", " + data;
-                        //$scope.result = "Request failed: " + err;
-                        return "error";
-                    });
+                .success(function(data, status, headers, config) {
+                    console.log("success data, status=" + JSON.stringify(data) + status);
+                    logger.log("Account created: '" + JSON.stringify(data) + "'");
+                    return data;
+                })
+                .error(function(data, status, headers, config) {
+                    var err = status + ", " + data;
+                    //$scope.result = "Request failed: " + err;
+                    return "error";
+                });
         }
-        
+
 
         function getTransactions(address) {
             var sc = {};
-            return dataProvider.get(sc, '/api/account/get/'+ address, function (data, status) {
+            return dataProvider.get(sc, '/api/account/get/' + address, function(data, status) {
                 //$scope.GetAllProgresses = data;
             });
-            }
         }
+
+
         function getYData() {
             var url = "http://query.yahooapis.com/v1/public/yql";
             var symbol = '"EURUSD","USDEUR", "USDJPY", "USDGBP", "USDAUD", "USDCHF", "USDSEK", "USDNOK", "USDRUB", "USDTRY", "USDBRL", "USDCAD", "USDCNY", "USDHKD", "USDINR", "USDKRW", "USDMXN", "USDNZD", "USDSGD", "USDZAR"';
@@ -80,14 +80,14 @@
             http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20('aapl')&format=json&diagnostics=true&env=http://datatables.org/alltables.env
             */
             var str1 = url.concat("?q=", data);
-            str1 = str1.concat("&format=json&env=store://datatables.org/alltableswithkeys");//http://datatables.org/alltables.env
+            str1 = str1.concat("&format=json&env=store://datatables.org/alltableswithkeys"); //http://datatables.org/alltables.env
 
             var res;
             var sc = {};
-            return dataProvider.get(sc, str1, function (data, status) {
+            return dataProvider.get(sc, str1, function(data, status) {
                 //$scope.GetAllProgresses = data;
             });
-            
+
         }
 
         function addCluster() {
@@ -105,24 +105,23 @@
         function deleteCluster() {
 
         }
+
         function clearAllProcesses() {
 
         }
 
-        function newAccount()
-        {
+        function newAccount() {
             return $http.post('/api/account/new')
-                    .success(function (data, status, headers, config) {
-                        console.log("success data, status=" + JSON.stringify(data) + status);
-                        logger.log("Account created: '" + JSON.stringify(data) + "'");
-                        return data;
-                    })
-
-                    .error(function (data, status, headers, config) {
-                        var err = status + ", " + data;
-                        //$scope.result = "Request failed: " + err;
-                        return "error";
-                    });
+                .success(function(data, status, headers, config) {
+                    console.log("success data, status=" + JSON.stringify(data) + status);
+                    logger.log("Account created: '" + JSON.stringify(data) + "'");
+                    return data;
+                })
+                .error(function(data, status, headers, config) {
+                    var err = status + ", " + data;
+                    //$scope.result = "Request failed: " + err;
+                    return "error";
+                });
         }
 
         function createGuid() {
@@ -132,8 +131,8 @@
             for (var i = 0; i < 36; i++) {
                 s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
             }
-            s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
-            s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
+            s[14] = "4"; // bits 12-15 of the time_hi_and_version field to 0010
+            s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1); // bits 6-7 of the clock_seq_hi_and_reserved to 01
             s[8] = s[13] = s[18] = s[23] = "-";
 
             var uuid = s.join("");
@@ -143,9 +142,9 @@
         function getData() {
             var data = {
                 clusters: [
-                {
-                    id: '1',
-                    nodes: [
+                    {
+                        id: '1',
+                        nodes: [
                             {
                                 id: '1',
                                 streams: [
@@ -176,31 +175,32 @@
                                     }
                                 ]
                             }
-                    ],
-                    streams: 5
-                },
-                {
-                    id: '2',
-                    nodes: [
+                        ],
+                        streams: 5
+                    },
                     {
-                        id: '1',
-                        streams: [
+                        id: '2',
+                        nodes: [
                             {
                                 id: '1',
-                                data: 3300
-                            },
-                            {
-                                id: '2',
-                                data: 4600
+                                streams: [
+                                    {
+                                        id: '1',
+                                        data: 3300
+                                    },
+                                    {
+                                        id: '2',
+                                        data: 4600
+                                    }
+                                ]
                             }
                         ]
                     }
-                    ]
-                }
                 ]
             };
             return data;
-            //function success(response) {
+
+//function success(response) {
             //    return response.result;
             //}
 
@@ -210,5 +210,5 @@
                 //return exception.catcher(msg)(e);
             }
         }
-    
+    }
 })();
