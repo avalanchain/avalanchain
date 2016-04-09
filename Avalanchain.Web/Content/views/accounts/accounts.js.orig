@@ -13,30 +13,32 @@
         $scope.searchAccounts = '';
         $scope.valinside = false;
         $scope.transactions = [];
-        $scope.payment = {};
         $scope.showAccount= function (value) {
             $scope.current = value;
             $scope.valinside = true;
-            $scope.payment.fromAcc = value.ref.address;
             return dataservice.getTransactions(value.ref.address).then(function (data) {
                 $scope.transactions = data.data.fields[0].transactions;
                 $scope.$digest();
             });
         };
 
+<<<<<<< 0223de1e7e4cac0664e52bad3b044200fe7f4e59
         $scope.newAccount = function() {
             dataservice.newAccount().then(function (data) {
                 getAccounts();
             });
         }
 
-        $scope.sendPayment = function () {
-            dataservice.sendPayment($scope.payment).then(function (data) {
-                $scope.getTransactions();
-                getAccounts();
-            });
-        }
-
+        //$scope.pagination = function () {
+        //    return function (input, start) {
+        //        if (input) {
+        //            start = +start; //parse to int
+        //            return input.slice(start);
+        //        }
+        //        return [];
+        //    }
+        //}
+=======
         $scope.getTransactions = function (address) {
             $scope.transactions = [];
             return dataservice.getTransactions(address).then(function(data) {
@@ -45,6 +47,7 @@
             });
         }
     
+>>>>>>> some fix
 
         $scope.clean = function() {
             $scope.searchAccounts = '';

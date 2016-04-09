@@ -24,7 +24,7 @@
                             <br />
                             <dt>Adress:</dt>
                             <dd> {{current.ref.address}}</dd>
-                            <dt>Balance:</dt>
+                            <dt>Amount:</dt>
                             <dd> {{current.balance | number}}</dd>
 
                         </dl>
@@ -100,15 +100,15 @@
                         <label class="col-lg-2 control-label">From</label>
 
                         <div class="col-lg-10">
-                            <input type="text" placeholder="Id" ng-model="current.ref.address" class="form-control" disabled>
+                            <input type="text" placeholder="Id" ng-model="payment.fromAcc" value="{{current.ref.address}}" class="form-control" disabled>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-lg-2 control-label">To</label>
 
                         <div class="col-lg-10">
-                            <select name="singleSelect" class="form-control m-b" ng-model="accountTo">
-                                <option ng-repeat="account in accounts" value="account.id">{{account.ref.address}}</option>
+                            <select name="singleSelect" class="form-control m-b" ng-model="payment.toAcc">
+                                <option ng-repeat="account in accounts">{{account.ref.address}}</option>
                             </select>
                         </div>
                     </div>
@@ -116,12 +116,12 @@
                         <label class="col-lg-2 control-label">Balance</label>
 
                         <div class="col-lg-10">
-                            <input type="number" placeholder="please, enter amount" class="form-control">
+                            <input type="number" ng-model="payment.amount" placeholder="please, enter amount" class="form-control">
                         </div>
                     </div>
                     <div class="form-group">
                         <div class="col-lg-offset-2 col-lg-10">
-                            <button class="btn btn-info pull-right" type="button"><span class="bold">Send</span></button>
+                            <button class="btn btn-info pull-right" type="button" ng-click="sendPayment()"><span class="bold">Send</span></button>
                         </div>
                     </div>
                 </form>

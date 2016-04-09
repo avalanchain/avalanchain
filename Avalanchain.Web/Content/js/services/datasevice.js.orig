@@ -24,8 +24,12 @@
         var service = {
             getData: getData,
             sendPayment: sendPayment,
-            getTransactions: getTransactions,
+<<<<<<< 0223de1e7e4cac0664e52bad3b044200fe7f4e59
+            getAccounts: getAccounts,
             newAccount: newAccount,
+=======
+            getTransactions: getTransactions,
+>>>>>>> some fix
             getAllAccounts: getAllAccounts,
             getYData: getYData,
             addCluster: addCluster,
@@ -45,19 +49,23 @@
             });
         }
 
-        function sendPayment(payment) {
-            return $http.post('/api/transaction/submit', payment)
+        function sendPayment(parameters) {
+            return $http.post('/api/transaction/submit')
                     .success(function (data, status, headers, config) {
                         console.log("success data, status=" + JSON.stringify(data) + status);
-                        logger.log("Account created: '" + JSON.stringify(data) + "'");
-                        return data;
+                        if (data.query.results == null) {
+                            console.log("No Valid Results could be Returned!!");
+                        }
+                        else {
+                            var res = data.query.results;
+                        }
                     })
 
-                    .error(function (data, status, headers, config) {
-                        var err = status + ", " + data;
-                        //$scope.result = "Request failed: " + err;
-                        return "error";
-                    });
+                .error(function (data, status, headers, config) {
+                    var err = status + ", " + data;
+                    //$scope.result = "Request failed: " + err;
+                    return "error";
+                });
         }
         
 
@@ -87,6 +95,23 @@
             return dataProvider.get(sc, str1, function (data, status) {
                 //$scope.GetAllProgresses = data;
             });
+            return $http.get(str1)
+                .success(function (data, status, headers, config) {
+                    console.log("success data, status=" + JSON.stringify(data) + status);
+                    if (data.query.results == null) {
+                        console.log("No Valid Results could be Returned!!");
+                    }
+                    else {
+                        var res = data.query.results;
+                    }
+                })
+
+            .error(function (data, status, headers, config) {
+                var err = status + ", " + data;
+                //$scope.result = "Request failed: " + err;
+                    return "error";
+                });
+            return $q.when(res);
             
         }
 
