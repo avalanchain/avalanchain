@@ -15,11 +15,11 @@
         .module('avalanchain')
         .factory('dataservice', dataservice);
 
-    dataservice.$inject = ['$http', '$q', 'common', 'dataProvider'];
+    dataservice.$inject = ['$http', '$q', 'common', 'dataProvider', '$filter'];
     /* @ngInject */
 
 
-    function dataservice($http, $q, common, dataProvider) {
+    function dataservice($http, $q, common, dataProvider, $filter) {
         var logger = common.logger.getLogFn('dataservice');
         var service = {
             getData: getData,
