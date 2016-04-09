@@ -1,0 +1,16 @@
+// Warning: generated file; your changes could be lost when a new file is generated.
+#I __SOURCE_DIRECTORY__
+#load "load-references-release.fsx"
+#load "../AssemblyInfo.fs"
+      "../Messages.fs"
+      "../AutomaticCluster.fs"
+      "../Actors.fs"
+      "../SpawnOptions.fs"
+      "../Extension.fs"
+      "../Sharded.fs"
+      "../NodeCommand.fs"
+      "../CommandLog.fs"
+      "../NodeRefStore.fs"
+      "../StreamAdminActor.fs"
+      "../EventStreamActor.fs"
+      "../NodeActor.fs"

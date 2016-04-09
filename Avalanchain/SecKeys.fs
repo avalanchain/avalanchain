@@ -127,6 +127,7 @@ let cryptoContextDummy =
 let cryptoContextRSANet containerName = 
     let cp = new CspParameters()
     cp.KeyContainerName <- containerName
+    cp.Flags <- CspProviderFlags.UseMachineKeyStore
     let rsa = new RSACryptoServiceProvider(cp)
     let sha = new SHA256Managed()
     let rsaParams = rsa.ExportParameters(false) // true - for exporting private key
