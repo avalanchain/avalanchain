@@ -436,6 +436,7 @@
     <Content Include="Index.html" />
     <Content Include="packages.config" />
     <Content Include="readme.txt" />
+    <None Include="Properties\PublishProfiles\avlnchdemo - Web Deploy.pubxml" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Argu">
