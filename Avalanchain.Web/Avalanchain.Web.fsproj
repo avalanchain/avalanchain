@@ -517,7 +517,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Owin">
@@ -525,7 +525,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Streams">
-      <HintPath>..\packages\Streams.0.4.0\lib\net45\Streams.dll</HintPath>
+      <HintPath>..\packages\Streams\lib\net45\Streams.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Swashbuckle.Core">
