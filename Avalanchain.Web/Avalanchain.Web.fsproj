@@ -20,7 +20,7 @@
     <Name>Avalanchain.Web</Name>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <NameOfLastUsedPublishProfile>avlnchdemo2 - Web Deploy</NameOfLastUsedPublishProfile>
+    <NameOfLastUsedPublishProfile>avlnchdemo - Web Deploy</NameOfLastUsedPublishProfile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -183,9 +183,9 @@
     <Content Include="Content\img\avalanchain.png" />
     <Content Include="Content\img\logo.png" />
     <Content Include="Content\img\quoka.PNG" />
-    <Content Include="Content\js\angular\angular.js" />
-    <Content Include="Content\js\angular\angular.min.js" />
-    <Content Include="Content\js\angular\angular.min.js.map" />
+    <Content Include="Content\js\angular\angular-message-format.js" />
+    <Content Include="Content\js\angular\angular-message-format.min.js" />
+    <Content Include="Content\js\angular\angular-message-format.min.js.map" />
     <Content Include="Content\js\angular\angular-animate.js" />
     <Content Include="Content\js\angular\angular-animate.min.js" />
     <Content Include="Content\js\angular\angular-animate.min.js.map" />
@@ -220,6 +220,9 @@
     <Content Include="Content\js\angular\errors.json" />
     <Content Include="Content\js\angular\version.json" />
     <Content Include="Content\js\angular\version.txt" />
+    <Content Include="Content\js\angular\angular.js" />
+    <Content Include="Content\js\angular\angular.min.js" />
+    <Content Include="Content\js\angular\angular.min.js.map" />
     <Content Include="Content\js\app.js" />
     <Content Include="Content\js\avalanchain.js" />
     <Content Include="Content\js\bootstrap\angular-bootstrap-checkbox.js" />
@@ -422,6 +425,7 @@
     <Content Include="Scripts\modernizr-2.6.2.js" />
     <Content Include="Scripts\npm.js" />
     <!--<None Include="Scripts\jquery-1.10.2.intellisense.js" />-->
+    <Content Include="Content\views\accounts\create_account.html" />
     <None Include="fonts\glyphicons-halflings-regular.woff" />
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
     <None Include="fonts\glyphicons-halflings-regular.ttf" />

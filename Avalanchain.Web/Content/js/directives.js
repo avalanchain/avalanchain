@@ -13,7 +13,7 @@ function pageTitle($rootScope, $timeout) {
         link: function(scope, element) {
             var listener = function(event, toState, toParams, fromState, fromParams) {
                 // Default title - load on Dashboard 1
-                var title = 'avalanchain | Responsive Admin Theme';
+                var title = 'avalanchain';
                 // Create your own title pattern
                 if (toState.data && toState.data.pageTitle) title = 'avalanchain | ' + toState.data.pageTitle;
                 $timeout(function() {
@@ -149,33 +149,44 @@ function vectorMap() {
 
 
 /**
- * iboxTools - Directive for iBox tools elements in right corner of ibox
+ * modal 
  */
-function pagination($timeout) {
+function modal($uibModal, dataservice) {
     return {
         restrict: 'E',
         scope: true,
-        //templateUrl: '/Content/views/common/ibox_tools.html',
+        //scope: {
+        //    myMapData: '=',
+        //},
+        templateUrl: '/Content/views/accounts/create_account.html',
         controller: function ($scope, $element) {
+
+            $scope.ok = function () {
+                $uibModalInstance.close();
+            };
+
+            $scope.cancel = function () {
+                $uibModalInstance.dismiss('cancel');
+            };
             // Function for collapse ibox
-            $scope.showhide = function () {
-                var ibox = $element.closest('div.ibox');
-                var icon = $element.find('i:first');
-                var content = ibox.find('div.ibox-content');
-                content.slideToggle(200);
-                // Toggle icon from up to down
-                icon.toggleClass('fa-chevron-up').toggleClass('fa-chevron-down');
-                ibox.toggleClass('').toggleClass('border-bottom');
-                $timeout(function () {
-                    ibox.resize();
-                    ibox.find('[id^=map-]').resize();
-                }, 50);
-            },
+            //$scope.showhide = function () {
+            //    var ibox = $element.closest('div.ibox');
+            //    var icon = $element.find('i:first');
+            //    var content = ibox.find('div.ibox-content');
+            //    content.slideToggle(200);
+            //    // Toggle icon from up to down
+            //    icon.toggleClass('fa-chevron-up').toggleClass('fa-chevron-down');
+            //    ibox.toggleClass('').toggleClass('border-bottom');
+            //    $timeout(function () {
+            //        ibox.resize();
+            //        ibox.find('[id^=map-]').resize();
+            //    }, 50);
+            //},
             // Function for close ibox
-                $scope.closebox = function () {
-                    var ibox = $element.closest('div.ibox');
-                    ibox.remove();
-                }
+                //$scope.closebox = function () {
+                //    var ibox = $element.closest('div.ibox');
+                //    ibox.remove();
+                //}
         }
     };
 };

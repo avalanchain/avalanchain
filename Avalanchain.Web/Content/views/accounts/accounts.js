@@ -1,9 +1,10 @@
-﻿(function () {
+﻿/// <reference path="create_account.html" />
+(function () {
     'use strict';
     var controllerId = 'accounts';
-    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope','$filter', accounts]);
+    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$filter', '$uibModal', '$rootScope', accounts]);
 
-    function accounts(common, dataservice, $scope, $filter) {
+    function accounts(common, dataservice, $scope, $filter, $uibModal, $rootScope) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -23,6 +24,18 @@
         $scope.currentPage = 1;
         $scope.transactionPage = 1;
         $scope.transactions = [];
+
+        $scope.openModal = function () {
+
+            var modalInstance = $uibModal.open({
+                templateUrl: '/Content/views/accounts/create_account.html',
+                controller: modalCtrl
+            });
+        };
+
+        $rootScope.$on('updateAccounts', function () {
+            getAccounts();
+        });
 
         $scope.getTransactions = function (address) {
             
@@ -44,11 +57,11 @@
             return $scope.getTransactions($scope.payment.fromAcc.address);
         };
 
-        $scope.newAccount = function() {
-            dataservice.newAccount().then(function (data) {
-                getAccounts();
-            });
-        }
+        //$scope.newAccount = function() {
+        //    dataservice.newAccount().then(function (data) {
+        //        getAccounts();
+        //    });
+        //}
 
         $scope.sendPayment = function () {
             dataservice.sendPayment($scope.payment).then(function (data) {

@@ -20,7 +20,8 @@
 
 
     function dataservice($http, $q, common, dataProvider, $filter) {
-        var logger = common.logger.getLogFn('dataservice');
+        var getLogFn = common.logger.getLogFn;
+        var log = getLogFn('dataservice');
         var service = {
             getData: getData,
             sendPayment: sendPayment,
@@ -33,6 +34,7 @@
             addStream: addStream,
             deleteCluster: deleteCluster,
             clearAllProcesses: clearAllProcesses,
+            createGuid: createGuid
         };
 
         return service;
@@ -48,12 +50,12 @@
         function sendPayment(payment) {
             return $http.post('/api/transaction/submit', payment)
                 .success(function(data, status, headers, config) {
-                    console.log("success data, status=" + JSON.stringify(data) + status);
-                    logger.log("Account created: '" + JSON.stringify(data) + "'");
+                    log("Transaction submited!");//'" + JSON.stringify(data) + "'
                     return data;
                 })
                 .error(function(data, status, headers, config) {
                     var err = status + ", " + data;
+                    log("Request failed: " + err);
                     //$scope.result = "Request failed: " + err;
                     return "error";
                 });
@@ -113,12 +115,12 @@
         function newAccount() {
             return $http.post('/api/account/new')
                 .success(function(data, status, headers, config) {
-                    console.log("success data, status=" + JSON.stringify(data) + status);
-                    logger.log("Account created: '" + JSON.stringify(data) + "'");
+                    log("Account created!");//'" + JSON.stringify(data) + "'
                     return data;
                 })
                 .error(function(data, status, headers, config) {
                     var err = status + ", " + data;
+                    log("Request failed: " + err);
                     //$scope.result = "Request failed: " + err;
                     return "error";
                 });

@@ -9,7 +9,7 @@
         'oc.lazyLoad',                  // ocLazyLoad
         'ui.bootstrap',                 // Ui Bootstrap
         'common',
-        'monospaced.qrcode'
-    ])
+        'monospaced.qrcode',
+    ]);
 })();
 

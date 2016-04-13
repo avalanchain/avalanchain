@@ -15,7 +15,27 @@ function MainCtrl() {
 
 };
 
+function modalCtrl($scope, $uibModalInstance, dataservice, $rootScope) {
+    var m = new Mnemonic(96);
+    $scope.password = m.toWords().join(' ');;
+    $scope.hexPass = m.toHex();
+    $scope.guid = dataservice.createGuid();
+    $scope.ok = function () {
+        dataservice.newAccount().then(function (data) {
+            $uibModalInstance.close();
+            $rootScope.$emit('updateAccounts');
+            //getAccounts();
+        });
+        
+    };
+
+    $scope.cancel = function () {
+        $uibModalInstance.dismiss('cancel');
+    };
+};
+
 
 angular
     .module('avalanchain')
     .controller('MainCtrl', MainCtrl)
+    .controller('modalCtrl', MainCtrl);
