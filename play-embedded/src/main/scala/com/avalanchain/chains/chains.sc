@@ -1,4 +1,5 @@
 import java.security.PublicKey
+import java.time.Instant
 import java.util.UUID
 
 import akka.NotUsed
@@ -9,9 +10,12 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.actor.{ActorSubscriber, ActorSubscriberMessage, MaxInFlightRequestStrategy}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import com.typesafe.config.ConfigFactory
+import org.omg.CORBA.DynAnyPackage.Invalid
 
+import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.reflect.ClassTag
+import scala.util.Try
 
 //type PublicKey = byte array
 type SigningPublicKey = PublicKey
@@ -21,14 +25,14 @@ trait ExecGroup
 
 //trait NodeSelectionStrategy
 //object NodeSelectionStrategy {
-//  case class FixedMinimum(minNodes: Int) extends ExecPolicy
+//  case class FixedMinimum(minNodes: Int) extends ExecutionPolicy
 //}
 
-trait ExecPolicy
+trait ExecutionPolicy
 object ExecPolicy {
-  case class Pass() extends ExecPolicy
-  case class FixedMinimum(minNodes: Int) extends ExecPolicy
-  //case class Pass() extends ExecPolicy
+  case class Pass() extends ExecutionPolicy
+  case class FixedMinimum(minNodes: Int) extends ExecutionPolicy
+  //case class Pass() extends ExecutionPolicy
 }
 
 
@@ -37,7 +41,9 @@ object ChainStream {
   type Version = Long
   type Hash = String//Array[Byte]
   type Serialized = String//Array[Byte]
-  type Proof = String//Array[Byte]
+  type Signature = String
+  case class Proof (signature: Signature, hash: Hash)
+  case class Signed[T] (proof: Proof, value: T)
 }
 
 import ChainStream._
@@ -85,12 +91,173 @@ object StateFrame {
 type Hasher[T] = T => HashedValue[T]
 type Serializer[T] = T => Serialized
 type Signer[T] = T => Proof
+type Verifier[T] = Proof => T => Boolean
 
-trait Node {
+trait CryptoContext {
   def hasher[T]: Hasher[T]
   def serializer[T]: Serializer[T]
   def signer[T]: Signer[T]
 }
+
+type ValueId = String
+type ConfirmationStateChangedNotifier[T] = T => Unit
+case class Confirmation[T] (nodeId: String, valueId: ValueId, value: T, notifier: ConfirmationStateChangedNotifier[T])
+
+trait ConfirmationResult[T] {
+  val confirmation: Confirmation[T]
+}
+object ConfirmationResult {
+  case class InvalidConfirmation[T](confirmation: Confirmation[T]) extends ConfirmationResult[T]
+  case class ConfirmedSame[T](confirmation: Confirmation[T]) extends ConfirmationResult[T]
+  case class ConfirmedDifferent[T](confirmation: Confirmation[T], expectedValue: T) extends ConfirmationResult[T]
+  case class NotConfirmedYet[T](confirmation: Confirmation[T]) extends ConfirmationResult[T]
+}
+
+type PolicyChecker[T] = ExecutionPolicy => List[Confirmation[T]] => Option[T]
+class ConfirmationCounter[T] (val policy: ExecutionPolicy, validator: Confirmation[T] => Boolean, policyChecker: PolicyChecker[T]) {
+  private var _confirmations = List.empty[Confirmation[T]]
+  private var _invalidConfirmations = List.empty[Confirmation[T]]
+  private var _pendingConfirmations = List.empty[Confirmation[T]]
+  private var _confirmedValue: Option[T] = None
+
+  private def notifyDependents(): Unit = {
+    _confirmedValue match {
+      case Some(v) => _confirmations.foreach(c => c.notifier(v))
+    }
+  }
+
+  def confirmations = _confirmations
+  def invalidConfirmations = _invalidConfirmations
+  def pendingConfirmations = _pendingConfirmations
+  def confirmedValue = _confirmedValue
+
+  def addConfirmation(confirmation: Confirmation[T]) = {
+    if (!validator(confirmation)) {
+      _invalidConfirmations = confirmation :: _invalidConfirmations
+      ConfirmationResult.InvalidConfirmation(confirmation)
+    }
+    else {
+      _confirmations = confirmation :: _confirmations
+      _confirmedValue match {
+        case Some(v) if v.equals(confirmation.value) => ConfirmationResult.ConfirmedSame(confirmation)
+        case Some(v) => ConfirmationResult.ConfirmedDifferent(confirmation, v)
+        case None => {
+          _confirmedValue = policyChecker(policy) (_confirmations)
+          _confirmedValue match {
+            case Some(v) =>
+              _confirmations = _pendingConfirmations
+              _pendingConfirmations = List.empty[Confirmation[T]]
+              notifyDependents()
+              if (v.equals(confirmation.value)) ConfirmationResult.ConfirmedSame(confirmation)
+              else ConfirmationResult.ConfirmedDifferent(confirmation, v) // Shouldn't ever happen really because of policyChecker call
+            case None =>
+              _pendingConfirmations = confirmation :: _pendingConfirmations
+              ConfirmationResult.NotConfirmedYet(confirmation)
+          }
+        }
+      }
+    }
+  }
+}
+
+////////////////// Payment
+
+case class PaymentAccountRef (address: String) // TODO: Change to proper ref
+
+type PaymentAmount = BigDecimal
+
+trait PaymentAttempt
+case class PaymentTransaction (from: PaymentAccountRef, to: List[(PaymentAccountRef, PaymentAmount)]) extends PaymentAttempt
+
+//val pt = PaymentTransaction(PaymentAccountRef(""), List((PaymentAccountRef(""), BigDecimal(22))))
+
+//type HashedPT = SignedProof<PaymentTransaction>
+
+type PaymentBalances = Map[PaymentAccountRef, PaymentAmount]
+
+trait PaymentRejection extends PaymentAttempt
+object PaymentRejection {
+  case class WrongHash (hash: Hash) extends PaymentRejection
+  case class WrongSignature (signature: Signature) extends PaymentRejection
+  case class FromAccountNotExists (account: PaymentAccountRef) extends PaymentRejection
+  case class ToAccountsMissing() extends PaymentRejection
+  case class UnexpectedNonPositiveAmount (amount: PaymentAmount) extends PaymentRejection
+  case class UnexpectedNonPositiveTotal (amount: PaymentAmount) extends PaymentRejection
+  case class NotEnoughFunds (available: PaymentAmount, expected: PaymentAmount) extends PaymentRejection
+}
+
+case class StoredTransaction (payment: PaymentAttempt, balances: PaymentBalances, timeStamp: Instant)
+
+case class PaymentAccount (ref: PaymentAccountRef, publicKey: SigningPublicKey, name: String, cryptoContext: CryptoContext)
+
+trait TransactionStorage {
+  def all: (PaymentBalances, List[StoredTransaction]) // Initial balances + transactions
+  def submit: PaymentTransaction => StoredTransaction
+  def accountState: PaymentAccountRef => (Option[PaymentAmount], Seq[StoredTransaction]) // Initial balances + account transactions
+  def paymentBalances: PaymentBalances
+  def accounts: List[PaymentAccount]
+  def newAccount: PaymentAccount
+}
+
+def signatureChecker(transaction: PaymentTransaction) = transaction // TODO: Add check
+
+def applyTransaction (balances: PaymentBalances) (transaction: PaymentTransaction) : StoredTransaction = {
+  def reject(reason: PaymentRejection) = StoredTransaction(reason, balances, Instant.now())
+  val total = transaction.to.map(_._2).sum
+  balances.get(transaction.from) match {
+    case None => reject(PaymentRejection.FromAccountNotExists(transaction.from))
+    case Some (_) if total <= 0 => reject(PaymentRejection.UnexpectedNonPositiveTotal(total))
+    case Some (value) =>
+      value match {
+        case v if v < total => reject(PaymentRejection.NotEnoughFunds(total, v))
+        case v =>
+          @tailrec def applyTos(blns: PaymentBalances, tos: List[(PaymentAccountRef, PaymentAmount)]): StoredTransaction = {
+            tos match {
+              case Nil => StoredTransaction(transaction, blns, Instant.now())
+              case t :: _ if t._2 < 0 => reject(PaymentRejection.UnexpectedNonPositiveAmount(t._2))
+              case t :: ts =>
+                val accountRef = t._1
+                val existingBalance = blns.get(accountRef)
+                val newToBlns = existingBalance match {
+                  case None => blns.updated(accountRef, t._2)
+                  case Some(eb) => blns.updated(accountRef, t._2 + eb)
+                }
+                val newFromBlns = newToBlns.updated(transaction.from, value - total)
+                applyTos(newFromBlns, ts)
+            }
+          }
+          applyTos(balances, transaction.to)
+      }
+  }
+
+  def newAccount(name: String) = {
+    let cctx = cryptoContextNamed name
+
+  let accountRef = {
+    Address = cctx.Address
+  }
+
+  let account = {
+    Ref = accountRef
+    PublicKey = cctx.SigningPublicKey
+    Name = name
+    CryptoContext = cctx
+  }
+  account
+  }
+
+//  let rec applyTos (blns: PaymentBalancesData) tos: StoredTransaction =
+//  match tos with
+//  |[] -> {Result = ok (transaction);
+//  Balances = {Balances = blns};
+//  TimeStamp = DateTimeOffset.UtcNow}
+//  | t :: _ when snd t < 0 m -> {Result = fail (UnexpectedNegativeAmount (snd t) );
+//  Balances = balances;
+//  TimeStamp = DateTimeOffset.UtcNow}
+//  |
+//  applyTos (balances.Balances) (transaction.To |> List.ofArray)
+}
+
 
 
 ///////
@@ -136,19 +303,19 @@ implicit val materializer = ActorMaterializer()
 //import com.roundeights.hasher.Hasher
 import scala.language.postfixOps
 
-class SimpleNode extends Node {
+class SimpleNode extends CryptoContext {
   override def hasher[T]: Hasher[T] = data => {
     val bytes = this.serializer[T](data)
     val hash = com.roundeights.hasher.Hasher(bytes).sha256
     HashedValue(hash, bytes, data)
   }
 
-  override def signer[T]: Signer[T] = data => "Proof: {" + this.serializer[T](data) + "}"
+  override def signer[T]: Signer[T] = data => Proof("Proof: {" + this.serializer[T](data) + "}", this.hasher[T](data).hash)
 
   override def serializer[T]: Serializer[T] = data => data.toString()
 }
 
-class ChainPersistentActor[T](node: Node, val chainRef: ChainRef, val snapshotInterval: Int, initial: T) extends PersistentActor {
+class ChainPersistentActor[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: T) extends PersistentActor {
   override def persistenceId = chainRef.hash.toString()
 
   private def merkledHasher = node.hasher[MerkledRef]
@@ -196,7 +363,7 @@ class ChainPersistentActor[T](node: Node, val chainRef: ChainRef, val snapshotIn
   }
 }
 
-class ChainStreamNode[T](node: Node, val chainRef: ChainRef, val snapshotInterval: Int, initial: T) extends ActorSubscriber {
+class ChainStreamNode[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: T) extends ActorSubscriber {
   import ActorSubscriberMessage._
 
   val MaxQueueSize = 10
@@ -213,7 +380,7 @@ class ChainStreamNode[T](node: Node, val chainRef: ChainRef, val snapshotInterva
   }
 }
 
-class ChainGroupByNode[T](node: Node, val chainRef: ChainRef, val snapshotInterval: Int, initial: T, keySelector: T => String) extends ActorSubscriber {
+class ChainGroupByNode[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: T, keySelector: T => String) extends ActorSubscriber {
   import ActorSubscriberMessage._
 
   val MaxQueueSize = 10
@@ -293,7 +460,7 @@ import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 //////////////////
 
 //class ChainFlow[T](source: Source[T, NotUsed], node: Node, chainRef: ChainRef) {
-class ChainFlow[T](node: Node, chainRef: ChainRef) {
+class ChainFlow[T](node: CryptoContext, chainRef: ChainRef) {
   private val queries = PersistenceQuery(system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier)
 
   def envelopStream() = {
@@ -374,7 +541,7 @@ class ChainFlow[T](node: Node, chainRef: ChainRef) {
 }
 
 object ChainFlow {
-  def create[T](node: Node, name: String, source: Source[T, NotUsed], initialValue: T, snapshotInterval: Int = 100): ChainFlow[T] = {
+  def create[T](node: CryptoContext, name: String, source: Source[T, NotUsed], initialValue: T, snapshotInterval: Int = 100): ChainFlow[T] = {
     val childChainRef = simpleNode.hasher(ChainRefData(UUID.randomUUID(), name, 0))
     val sinkActor = Sink.actorSubscriber(Props(new ChainStreamNode[T](simpleNode, childChainRef, snapshotInterval, initialValue)))
 

@@ -53,6 +53,15 @@ class PrintActor() extends Actor {
   }
 }
 
+
+
+class ConfirmationActor[T]() extends Actor {
+
+  def receive = {
+    case a => println(a)
+  }
+}
+
 //val cs1 = deployNode ("application", "2551", Props[Destination], "")
 //val cs2 = deployNode ("application", "2552", Props[Destination], "")
 val cs1 = deployNode ("application", "2551", Props[Destination], "_AA_")
@@ -63,19 +72,19 @@ val cs2 = deployNode ("application", "2552", Props[Destination], "_AA_")
 //}
 
 
-val workerRouter = cs1.actorOf(
+val workerRouter1 = cs1.actorOf(
   ClusterRouterPool(BroadcastPool(0), ClusterRouterPoolSettings(
     totalInstances = 100000000, maxInstancesPerNode = 5,
     allowLocalRoutees = true, useRole = Some("_AA_"))).props(Props[Destination]),
   name = "dest")
 
-val workerRouter = cs2.actorOf(
+val workerRouter2 = cs2.actorOf(
   ClusterRouterPool(BroadcastPool(10), ClusterRouterPoolSettings(
     totalInstances = 10, maxInstancesPerNode = 5,
     allowLocalRoutees = true, useRole = Some("_AA_"))).props(Props[Destination]),
   name = "dest8")
 
-val workerRouter = cs2.actorOf(ClusterRouterGroup(BroadcastGroup(List("/user/print")),
+val workerRouter3 = cs2.actorOf(ClusterRouterGroup(BroadcastGroup(List("/user/print")),
   ClusterRouterGroupSettings(
     totalInstances = 10, routeesPaths = List("/user/print"),
     allowLocalRoutees = true, useRole = None)).props(), name = "dest8")
@@ -119,3 +128,4 @@ object ResourceGroupNode extends App {
 
   deployNode (port, Props[Actor], groupNames)
 }
+
