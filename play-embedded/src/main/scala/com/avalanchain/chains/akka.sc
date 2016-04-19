@@ -116,4 +116,4 @@ class ExamplePersistentActor(id: String) extends PersistentActor {
 
 }
 
-val epa = system.actorOf(Props(new ExamplePersistentActor()))
+val epa = system.actorOf(Props(new ExamplePersistentActor("")))

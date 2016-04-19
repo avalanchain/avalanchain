@@ -3,21 +3,22 @@ import java.time.Instant
 import java.util.UUID
 
 import akka.NotUsed
-import akka.actor.{Actor, ActorRef, ActorSelection, ActorSystem, Inbox, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSelection, ActorSystem, Inbox, Props}
+import akka.persistence.fsm.PersistentFSM
+import akka.persistence.fsm.PersistentFSM.FSMState
 import akka.persistence.query.EventEnvelope
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.actor.{ActorSubscriber, ActorSubscriberMessage, MaxInFlightRequestStrategy}
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import com.typesafe.config.ConfigFactory
-import org.omg.CORBA.DynAnyPackage.Invalid
 
 import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 import scala.util.Try
 
-//type PublicKey = byte array
+type PublicKey = String // TODO: Replace with java.security.PublicKey
 type SigningPublicKey = PublicKey
 type EncryptionPublicKey = PublicKey
 
@@ -42,6 +43,7 @@ object ChainStream {
   type Hash = String//Array[Byte]
   type Serialized = String//Array[Byte]
   type Signature = String
+  type SigningPublicKey = String
   case class Proof (signature: Signature, hash: Hash)
   case class Signed[T] (proof: Proof, value: T)
 }
@@ -97,28 +99,29 @@ trait CryptoContext {
   def hasher[T]: Hasher[T]
   def serializer[T]: Serializer[T]
   def signer[T]: Signer[T]
+  def signingPublicKey: SigningPublicKey
 }
 
 type ValueId = String
-type ConfirmationStateChangedNotifier[T] = T => Unit
-case class Confirmation[T] (nodeId: String, valueId: ValueId, value: T, notifier: ConfirmationStateChangedNotifier[T])
+type ConfirmationStateChangedNotifier = Hash => Unit
+case class Confirmation (nodeId: String, valueId: ValueId, value: Hash, notifier: ConfirmationStateChangedNotifier)
 
-trait ConfirmationResult[T] {
-  val confirmation: Confirmation[T]
+trait ConfirmationResult {
+  val confirmation: Confirmation
 }
 object ConfirmationResult {
-  case class InvalidConfirmation[T](confirmation: Confirmation[T]) extends ConfirmationResult[T]
-  case class ConfirmedSame[T](confirmation: Confirmation[T]) extends ConfirmationResult[T]
-  case class ConfirmedDifferent[T](confirmation: Confirmation[T], expectedValue: T) extends ConfirmationResult[T]
-  case class NotConfirmedYet[T](confirmation: Confirmation[T]) extends ConfirmationResult[T]
+  case class InvalidConfirmation(confirmation: Confirmation) extends ConfirmationResult
+  case class ConfirmedSame(confirmation: Confirmation) extends ConfirmationResult
+  case class ConfirmedDifferent(confirmation: Confirmation, expectedHash: Hash) extends ConfirmationResult
+  case class NotConfirmedYet(confirmation: Confirmation) extends ConfirmationResult
 }
 
-type PolicyChecker[T] = ExecutionPolicy => List[Confirmation[T]] => Option[T]
-class ConfirmationCounter[T] (val policy: ExecutionPolicy, validator: Confirmation[T] => Boolean, policyChecker: PolicyChecker[T]) {
-  private var _confirmations = List.empty[Confirmation[T]]
-  private var _invalidConfirmations = List.empty[Confirmation[T]]
-  private var _pendingConfirmations = List.empty[Confirmation[T]]
-  private var _confirmedValue: Option[T] = None
+type PolicyChecker = ExecutionPolicy => List[Confirmation] => Option[Hash]
+class ConfirmationCounter (val policy: ExecutionPolicy, validator: Confirmation => Boolean, policyChecker: PolicyChecker) {
+  private var _confirmations = List.empty[Confirmation]
+  private var _invalidConfirmations = List.empty[Confirmation]
+  private var _pendingConfirmations = List.empty[Confirmation]
+  private var _confirmedValue: Option[Hash] = None
 
   private def notifyDependents(): Unit = {
     _confirmedValue match {
@@ -131,7 +134,7 @@ class ConfirmationCounter[T] (val policy: ExecutionPolicy, validator: Confirmati
   def pendingConfirmations = _pendingConfirmations
   def confirmedValue = _confirmedValue
 
-  def addConfirmation(confirmation: Confirmation[T]) = {
+  def addConfirmation(confirmation: Confirmation) = {
     if (!validator(confirmation)) {
       _invalidConfirmations = confirmation :: _invalidConfirmations
       ConfirmationResult.InvalidConfirmation(confirmation)
@@ -146,7 +149,7 @@ class ConfirmationCounter[T] (val policy: ExecutionPolicy, validator: Confirmati
           _confirmedValue match {
             case Some(v) =>
               _confirmations = _pendingConfirmations
-              _pendingConfirmations = List.empty[Confirmation[T]]
+              _pendingConfirmations = List.empty[Confirmation]
               notifyDependents()
               if (v.equals(confirmation.value)) ConfirmationResult.ConfirmedSame(confirmation)
               else ConfirmationResult.ConfirmedDifferent(confirmation, v) // Shouldn't ever happen really because of policyChecker call
@@ -159,6 +162,93 @@ class ConfirmationCounter[T] (val policy: ExecutionPolicy, validator: Confirmati
     }
   }
 }
+
+//////////////////
+
+//final case class SetNumber(num: Integer)
+//final case class Reset()
+
+sealed trait ConfirmationState extends FSMState
+case object Unconfirmed extends ConfirmationState {
+  override def identifier: String = "Unconfirmed"
+}
+case object Confirmed extends ConfirmationState {
+  override def identifier: String = "Confirmed"
+}
+
+sealed trait Data {
+  def add(number: Integer): Data
+  def empty(): Data
+}
+case object Empty extends Data {
+  def add(number: Integer) = Numbers(Vector(number))
+  def empty() = this
+}
+final case class Numbers(queue: Seq[Integer]) extends Data {
+  def add(number: Integer) = Numbers(queue :+ number)
+  def empty() = Empty
+}
+
+sealed trait DomainEvt
+case class SetNumberEvt(num: Integer) extends DomainEvt
+case class ResetEvt() extends DomainEvt
+
+class ConfirmationActor() extends PersistentFSM[ConfirmationState, Data, DomainEvt] {
+
+  override def applyEvent(domainEvent: DomainEvt, currentData: Data): Data = {
+    domainEvent match {
+      case SetNumberEvt(num) =>
+        val data = currentData.add(num)
+        println(data)
+        data
+      case ResetEvt() =>
+        deleteMessages(1000)
+        println("RESET")
+        currentData.empty()
+    }
+  }
+
+  override def persistenceId: String = "generator"
+
+  override def domainEventClassTag: ClassTag[DomainEvt] = classTag[DomainEvt]
+
+  startWith(Idle, Empty)
+
+  when(Idle) {
+    case Event(SetNumber(num), _) =>
+      println("STARTING IDLE")
+      goto(Active) applying SetNumberEvt(num)
+    case Event(Reset, _) => goto(Active) applying ResetEvt()
+  }
+
+  when(Active) {
+    case Event(SetNumber(num), numbers: Data) => stay applying SetNumberEvt(num)
+    case Event(Reset, _) => goto(Idle) applying ResetEvt() replying "RESET COMPLETED"
+  }
+
+  initialize()
+
+}
+
+//class ConfirmationActor() extends Actor with ActorLogging {
+//
+//  def receive = {
+//    case c: Confirmation =>
+//    case a => println(a)
+//  }
+//}
+
+case class CoordinationKey(pos: Int, )
+
+class CoordinatorActor() extends Actor with ActorLogging {
+  var
+
+  def receive = {
+    case c: Confirmation =>
+    case a => println(a)
+  }
+}
+
 
 ////////////////// Payment
 
@@ -230,21 +320,10 @@ def applyTransaction (balances: PaymentBalances) (transaction: PaymentTransactio
       }
   }
 
-  def newAccount(name: String) = {
-    let cctx = cryptoContextNamed name
-
-  let accountRef = {
-    Address = cctx.Address
-  }
-
-  let account = {
-    Ref = accountRef
-    PublicKey = cctx.SigningPublicKey
-    Name = name
-    CryptoContext = cctx
-  }
-  account
-  }
+def newAccount(name: String, cryptoContext: CryptoContext) = {
+  val accountRef = PaymentAccountRef(name)
+  PaymentAccount(accountRef, cryptoContext.signingPublicKey, name, cryptoContext)
+}
 
 //  let rec applyTos (blns: PaymentBalancesData) tos: StoredTransaction =
 //  match tos with
@@ -313,6 +392,8 @@ class SimpleNode extends CryptoContext {
   override def signer[T]: Signer[T] = data => Proof("Proof: {" + this.serializer[T](data) + "}", this.hasher[T](data).hash)
 
   override def serializer[T]: Serializer[T] = data => data.toString()
+
+  override def signingPublicKey = "SigningPublicKey"
 }
 
 class ChainPersistentActor[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: T) extends PersistentActor {
