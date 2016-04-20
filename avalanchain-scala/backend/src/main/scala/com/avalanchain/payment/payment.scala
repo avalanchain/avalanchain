@@ -3,6 +3,10 @@ package com.avalanchain
 import java.time.Instant
 import java.util.UUID
 
+import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.Actor.Receive
+import akka.stream.actor.ActorPublisher
+import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
 import com.avalanchain.core.domain.ChainStream.{Hash, Signature, SigningPublicKey}
 import com.avalanchain.core.domain._
 
@@ -103,6 +107,34 @@ package object payment {
     storage.submit (PaymentTransaction(fromAcc._1, List((toAcc._1, (Random.nextDouble() * fromAcc._2 )))))
   }
 
+  class TradingBot[T](storage: TransactionStorage) extends ActorPublisher[T] with ActorLogging {
+    val Tick = "tick"
+    class TickActor extends Actor {
+      def receive = {
+        case Tick => //Do something
+      }
+    }
+    val tickActor = context.actorOf(Props(classOf[TickActor], this))
+
+    val cancellable =
+    context.scheduler.schedule(0 milliseconds,
+      50 milliseconds,
+      self,
+      Tick)
+
+    //This cancels further Ticks to be sent
+    cancellable.cancel()
+
+    override def receive = {
+      case Request(cnt) =>                                                             // 2
+        log.debug("[FibonacciPublisher] Received Request ({}) from Subscriber", cnt)
+        sendFibs()
+      case Cancel =>                                                                   // 3
+        log.info("[FibonacciPublisher] Cancel Message Received -- Stopping")
+        context.stop(self)
+      case _ =>
+    }
+  }
 
   val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), simpleContext))
   val balances = accounts.map(a => (a.ref, 1000)).toMap
