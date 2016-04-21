@@ -26,18 +26,26 @@
             <!--<li ui-sref-active="active">
                 <a ui-sref="index.dashboard"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> </a>
             </li>-->
+            <li ng-class="{active: $state.includes('quoka')}">
+                <a href=""><i class="fa fa-th-large"></i> <span class="nav-label">Quoka</span> <span class="fa arrow"></span></a>
+                <ul class="nav nav-second-level collapse" ng-class="{in: $state.includes('quoka')}">
+                    <li ui-sref-active="active"><a ui-sref="quoka.dashboard">Dashboard</a></li>
+                    <li ui-sref-active="active"><a ui-sref="quoka.trader">Trader</a></li>
+                </ul>
+            </li>
             <li ng-class="{active: $state.includes('dashboards')}">
                 <a href=""><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
                 <ul class="nav nav-second-level collapse" ng-class="{in: $state.includes('dashboards')}">
-                    <li ui-sref-active="active"><a ui-sref="dashboards.dashboard">Dashboard v.1</a></li>
-                    <li ui-sref-active="active"><a ui-sref="dashboards.dashboard_2">Dashboard v.2</a></li>
-                    <!--<li ui-sref-active="active"><a ui-sref="dashboards.dashboard_3">{{ 'DASHBOARD' | translate }} v.3</a></li>
-                    <li ui-sref-active="active"><a ui-sref="dashboards.dashboard_4_1">{{ 'DASHBOARD' | translate }} v.4</a></li>
-                    <li ui-sref-active="active"><a ui-sref="dashboards.dashboard_5">{{ 'DASHBOARD' | translate }} v.5 <span class="label label-primary pull-right">NEW</span></a></li>-->
+                    <li ui-sref-active="active"><a ui-sref="dashboards.dashboard">Dashboard </a></li>
                 </ul>
             </li>
             <li ui-sref-active="active">
-                <a ui-sref="index.accounts"><i class="fa fa-users"></i> <span class="nav-label">Accounts</span></a>
+                <a ui-sref="index.accounts"><i class="fa fa-users"></i>
+                    <span class="nav-label">Accounts</span>
+                    <span class="label label-primary pull-right">{{accountsamount}}</span></a>
+            </li>
+            <li ui-sref-active="active">
+                <a ui-sref="index.trader"><i class="fa fa-briefcase"></i> <span class="nav-label">Trader</span></a>
             </li>
             <li ui-sref-active="active">
                 <a ui-sref="index.clusters"><i class="fa fa-database"></i> <span class="nav-label">Clusters</span></a>

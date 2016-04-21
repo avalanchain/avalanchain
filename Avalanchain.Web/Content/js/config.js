@@ -8,7 +8,12 @@
  * Initial there are written state for all view in theme.
  *
  */
-function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider) {
+function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, $locationProvider, adalAuthenticationServiceProvider, $httpProvider) {
+    //$locationProvider.html5Mode({
+    //    enabled: true,
+    //    requireBase: false
+    //});
+    //$locationProvider.html5Mode(true).hashPrefix('!');
     $urlRouterProvider.otherwise("/dashboards/dashboard");
 
     $ocLazyLoadProvider.config({
@@ -16,11 +21,35 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider) {
         debug: false
     });
 
+    var endpoints = {
+        "http://localhost:48213": "https://avlnchdemo.azurewebsites.net"
+        // Map the location of a request to an API to a the identifier of the associated resource
+        //"Enter the root location of your To Go API here, e.g. https://contosotogo.azurewebsites.net/":
+        //    "Enter the App ID URI of your To Go API here, e.g. https://contoso.onmicrosoft.com/ToGoAPI",
+    };
+
+    //adalAuthenticationServiceProvider.init(
+    //    {
+    //        instance: 'https://login.microsoftonline.com/',
+    //        tenant: 'safytrack.onmicrosoft.com',
+    //        clientId: '02fa79b9-d917-4496-93d4-8fb311611f51',
+    //        extraQueryParameter: 'nux=1',
+    //        //endpoints: endpoints,
+    //        //cacheLocation: 'localStorage', // enable this for IE, as sessionStorage does not work for localhost.
+    //    },
+    //    $httpProvider
+    //    );
+
     $stateProvider
 
         .state('dashboards', {
             abstract: true,
             url: "/dashboards",
+            templateUrl: "/Content/views/common/content.html",
+        })
+        .state('quoka', {
+            abstract: true,
+            url: "/quoka",
             templateUrl: "/Content/views/common/content.html",
         })
         .state('index', {
@@ -32,6 +61,8 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider) {
             url: "/dashboard",
             templateUrl: "/Content/views/dashboard/dashboard.html",
             data: { pageTitle: 'dashboard' },
+
+            //requireADLogin: true,
             resolve: {
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
@@ -44,10 +75,10 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider) {
                 }
             }
         })
-        .state('dashboards.dashboard_2', {
-            url: "/dashboard_2",
-            templateUrl: "/Content/views/dashboard/dashboard_2.html",
-            data: { pageTitle: 'Dashboard 2' },
+        .state('quoka.dashboard', {
+            url: "/dashboard",
+            templateUrl: "/Content/views/quoka/dashboard.html",
+            data: { pageTitle: 'Dashboard' },
             resolve: {
                 loadPlugin: function ($ocLazyLoad) {
                     return $ocLazyLoad.load([
@@ -81,6 +112,11 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider) {
                 }
             }
         })
+        .state('quoka.trader', {
+            url: "/trader",
+            templateUrl: "/Content/views/quoka/trader.html",
+            data: { pageTitle: 'quoka trader' }
+        })
         .state('index.clusters', {
             url: "/clusters",
             templateUrl: "/Content/views/clusters/clusters.html",
@@ -90,6 +126,11 @@ function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider) {
             url: "/accounts",
             templateUrl: "/Content/views/accounts/accounts.html",
             data: { pageTitle: 'accounts' }
+        })
+        .state('index.trader', {
+            url: "/trader",
+            templateUrl: "/Content/views/trader/trader.html",
+            data: { pageTitle: 'trader' }
         })
         .state('index.nodes', {
             url: "/nodes",

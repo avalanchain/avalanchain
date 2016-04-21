@@ -5,10 +5,10 @@
             <p>Sign in today for more expirience.</p>
 
             <form role="form">
-                <div class="form-group"><label>ID</label> <input type="text" ng-model="guid" disabled class="form-control"></div>
-                <div class="form-group"><label>Password(mnemonic)</label> <input type="text" ng-model="password" class="form-control">
+                <div class="form-group"><label>ID</label> <input type="text" ng-model="modal.guid" disabled class="form-control"></div>
+                <div class="form-group"><label>Password(mnemonic)</label> <input type="text" ng-model="modal.password" class="form-control">
                 </div>
-                <div class="form-group"><label>Hex password(mnemonic)</label> <input type="text" ng-model="hexPass" class="form-control"></div>
+                <div class="form-group"><label>Hex password(mnemonic)</label> <input type="text" ng-model="modal.hexPass" class="form-control"></div>
                 <div>
                     <button class="btn btn-sm btn-primary pull-right m-t-n-xs" type="submit" ng-click="ok()"><strong>Create</strong></button>
                     <!--<label> <input icheck type="checkbox" ng-model="main.unCheck"> Remember me </label>-->

@@ -16,17 +16,14 @@ function MainCtrl() {
 };
 
 function modalCtrl($scope, $uibModalInstance, dataservice, $rootScope) {
-    var m = new Mnemonic(96);
-    $scope.password = m.toWords().join(' ');;
-    $scope.hexPass = m.toHex();
-    $scope.guid = dataservice.createGuid();
+    //var m = new Mnemonic(96);
+    //$scope.password = m.toWords().join(' ');;
+    //$scope.hexPass = m.toHex();
+    //$scope.guid = dataservice.createGuid();
+    $scope.modal = $rootScope.modal;
     $scope.ok = function () {
-        dataservice.newAccount().then(function (data) {
-            $uibModalInstance.close();
-            $rootScope.$emit('updateAccounts');
-            //getAccounts();
-        });
-        
+        $uibModalInstance.close();
+        $scope.modal.ok();
     };
 
     $scope.cancel = function () {
