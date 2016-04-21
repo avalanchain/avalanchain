@@ -407,7 +407,7 @@
     <Content Include="Content\views\dashboard\dashboard.js" />
     <Content Include="Content\views\dashboard\dashboard_2.html" />
     <Content Include="Content\views\dashboard\dashboard_2.js" />
-    <Content Include="Content\views\dashboard\quoka_payment.html" />
+    <!--<Content Include="Content\views\dashboard\quoka_payment.html" />-->
     <Content Include="Content\views\doctor\doctor.html" />
     <Content Include="Content\views\doctor\doctor.js" />
     <Content Include="Content\views\main.html" />
@@ -416,6 +416,9 @@
     <Content Include="Content\views\nodes\nodes.js" />
     <Content Include="Content\views\quoka\trader.js" />
     <Content Include="Content\views\quoka\dashboard.js" />
+    <Content Include="Content\views\quoka\dashboard.html" />
+	<Content Include="Content\views\quoka\quoka_payment.html" />
+    <Content Include="Content\views\quoka\trader.html" />
     <Content Include="Content\views\streams\streams.html" />
     <Content Include="Content\views\streams\streams.js" />
     <Content Include="Content\views\trader\trader.html" />
@@ -434,9 +437,6 @@
     <Content Include="Scripts\modernizr-2.6.2.js" />
     <Content Include="Scripts\npm.js" />
     <!--<None Include="Scripts\jquery-1.10.2.intellisense.js" />-->
-    <Content Include="Content\views\quoka\quoka_payment.html" />
-    <Content Include="Content\views\quoka\dashboard.html" />
-    <Content Include="Content\views\quoka\trader.html" />
     <None Include="fonts\glyphicons-halflings-regular.woff" />
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
     <None Include="fonts\glyphicons-halflings-regular.ttf" />
