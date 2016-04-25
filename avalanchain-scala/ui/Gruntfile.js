@@ -41,7 +41,7 @@ module.exports = grunt => {
     },
 
     connect: {
-      proxies: [{context: '/api/', host: 'localhost', port: 8080}],
+      proxies: [{context: '/api/', host: 'localhost', port: 8080}, {context: '/ws/', host: 'localhost', port: 8080, ws: true}],
       options: {
         port: 9090,
         hostname: '0.0.0.0'

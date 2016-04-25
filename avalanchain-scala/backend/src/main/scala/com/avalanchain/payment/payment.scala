@@ -12,6 +12,8 @@ import com.avalanchain.core.domain._
 
 import scala.annotation.tailrec
 import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 
 /**
@@ -117,7 +119,7 @@ package object payment {
     val tickActor = context.actorOf(Props(classOf[TickActor], this))
 
     val cancellable =
-    context.scheduler.schedule(0 milliseconds,
+    context.system.scheduler.schedule(0 milliseconds,
       50 milliseconds,
       self,
       Tick)
@@ -128,7 +130,7 @@ package object payment {
     override def receive = {
       case Request(cnt) =>                                                             // 2
         log.debug("[FibonacciPublisher] Received Request ({}) from Subscriber", cnt)
-        sendFibs()
+        //sendFibs()
       case Cancel =>                                                                   // 3
         log.info("[FibonacciPublisher] Cancel Message Received -- Stopping")
         context.stop(self)

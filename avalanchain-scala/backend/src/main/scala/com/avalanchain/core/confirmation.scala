@@ -31,6 +31,7 @@ package object confirmation {
     private def notifyDependents(): Unit = {
       _confirmedValue match {
         case Some(v) => _confirmations.foreach(c => c.notifier(v))
+        case _ =>
       }
     }
 

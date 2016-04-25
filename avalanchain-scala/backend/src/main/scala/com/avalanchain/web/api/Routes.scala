@@ -1,14 +1,15 @@
 package com.avalanchain.web.api
 
-import akka.http.scaladsl.model.StatusCodes
+import akka.http.javadsl.model.ContentTypes
+import akka.http.scaladsl.model
+import akka.http.scaladsl.model.{HttpEntity, StatusCodes}
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{RejectionHandler, Route, ExceptionHandler}
-import com.avalanchain.web.passwordreset.PasswordResetRoutes
-import com.avalanchain.web.user.UsersRoutes
+import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
+import akka.stream.scaladsl.{Flow, Source}
+import com.typesafe.scalalogging.StrictLogging
 
-trait Routes extends UsersRoutes
-    with PasswordResetRoutes
-    with CacheSupport {
+trait Routes extends CacheSupport with StrictLogging {
 
   private val exceptionHandler = ExceptionHandler {
     case e: Exception =>
@@ -27,19 +28,39 @@ trait Routes extends UsersRoutes
     } & handleRejections(rejectionHandler)
   }
 
+  val greeterWebSocketService =
+    Flow[Message].collect {
+      case tm: TextMessage =>
+        println(s"Received: $tm")
+        TextMessage(Source.single("Hello ") ++ tm.textStream)
+      // ignore binary messages
+    }
+
+  //#websocket-routing
+  val greeterRoute =
+    path("greeter") {
+      get {
+        handleWebSocketMessages(greeterWebSocketService)
+        //complete(HttpEntity(model.ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+      }
+    }
+
   val routes =
     logDuration {
       handleExceptions(exceptionHandler) {
         cacheImages {
           encodeResponse {
-            pathPrefix("api") {
-              passwordResetRoutes ~
-                usersRoutes
+//            pathPrefix("api") {
+//              passwordResetRoutes ~
+//                usersRoutes
+//            } ~
+            pathPrefix("ws") {
+              greeterRoute
             } ~
-              getFromResourceDirectory("webapp") ~
-              path("") {
-                getFromResource("webapp/index.html")
-              }
+            getFromResourceDirectory("webapp") ~
+            path("") {
+              getFromResource("webapp/index.html")
+            }
           }
         }
       }

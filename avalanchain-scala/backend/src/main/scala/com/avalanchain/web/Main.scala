@@ -7,7 +7,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.ActorMaterializer
 import com.avalanchain.web.api.Routes
-import com.avalanchain.web.user.Session
 import com.softwaremill.session.{SessionConfig, SessionManager}
 import com.typesafe.scalalogging.StrictLogging
 
@@ -27,14 +26,12 @@ class Main() extends StrictLogging {
       lazy val sessionConfig = SessionConfig.fromConfig(config.rootConfig).copy(sessionEncryptData = true)
 
       implicit lazy val ec = _system.dispatchers.lookup("akka-http-routes-dispatcher")
-      implicit lazy val sessionManager: SessionManager[Session] = new SessionManager[Session](sessionConfig)
+      //implicit lazy val sessionManager: SessionManager[Session] = new SessionManager[Session](sessionConfig)
       implicit lazy val materializer = _materializer
       lazy val system = _system
     }
 
     logger.info("Server secret: " + modules.sessionConfig.serverSecret.take(3) + "...")
-
-    modules.sqlDatabase.updateSchema()
 
     (Http().bindAndHandle(modules.routes, modules.config.serverHost, modules.config.serverPort), modules)
   }
