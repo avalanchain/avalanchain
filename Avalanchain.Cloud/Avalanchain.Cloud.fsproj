@@ -54,7 +54,6 @@
     <Compile Include="CloudStream.fs" />
     <Compile Include="Confirmation.fs" />
     <Compile Include="ChainFlow.fs" />
-    <Compile Include="PaymentNetwork.fs" />
     <None Include="AzureCluster.fsx" />
     <None Include="ThespianCluster.fsx" />
     <None Include="Script.fsx" />

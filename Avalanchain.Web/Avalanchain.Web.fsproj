@@ -389,6 +389,7 @@
     <Content Include="Content\views\accounts\account.html" />
     <Content Include="Content\views\accounts\accounts.html" />
     <Content Include="Content\views\accounts\accounts.js" />
+    <Content Include="Content\views\accounts\create_account.html" />
     <Content Include="Content\views\admin\admin.html" />
     <Content Include="Content\views\admin\admin.js" />
     <Content Include="Content\views\clusters\clusters.html" />
@@ -425,7 +426,7 @@
     <Content Include="Scripts\modernizr-2.6.2.js" />
     <Content Include="Scripts\npm.js" />
     <!--<None Include="Scripts\jquery-1.10.2.intellisense.js" />-->
-    <Content Include="Content\views\accounts\create_account.html" />
+
     <None Include="fonts\glyphicons-halflings-regular.woff" />
     <None Include="fonts\glyphicons-halflings-regular.woff2" />
     <None Include="fonts\glyphicons-halflings-regular.ttf" />

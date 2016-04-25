@@ -1,6 +1,6 @@
 ﻿(*** hide ***)
 #load "ThespianCluster.fsx"
-#load "AzureCluster.fsx"
+//#load "AzureCluster.fsx"
 
 #r "../packages/Chessie.0.4.0/lib/net40/Chessie.dll"
 #r "../packages/FSharpx.Collections.1.14.0/lib/net40/FSharpx.Collections.dll"
@@ -64,7 +64,7 @@ let chain = ChainFlow.ofStream topChain
             |> ChainFlow.filter 1000u (fun v -> true )
             //|> ChainFlow.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
 //            |> ChainFlow.filter 1000u (fun v -> v.ToString() |> Int64.Parse |> fun ch -> ch % 2L <> 0L )
-            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
+            |> ChainFlow.mapFrame 1000u (fun v -> v )
             |> cluster.Run
 
 let chainPos = chain.Position() |> cluster.Run
