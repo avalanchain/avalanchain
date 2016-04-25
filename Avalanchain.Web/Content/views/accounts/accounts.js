@@ -25,14 +25,27 @@
         $scope.transactionPage = 1;
         $scope.transactions = [];
 
-        $scope.openModal = function () {
 
+        $scope.openModal = function () {
+            var m = new Mnemonic(96);
+            $rootScope.modal = {};
+            $rootScope.modal.password = m.toWords().join(' ');;
+            $rootScope.modal.hexPass = m.toHex();
+            $rootScope.modal.guid = dataservice.createGuid();
+            $rootScope.modal.ok =function () {
+                dataservice.newAccount().then(function (data) {
+                    $rootScope.$emit('updateAccounts');
+                });
+            };
             var modalInstance = $uibModal.open({
                 templateUrl: '/Content/views/accounts/create_account.html',
                 controller: modalCtrl
             });
         };
-
+        //$scope.showModal = false;
+        //$scope.toggleModal = function () {
+        //    $scope.showModal = !$scope.showModal;
+        //};
         $rootScope.$on('updateAccounts', function () {
             getAccounts();
         });
@@ -105,6 +118,7 @@
             return dataservice.getAllAccounts().then(function (data) {
                 $scope.accounts = addStatus(data.data);
                 $scope.totalItems = $scope.accounts.length;
+                $rootScope.accountsamount = $scope.accounts.length;
             });
 
         }

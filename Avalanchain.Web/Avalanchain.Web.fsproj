@@ -236,6 +236,8 @@
     <Content Include="Content\js\jquery\jquery-ui.custom.min.js" />
     <Content Include="Content\js\jquery\jquery-ui-1.10.4.min.js" />
     <Content Include="Content\js\jquery\moment.min.js" />
+    <Content Include="Content\js\plugins\adal\adal.js" />
+    <Content Include="Content\js\plugins\adal\adal-angular.js" />
     <Content Include="Content\js\plugins\c3\c3.min.js" />
     <Content Include="Content\js\plugins\c3\c3-angular.min.js" />
     <Content Include="Content\js\plugins\d3\d3.min.js" />
@@ -379,6 +381,7 @@
     <Content Include="Content\js\plugins\slimscroll\jquery.slimscroll.min.js" />
     <Content Include="Content\js\plugins\toastr\toastr.min.css" />
     <Content Include="Content\js\plugins\toastr\toastr.min.js" />
+    <Content Include="Content\js\plugins\mnemonic\mnemonic.js" />
     <Content Include="Content\js\services\common.js" />
     <Content Include="Content\js\services\datasevice.js" />
     <Content Include="Content\js\services\logger.js" />
@@ -404,14 +407,22 @@
     <Content Include="Content\views\dashboard\dashboard.js" />
     <Content Include="Content\views\dashboard\dashboard_2.html" />
     <Content Include="Content\views\dashboard\dashboard_2.js" />
+    <!--<Content Include="Content\views\dashboard\quoka_payment.html" />-->
     <Content Include="Content\views\doctor\doctor.html" />
     <Content Include="Content\views\doctor\doctor.js" />
     <Content Include="Content\views\main.html" />
     <Content Include="Content\views\minor.html" />
     <Content Include="Content\views\nodes\nodes.html" />
     <Content Include="Content\views\nodes\nodes.js" />
+    <Content Include="Content\views\quoka\trader.js" />
+    <Content Include="Content\views\quoka\dashboard.js" />
+    <Content Include="Content\views\quoka\dashboard.html" />
+	<Content Include="Content\views\quoka\quoka_payment.html" />
+    <Content Include="Content\views\quoka\trader.html" />
     <Content Include="Content\views\streams\streams.html" />
     <Content Include="Content\views\streams\streams.js" />
+    <Content Include="Content\views\trader\trader.html" />
+    <Content Include="Content\views\trader\trader.js" />
     <Content Include="favicon.ico" />
     <Content Include="Scripts\ai.0.15.0-build58334.js" />
     <Content Include="Scripts\ai.0.15.0-build58334.min.js" />
@@ -443,6 +454,9 @@
     <Content Include="packages.config" />
     <Content Include="readme.txt" />
     <None Include="Properties\PublishProfiles\avlnchdemo - Web Deploy.pubxml" />
+    <!--<Content Include="Content\js\plugins\mnemonic\mnemonic.js" />
+    <Content Include="Content\js\plugins\adal\adal.js" />
+    <Content Include="Content\js\plugins\adal\adal-angular.js" />-->
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Argu">

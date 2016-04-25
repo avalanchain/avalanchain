@@ -1,13 +1,13 @@
 ﻿(function () {
     'use strict';
-    var controllerId = 'Dashboard_2';
-    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice','$scope','$uibModal','$rootScope', dashboard_2]);
+    var controllerId = 'QuokaDashboard';
+    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$uibModal', '$rootScope', QuokaDashboard]);
 
-    function dashboard_2(common, dataservice, $scope, $uibModal, $rootScope) {
+    function QuokaDashboard(common, dataservice, $scope, $uibModal, $rootScope) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
-        vm.info = 'Dashboard 2';
+        vm.info = 'Quoka Dashboard';
         vm.helloText = 'Welcome in Avalanchain';
         vm.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         var currencies = dataservice.commondata().currencies();
@@ -328,7 +328,7 @@
 
         function activate() {
             common.activateController([getMessageCount()], controllerId)
-                .then(function () { log('Activated Dashboard_2') });//log('Activated Admin View');
+                .then(function () { log('Activated Quoka Dashboard') });//log('Activated Admin View');
         }
 
         $scope.$watch('yourItems', function (newVal, oldVal) {

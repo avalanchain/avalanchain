@@ -10,13 +10,13 @@
  */
 function pageTitle($rootScope, $timeout) {
     return {
-        link: function(scope, element) {
-            var listener = function(event, toState, toParams, fromState, fromParams) {
+        link: function (scope, element) {
+            var listener = function (event, toState, toParams, fromState, fromParams) {
                 // Default title - load on Dashboard 1
                 var title = 'avalanchain';
                 // Create your own title pattern
                 if (toState.data && toState.data.pageTitle) title = 'avalanchain | ' + toState.data.pageTitle;
-                $timeout(function() {
+                $timeout(function () {
                     element.text(title);
                 });
             };
@@ -31,9 +31,9 @@ function pageTitle($rootScope, $timeout) {
 function sideNavigation($timeout) {
     return {
         restrict: 'A',
-        link: function(scope, element) {
+        link: function (scope, element) {
             // Call the metsiMenu plugin and plug it to sidebar navigation
-            $timeout(function(){
+            $timeout(function () {
                 element.metisMenu();
             });
         }
@@ -63,7 +63,7 @@ function iboxTools($timeout) {
                     ibox.find('[id^=map-]').resize();
                 }, 50);
             },
-                // Function for close ibox
+            // Function for close ibox
                 $scope.closebox = function () {
                     var ibox = $element.closest('div.ibox');
                     ibox.remove();
@@ -90,7 +90,7 @@ function minimalizaSidebar($timeout) {
                         function () {
                             $('#side-menu').fadeIn(500);
                         }, 100);
-                } else if ($('body').hasClass('fixed-sidebar')){
+                } else if ($('body').hasClass('fixed-sidebar')) {
                     $('#side-menu').hide();
                     setTimeout(
                         function () {
@@ -154,39 +154,45 @@ function vectorMap() {
 function modal($uibModal, dataservice) {
     return {
         restrict: 'E',
+        templateUrl: function (tElement, tAttrs) {
+            return tAttrs.templateUrl;
+        },
+        transclude: true,
+        replace: true,
         scope: true,
-        //scope: {
-        //    myMapData: '=',
-        //},
-        templateUrl: '/Content/views/accounts/create_account.html',
-        controller: function ($scope, $element) {
+        link: function postLink(scope, element, attrs) {
+            scope.title = attrs.title;
 
-            $scope.ok = function () {
-                $uibModalInstance.close();
-            };
+            scope.$watch(attrs.visible, function (value) {
+                if (value == true)
+                    $(element).modal('show');
+                else
+                    $(element).modal('hide');
+            });
 
-            $scope.cancel = function () {
-                $uibModalInstance.dismiss('cancel');
-            };
-            // Function for collapse ibox
-            //$scope.showhide = function () {
-            //    var ibox = $element.closest('div.ibox');
-            //    var icon = $element.find('i:first');
-            //    var content = ibox.find('div.ibox-content');
-            //    content.slideToggle(200);
-            //    // Toggle icon from up to down
-            //    icon.toggleClass('fa-chevron-up').toggleClass('fa-chevron-down');
-            //    ibox.toggleClass('').toggleClass('border-bottom');
-            //    $timeout(function () {
-            //        ibox.resize();
-            //        ibox.find('[id^=map-]').resize();
-            //    }, 50);
-            //},
-            // Function for close ibox
-                //$scope.closebox = function () {
-                //    var ibox = $element.closest('div.ibox');
-                //    ibox.remove();
-                //}
+            $(element).on('shown.bs.modal', function () {
+                scope.$apply(function () {
+                    scope.$parent[attrs.visible] = true;
+                });
+            });
+
+            $(element).on('hidden.bs.modal', function () {
+                scope.$apply(function () {
+                    scope.$parent[attrs.visible] = false;
+                });
+            });
+            element.wrap('<div class="modal fade">' +
+            '<div class="modal-dialog">' +
+              '<div class="modal-content">' +
+                '<div class="modal-header">' +
+                  '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
+                  '<h4 class="modal-title">{{ title }}</h4>' +
+                '</div>' +
+                '<div class="modal-body" ng-transclude></div>' +
+              '</div>' +
+            '</div>' +
+          '</div>');
+
         }
     };
 };
@@ -201,4 +207,5 @@ angular
     .directive('sideNavigation', sideNavigation)
     .directive('iboxTools', iboxTools)
     .directive('minimalizaSidebar', minimalizaSidebar)
-        .directive('vectorMap', vectorMap)
+    .directive('vectorMap', vectorMap)
+    .directive('modal', modal);
