@@ -7,6 +7,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
+import akka.stream.Materializer
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorSubscriber, ActorSubscriberMessage, MaxInFlightRequestStrategy}
 import akka.stream.scaladsl.{Sink, Source}
@@ -103,7 +104,7 @@ package object chainFlow {
     }
   }
 
-  class ChainFlow[T](node: CryptoContext, chainRef: ChainRef, implicit val system: ActorSystem) {
+  class ChainFlow[T](node: CryptoContext, chainRef: ChainRef, implicit val system: ActorSystem, implicit val materializer: Materializer) {
     private val queries = PersistenceQuery(system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier)
 
     def envelopStream() = {
@@ -121,7 +122,7 @@ package object chainFlow {
 
       val stream = eventStream().map(e => node.hasher(f(e.value))).runWith(sinkActor)
 
-      new ChainFlow[B](node, childChainRef, system)
+      new ChainFlow[B](node, childChainRef, system, materializer)
     }
 
     def filter(f: T => Boolean, initialValue: T, snapshotInterval: Int = 100): ChainFlow[T] = {
@@ -130,7 +131,7 @@ package object chainFlow {
 
       val stream = eventStream().filter(e => f(e.value)).runWith(sinkActor)
 
-      new ChainFlow[T](node, childChainRef, system)
+      new ChainFlow[T](node, childChainRef, system, materializer)
     }
 
     def fold[B](f: B => T => B, initialValue: B, snapshotInterval: Int = 100): ChainFlow[B] = {
@@ -139,7 +140,7 @@ package object chainFlow {
 
       val stream = eventStream().fold(node.hasher(initialValue))((state, e) => node.hasher(f(state.value) (e.value))).runWith(sinkActor)
 
-      new ChainFlow[B](node, childChainRef, system)
+      new ChainFlow[B](node, childChainRef, system, materializer)
     }
 
     //  def reduce(f: T => T => T, snapshotInterval: Int = 100): ChainFlow[T] = {
@@ -152,7 +153,7 @@ package object chainFlow {
 
       val stream = eventStream().runWith(sinkActor)
 
-      new ChainFlow[T](node, childChainRef, system)
+      new ChainFlow[T](node, childChainRef, system, materializer)
     }
 
     def mapFrame[B](f: StateFrame[T] => B, initialValue: B, snapshotInterval: Int = 100): ChainFlow[B] = {
@@ -161,7 +162,7 @@ package object chainFlow {
 
       val stream = frameStream().map(e => node.hasher(f(e))).runWith(sinkActor)
 
-      new ChainFlow[B](node, childChainRef, system)
+      new ChainFlow[B](node, childChainRef, system, materializer)
     }
 
     def filterFrame(f: StateFrame[T] => Boolean, initialValue: T, snapshotInterval: Int = 100): ChainFlow[T] = {
@@ -170,7 +171,7 @@ package object chainFlow {
 
       val stream = frameStream().filter(e => f(e)).runWith(sinkActor)
 
-      new ChainFlow[T](node, childChainRef, system)
+      new ChainFlow[T](node, childChainRef, system, materializer)
     }
 
     def foldFrame[B](f: B => StateFrame[T] => B, initialValue: B, snapshotInterval: Int = 100): ChainFlow[B] = {
@@ -179,18 +180,19 @@ package object chainFlow {
 
       val stream = frameStream().fold(node.hasher(initialValue))((state, e) => node.hasher(f(state.value) (e))).runWith(sinkActor)
 
-      new ChainFlow[B](node, childChainRef, system)
+      new ChainFlow[B](node, childChainRef, system, materializer)
     }
   }
 
   object ChainFlow {
-    def create[T](node: CryptoContext, name: String, source: Source[T, NotUsed], initialValue: T, snapshotInterval: Int = 100)(implicit system: ActorSystem): ChainFlow[T] = {
+    def create[T](node: CryptoContext, name: String, source: Source[T, NotUsed], initialValue: T, snapshotInterval: Int = 100)
+                 (implicit system: ActorSystem, materializer: Materializer) : ChainFlow[T] = {
       val childChainRef = node.hasher(ChainRefData(UUID.randomUUID(), name, 0))
       val sinkActor = Sink.actorSubscriber(Props(new ChainStreamNode[T](node, childChainRef, snapshotInterval, initialValue)))
 
       val stream = source.map(e => node.hasher(e)).runWith(sinkActor)
 
-      new ChainFlow[T](node, childChainRef, system)
+      new ChainFlow[T](node, childChainRef, system, materializer)
     }
   }
 }
