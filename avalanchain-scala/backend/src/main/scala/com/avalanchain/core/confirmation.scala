@@ -4,7 +4,7 @@ import com.avalanchain.core.domain.ChainStream.Hash
 import com.avalanchain.core.domain.ExecutionPolicy
 
 /**
-  * Created by mytut on 19/04/2016.
+  * Created by Yuriy Habarov on 19/04/2016.
   */
 package object confirmation {
   type ValueId = String

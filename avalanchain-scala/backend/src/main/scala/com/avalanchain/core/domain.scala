@@ -83,10 +83,20 @@ package object domain {
       extends StateFrame[T]
   }
 
+  sealed trait Verified[T] {
+    val value: T
+  }
+  object Verified {
+    final case class Passed[T](value: T) extends Verified[T]
+    final case class HashCheckFailed[T](value: T, actual: Hash, expected: Hash) extends Verified[T]
+    final case class ProofCheckFailed[T](override val value: T, actual: Hash, expected: Hash) extends Verified[T]
+  }
+
+
   type Hasher[T] = T => HashedValue[T]
   type Serializer[T] = T => Serialized
-  type Signer[T] = T => Proof
-  type Verifier[T] = Proof => T => Boolean
+  type Signer[T] = T => Signed[T]
+  type Verifier[T] = (Proof, T) => Verified[T]
 
   trait CryptoContext {
     def hasher[T]: Hasher[T]

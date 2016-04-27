@@ -14,7 +14,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.avalanchain.core.domain._
 
 /**
-  * Created by mytut on 19/04/2016.
+  * Created by Yuriy Habarov on 19/04/2016.
   */
 package object chainFlow {
   class ChainPersistentActor[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: T) extends PersistentActor {

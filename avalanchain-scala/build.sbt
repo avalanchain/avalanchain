@@ -35,6 +35,8 @@ val h2 = "com.h2database" % "h2" % "1.3.176" //watch out! 1.4.190 is beta
 val postgres = "org.postgresql" % "postgresql" % "9.4.1208"
 val flyway = "org.flywaydb" % "flyway-core" % "4.0"
 val slickStack = Seq(slick, h2, postgres, slickHikari, flyway)
+val kantan = "com.nrinaudo" %% "kantan.csv-generic" % "0.1.9"
+val yahoo = "com.yahoofinance-api" % "YahooFinanceAPI" % "3.2.0"
 
 val scalatest = "org.scalatest" %% "scalatest" % "2.2.6" % "test"
 val unitTestingStack = Seq(scalatest)
@@ -107,7 +109,7 @@ lazy val backend: Project = (project in file("backend"))
   .settings(commonSettings)
   .settings(Revolver.settings)
   .settings(
-    libraryDependencies ++= slickStack ++ akkaStack ++ circe ++ Seq(javaxMailSun, typesafeConfig),
+    libraryDependencies ++= slickStack ++ akkaStack ++ circe ++ Seq(javaxMailSun, typesafeConfig) ++ Seq(kantan, yahoo),
     buildInfoPackage := "com.avalanchain.web.version",
     buildInfoObject := "BuildInfo",
     buildInfoKeys := Seq[BuildInfoKey](
