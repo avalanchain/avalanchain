@@ -18,11 +18,11 @@ package object domain {
   //  case class FixedMinimum(minNodes: Int) extends ExecutionPolicy
   //}
 
-  trait ExecutionPolicy
+  sealed trait ExecutionPolicy
 
   object ExecPolicy {
-    case class Pass() extends ExecutionPolicy
-    case class FixedMinimum(minNodes: Int) extends ExecutionPolicy
+    final case class Pass() extends ExecutionPolicy
+    final case class FixedMinimum(minNodes: Int) extends ExecutionPolicy
     //case class Pass() extends ExecutionPolicy
   }
 
@@ -37,9 +37,9 @@ package object domain {
     type Signature = String
     type SigningPublicKey = String
 
-    case class Proof(signature: Signature, hash: Hash)
+    final case class Proof(signature: Signature, hash: Hash)
 
-    case class Signed[T](proof: Proof, value: T)
+    final case class Signed[T](proof: Proof, value: T)
 
   }
 
@@ -50,9 +50,9 @@ package object domain {
     val bytes: Serialized
   }
 
-  case class HashedValue[T](hash: Hash, bytes: Serialized, value: T) extends Hashed
+  final case class HashedValue[T](hash: Hash, bytes: Serialized, value: T) extends Hashed
 
-  case class ChainRefData(id: Id, name: String, ver: Version)
+  final case class ChainRefData(id: Id, name: String, ver: Version)
   type ChainRef = HashedValue[ChainRefData]
 
   //case class ChainRef (override val hash: Hash, override val bytes: Serialized, override val value: ChainRefData)
@@ -61,12 +61,12 @@ package object domain {
   //  def UID = this.hash.toString()
   //}
 
-  case class ChainDefData(ref: ChainRef, execGroups: Set[ExecGroup])
+  final case class ChainDefData(ref: ChainRef, execGroups: Set[ExecGroup])
   type ChainDef = HashedValue[ChainDefData]
 
   //case class Data[T](value: HashedValue[T])
 
-  case class MerkledRef(streamRefHash: Hash, pmHash: Hash, pos: Version, ownHash: Hash)
+  final case class MerkledRef(streamRefHash: Hash, pmHash: Hash, pos: Version, ownHash: Hash)
 
   type HashedMR = HashedValue[MerkledRef]
 

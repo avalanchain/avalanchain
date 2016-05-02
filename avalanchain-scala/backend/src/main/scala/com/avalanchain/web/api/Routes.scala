@@ -6,8 +6,12 @@ import akka.http.scaladsl.model.{HttpEntity, StatusCodes}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
-import akka.stream.scaladsl.{Flow, Source}
+import akka.http.scaladsl.server.directives.WebSocketDirectives
+import akka.stream.scaladsl.{Flow, Sink, Source}
+import com.avalanchain.yahoo.YahooFinSource
 import com.typesafe.scalalogging.StrictLogging
+
+import scala.concurrent.forkjoin.ThreadLocalRandom
 
 trait Routes extends CacheSupport with StrictLogging {
 
@@ -37,13 +41,30 @@ trait Routes extends CacheSupport with StrictLogging {
     }
 
   //#websocket-routing
-  val greeterRoute =
+  val wsRoute: Route = {
     path("greeter") {
       get {
         handleWebSocketMessages(greeterWebSocketService)
         //complete(HttpEntity(model.ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
       }
+    } ~
+    path("randomNums") {
+      val src =
+        Source.fromIterator(() => Iterator.continually(ThreadLocalRandom.current.nextInt()))
+          .filter(i => i > 0 && i % 2 == 0).map(i => TextMessage(i.toString))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
+    path("yahoo") {
+      val src = YahooFinSource().map(i => TextMessage(i.toString))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
     }
+  }
 
   val routes =
     logDuration {
@@ -55,7 +76,7 @@ trait Routes extends CacheSupport with StrictLogging {
 //                usersRoutes
 //            } ~
             pathPrefix("ws") {
-              greeterRoute
+              wsRoute
             } ~
             getFromResourceDirectory("webapp") ~
             path("") {
@@ -66,3 +87,4 @@ trait Routes extends CacheSupport with StrictLogging {
       }
     }
 }
+

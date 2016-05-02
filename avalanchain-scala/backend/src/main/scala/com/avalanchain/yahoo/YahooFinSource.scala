@@ -21,11 +21,11 @@ object YahooFinSource {
 
       // connect the graph
       val fxUpdates = source.
-        map(i => (i, YahooStockPriceClient().stocks())).
-        throttle(1, duration, 1, ThrottleMode.shaping)
+        throttle(1, duration, 1, ThrottleMode.shaping).
+        map(i => (i, YahooStockPriceClient().stocks()))
 
       // expose port
-      fxUpdates.s.shape
+      SourceShape(b.add(fxUpdates).out)
     })
   }
 }

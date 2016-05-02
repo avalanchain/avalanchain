@@ -1,15 +1,15 @@
 import akka.actor.Status.{Failure, Success}
 import akka.actor.{Actor, ActorRef, ActorSystem, Inbox, Props}
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, FlowShape, SinkShape}
+import akka.stream.scaladsl._
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 import scala.language.reflectiveCalls
 
 def time[A](f: => A) = {
@@ -36,12 +36,12 @@ val emptySource = Source.empty
 
 
 val sinkPrintingOutElements = Sink.foreach[Int](println(_))
+
 val sinkCalculatingASumOfElements = Sink.fold[Int, Int](0)(_ + _)
 val sinkReturningTheFirstElement = Sink.head
 val sinkNoop = Sink.ignore
 
-val sourceFromRange = Source(1 to 1000000)
-
+val sourceFromRange = Source(1 to 1000)
 def run[LT <: { def length: Int }] (sink: Sink[Int, Future[LT]]) = {
   val s = st()
   val b = sourceFromRange.runWith(sink)
@@ -73,6 +73,42 @@ val a = sourceFromRange.
   runWith(sinkToList)
 
 println(a.value)
+
+val sourceFromRange1 = Source(1 to 1000)
+
+//val cm = TrieMap[Int, Int]()
+//val sinkToMap = Sink.fold[TrieMap[Int, Int], Int](cm)((m, v) => {
+//  val vv = m.getOrElseUpdate(v, 0); m(v) = vv + 1; m })
+//
+//val b = sourceFromRange1.
+//  map(x => x % 10).
+//  groupBy(100, x => x).
+//  to(sinkToMap)
+//
+//b.run()
+//
+//cm.size
+
+//Flow.fromSinkAndSource()
+
+import GraphDSL.Implicits._
+def broadcastSink[T, Mat](sinks: List[Sink[T, Mat]]) = GraphDSL.create() { implicit builder =>
+  val B = builder.add(Broadcast[T](sinks.length))
+
+  sinks.foreach(sink => B ~> builder.add(sink))
+
+  SinkShape(B.in)
+}.named("broadcastSink")
+
+val sinks =
+  (0 until 100).map(i => Sink.foreach[Int](v => println(s"Sink $i - $v"))).toList
+
+val b1 = sourceFromRange1.
+  map(x => x % 100).
+  //groupBy(100, x => x).
+  to(broadcastSink(sinks))
+
+b1.run()
 
 ////////////////////
 
