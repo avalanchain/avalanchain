@@ -26,10 +26,10 @@ class Destination extends Actor with ActorLogging {
   }
 }
 
-def deployNode (port: String, props: Props, groupNames: String = defaultGroup) : ActorSystem = {
+def deployNode (port: Int, props: Props, groupNames: String = defaultGroup) : ActorSystem = {
   // System initialization
   val properties = Map(
-    "akka.remote.netty.tcp.port" -> port
+    "akka.remote.netty.tcp.port" -> port.toString
   )
 
   val system = ActorSystem("application", (ConfigFactory parseMap properties)
@@ -58,8 +58,8 @@ class PrintActor() extends Actor {
 }
 
 
-val cs1 = deployNode ("2551", Props[Destination], "_AA_")
-val cs2 = deployNode ("2552", Props[Destination], "_AA_")
+val cs1 = deployNode (2551, Props[Destination], "_AA_")
+val cs2 = deployNode (2552, Props[Destination], "_AA_")
 //
 //for( a <- 1 until 100){
 //  deployNode ("0", Props[PrintActor], "_AA_")

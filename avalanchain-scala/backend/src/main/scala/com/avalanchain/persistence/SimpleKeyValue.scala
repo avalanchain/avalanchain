@@ -1,8 +1,9 @@
 package com.avalanchain.persistence
 
 import akka.persistence.{PersistentActor, SnapshotOffer}
+import com.avalanchain.persistence.SimpleKeyValue.CommandChecker
 
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by Yuriy Habarov on 02/05/2016.
@@ -10,7 +11,7 @@ import scala.util.{Success, Try}
 case class KVCommand[T](id: String, value: T)
 case class KVEvent[T](cmd: KVCommand[T])
 
-class SimpleKeyValue[T](realm: String, id: String, commandChecker: KVCommand[T] => Try[Unit] = cmd => Success(Unit), snapshotInterval: Int = 10)
+class SimpleKeyValue[T](realm: String, id: String, commandChecker: CommandChecker[T] = ((cmd: KVCommand[T]) => Success(Unit)), snapshotInterval: Int = 10)
   extends PersistentActor {
   override def persistenceId = realm + "##" + id
   type StateType = Option[KVEvent[T]]
@@ -28,8 +29,8 @@ class SimpleKeyValue[T](realm: String, id: String, commandChecker: KVCommand[T] 
 
 
   val receiveRecover: Receive = {
-    case event: KVEvent[T]                     => updateState(event)
-    case SnapshotOffer(_, snapshot: StateType) =>
+    case Some(event: KVEvent[T])               => updateState(event)
+    case SnapshotOffer(_, snapshot: Option[KVEvent[T]]) =>
       state = snapshot
       pos = 0
   }
@@ -40,6 +41,7 @@ class SimpleKeyValue[T](realm: String, id: String, commandChecker: KVCommand[T] 
       checked match {
         case Success(()) =>
           persistAsync(KVEvent(cmd))(updateState)
+        case Failure(e) =>
       }
       sender() ! checked
 
@@ -47,3 +49,8 @@ class SimpleKeyValue[T](realm: String, id: String, commandChecker: KVCommand[T] 
     case "id" => sender() ! persistenceId
   }
 }
+
+object SimpleKeyValue {
+  type CommandChecker[T] = KVCommand[T] => Try[Unit]
+}
+

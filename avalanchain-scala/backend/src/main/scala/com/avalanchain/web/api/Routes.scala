@@ -2,12 +2,16 @@ package com.avalanchain.web.api
 
 import akka.http.javadsl.model.ContentTypes
 import akka.http.scaladsl.model
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model.{HttpEntity, StatusCodes}
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.server.directives.WebSocketDirectives
+import akka.stream.OverflowStrategy
+import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{Flow, Sink, Source}
+import com.avalanchain.cluster.ClusterService
 import com.avalanchain.yahoo.YahooFinSource
 import com.typesafe.scalalogging.StrictLogging
 
@@ -62,6 +66,21 @@ trait Routes extends CacheSupport with StrictLogging {
 
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
+    path("cluster") {
+      val system = ClusterService.firstNode
+      val monitor = ClusterService.startMonitor(system)
+      val src = Source.fromPublisher[String](ActorPublisher(monitor)).map(i => TextMessage(i))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
+    path("newnode") {
+      get {
+        ClusterService.deployNode(0)
+        complete("Node added")
       }
     }
   }

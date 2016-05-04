@@ -12,7 +12,7 @@ val logBackVersion = "1.1.7"
 val scalaLoggingVersion = "3.1.0"
 val slickVersion = "3.1.1"
 val seleniumVersion = "2.53.0"
-val circeVersion = "0.4.0"
+val circeVersion = "0.4.1"
 val akkaVersion = "2.4.3"
 
 val slf4jApi = "org.slf4j" % "slf4j-api" % slf4jVersion
@@ -25,7 +25,10 @@ val typesafeConfig = "com.typesafe" % "config" % "1.3.0"
 val circeCore = "io.circe" %% "circe-core" % circeVersion
 val circeGeneric = "io.circe" %% "circe-generic" % circeVersion
 val circeJawn = "io.circe" %% "circe-jawn" % circeVersion
-val circe = Seq(circeCore, circeGeneric, circeJawn)
+val circeParser = "io.circe" %% "circe-parser" % circeVersion // remove?
+val circe = Seq(circeCore, circeGeneric, circeParser, circeJawn)
+
+val sprayJson = "io.spray" %%  "spray-json" % "1.3.2"
 
 val javaxMailSun = "com.sun.mail" % "javax.mail" % "1.5.5"
 
@@ -109,7 +112,7 @@ lazy val backend: Project = (project in file("backend"))
   .settings(commonSettings)
   .settings(Revolver.settings)
   .settings(
-    libraryDependencies ++= slickStack ++ akkaStack ++ circe ++ Seq(javaxMailSun, typesafeConfig) ++ Seq(kantan, yahoo),
+    libraryDependencies ++= slickStack ++ akkaStack ++ circe ++ Seq(javaxMailSun, typesafeConfig) ++ Seq(sprayJson, kantan, yahoo),
     buildInfoPackage := "com.avalanchain.web.version",
     buildInfoObject := "BuildInfo",
     buildInfoKeys := Seq[BuildInfoKey](
