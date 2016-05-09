@@ -30,12 +30,18 @@ package object domain {
   object ChainStream {
     type Id = UUID
     type Version = Long
-    type Hash = String
     //Array[Byte]
     type Serialized = String
     //Array[Byte]
     type Signature = String
     type SigningPublicKey = String
+
+    final case class Hash(hash: String) {
+      override def toString = hash
+    }
+    object Hash {
+      val Zero = Hash("")
+    }
 
     final case class Proof(signature: Signature, hash: Hash)
 
@@ -72,14 +78,14 @@ package object domain {
 
   trait StateFrame[T] {
     val mref: HashedMR
-    val value: HashedValue[T]
+    val value: Option[HashedValue[T]]
 
     def pos = mref.value.pos
   }
 
   object StateFrame {
-    case class InitialFrame[T](override val mref: HashedMR, override val value: HashedValue[T]) extends StateFrame[T]
-    case class Frame[T](override val mref: HashedMR, override val value: HashedValue[T]) // add proofs?
+    case class InitialFrame[T](override val mref: HashedMR, override val value: Option[HashedValue[T]]) extends StateFrame[T]
+    case class Frame[T](override val mref: HashedMR, override val value: Option[HashedValue[T]]) // add proofs?
       extends StateFrame[T]
   }
 
@@ -103,5 +109,25 @@ package object domain {
     def serializer[T]: Serializer[T]
     def signer[T]: Signer[T]
     def signingPublicKey: SigningPublicKey
+  }
+
+  object FrameBuilder {
+    def buildNestedRef(node: CryptoContext, cr: ChainRef, nestedName: String): ChainRef = {
+      val data = cr.value
+      val newData = data.copy(id = UUID.randomUUID(), name = data.name + "/" + nestedName, ver = data.ver)
+      node.hasher(newData)
+    }
+
+    def buildInitialFrame[T](node: CryptoContext, cr: ChainRef, initial: Option[T]): StateFrame[T] = {
+      val hashed = initial.map(node.hasher)
+      val mr = MerkledRef(cr.hash, Hash.Zero, 0, hashed.map(_.hash).getOrElse(Hash.Zero))
+      StateFrame.InitialFrame[T](node.hasher(mr), hashed).asInstanceOf[StateFrame[T]]
+    }
+
+    def buildFrame[T](node: CryptoContext, cr: ChainRef, state: StateFrame[T], data: T): StateFrame[T] = {
+      val hashedData = node.hasher(data)
+      val mr = MerkledRef(cr.hash, state.mref.hash, state.pos + 1, hashedData.hash)
+      StateFrame.Frame[T](node.hasher(mr), Some(hashedData))
+    }
   }
 }

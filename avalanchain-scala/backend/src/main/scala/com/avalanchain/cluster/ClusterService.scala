@@ -3,7 +3,9 @@ package com.avalanchain.cluster
 import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.routing.BroadcastPool
 import akka.stream.scaladsl.SourceQueue
+import com.avalanchain.core.domain.{HashedValue, StateFrame, ChainStream}
 import com.typesafe.config.ConfigFactory
 
 import scala.collection.JavaConverters._
@@ -20,6 +22,10 @@ object ClusterService {
 
   def startMonitor(implicit system: ActorSystem): ActorRef = {
     startOn (MembersMonitor.props, "monitor" + (UUID.randomUUID().toString.replace("-", "")))(system)
+  }
+
+  def startBroadcast(props: Props, maxCount: Int, name: String)(implicit system: ActorSystem): ActorRef = {
+    system.actorOf(BroadcastPool(maxCount).props(props), name)
   }
 
   def deployNode (port: Int, groupNames: String = defaultGroup) : ActorSystem = {
@@ -54,6 +60,10 @@ object ClusterService {
   }
 
   val firstNode = deployNode(2551)
+
+  final case class InternalTransferSigned[T](signedValue: ChainStream.Signed[T])
+  final case class InternalTransferValue[T](hashedValue: HashedValue[T])
+  final case class InternalTransferFrame[T](frame: StateFrame[T])
 }
 
 

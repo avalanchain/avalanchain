@@ -92,7 +92,7 @@ package object payment {
   val simpleContext = new CryptoContext {override def signer[T]: Signer[T] = ???
     override def signingPublicKey: SigningPublicKey = "SigningPublicKey"
     override def serializer[T]: Serializer[T] = t => t.toString
-    override def hasher[T]: Hasher[T] = t => HashedValue("Hash", t.toString(), t)
+    override def hasher[T]: Hasher[T] = t => HashedValue(Hash("Hash"), t.toString(), t)
   }
 
   def newAccount(name: String, cryptoContext: CryptoContext) = {

@@ -110,6 +110,8 @@ val b1 = sourceFromRange1.
 
 b1.run()
 
+Source.empty
+
 ////////////////////
 
 import akka.persistence._

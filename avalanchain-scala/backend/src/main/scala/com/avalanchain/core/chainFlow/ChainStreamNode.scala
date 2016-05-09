@@ -8,15 +8,14 @@ import com.avalanchain.core.domain._
 /**
   * Created by Yuriy on 29/04/2016.
   */
-class ChainStreamNode[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: T) extends ActorSubscriber {
+class ChainStreamNode[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: Option[T]) extends ActorSubscriber {
   import ActorSubscriberMessage._
 
-  val MaxQueueSize = 10
-  var queue = Map.empty[Int, ActorRef]
-  val persistence = context.actorOf(Props(new ChainPersistentActor[T](node, chainRef, snapshotInterval, initial)), name = "persistence")
+  val MaxQueueSize = 1000
+  val persistence = context.actorOf(Props(new ChainPersistentActor[T](node, chainRef, initial, snapshotInterval, MaxQueueSize)), name = "persistence")
 
   override val requestStrategy = new MaxInFlightRequestStrategy(max = MaxQueueSize) {
-    override def inFlightInternally: Int = queue.size
+    override def inFlightInternally: Int = MaxQueueSize // TODO: fix this
   }
 
   def receive = {

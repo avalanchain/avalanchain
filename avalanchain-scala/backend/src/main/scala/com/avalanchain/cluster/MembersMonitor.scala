@@ -32,19 +32,19 @@ class MembersMonitor extends Actor with ActorLogging with ActorPublisher[String]
 //    implicit val colorFormat = jsonFormat1(Member)
 //  }
 
-  object MemberProtocol extends DefaultJsonProtocol {
-    implicit object ColorJsonFormat extends RootJsonFormat[Member] {
-      def write(m: Member) =
-        JsObject(("address", JsString(m.address.toString)), ("status", JsString(m.status.toString)))
-        //JsArray(JsString(c.name), JsNumber(c.red), JsNumber(c.green), JsNumber(c.blue))
-
-      def read(value: JsValue) = value match {
-        //case JsArray(Vector(JsString(name), JsNumber(red), JsNumber(green), JsNumber(blue))) =>
-        //  new Color(name, red.toInt, green.toInt, blue.toInt)
-        case _ => deserializationError("Not implemented")
-      }
-    }
-  }
+//  object MemberProtocol extends DefaultJsonProtocol {
+//    implicit object ColorJsonFormat extends RootJsonFormat[Member] {
+//      def write(m: Member) =
+//        JsObject(("address", JsString(m.address.toString)), ("status", JsString(m.status.toString)))
+//        //JsArray(JsString(c.name), JsNumber(c.red), JsNumber(c.green), JsNumber(c.blue))
+//
+//      def read(value: JsValue) = value match {
+//        //case JsArray(Vector(JsString(name), JsNumber(red), JsNumber(green), JsNumber(blue))) =>
+//        //  new Color(name, red.toInt, green.toInt, blue.toInt)
+//        case _ => deserializationError("Not implemented")
+//      }
+//    }
+//  }
 
   // subscribe to cluster changes, re-subscribe when restart
   override def preStart(): Unit = {
