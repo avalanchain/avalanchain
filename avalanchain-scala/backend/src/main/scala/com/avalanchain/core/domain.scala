@@ -30,8 +30,12 @@ package object domain {
   object ChainStream {
     type Id = UUID
     type Version = Long
-    //Array[Byte]
-    type Serialized = String
+
+    type TextSerialized = String
+    type BytesSerialized = Array[Byte]
+    type Serialized = (TextSerialized, BytesSerialized)
+    type Hexed = String
+
     //Array[Byte]
     type Signature = String
     type SigningPublicKey = String
@@ -101,12 +105,18 @@ package object domain {
 
   type Hasher[T] = T => HashedValue[T]
   type Serializer[T] = T => Serialized
+  type Deserializer[T] = (TextSerialized => T, BytesSerialized => T)
   type Signer[T] = T => Signed[T]
   type Verifier[T] = (Proof, T) => Verified[T]
+  type Bytes2Hexed = BytesSerialized => Hexed
+  type Hexed2Bytes = Hexed => BytesSerialized
 
   trait CryptoContext {
     def hasher[T]: Hasher[T]
     def serializer[T]: Serializer[T]
+    def deserializer[T]: Deserializer[T]
+    def bytes2Hexed: Bytes2Hexed
+    def hexed2Bytes: Hexed2Bytes
     def signer[T]: Signer[T]
     def signingPublicKey: SigningPublicKey
   }

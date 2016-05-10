@@ -29,6 +29,7 @@ val circeParser = "io.circe" %% "circe-parser" % circeVersion // remove?
 val circe = Seq(circeCore, circeGeneric, circeParser, circeJawn)
 
 val sprayJson = "io.spray" %%  "spray-json" % "1.3.2"
+val pickling = "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
 
 val javaxMailSun = "com.sun.mail" % "javax.mail" % "1.5.5"
 
@@ -58,8 +59,12 @@ val akkaPersistenceQuery = "com.typesafe.akka"                  %% "akka-persist
 val akkaCluster          = "com.typesafe.akka"                  %% "akka-cluster"                        % akkaVersion
 val akkaClusterMetrics   = "com.typesafe.akka"                  %% "akka-cluster-metrics"                % akkaVersion
 val akkaClusterTools     = "com.typesafe.akka"                  %% "akka-cluster-tools"                  % akkaVersion
+val akkaDistributedData  = "com.typesafe.akka"                  %% "akka-distributed-data-experimental"  % akkaVersion
 
-val akkaStack = Seq(akkaHttpCore, akkaHttpExperimental, akkaHttpTestkit, akkaHttpSession,
+val scorexCore           = "org.consensusresearch"              %% "scrypto"                             % "1.1.0"
+val scorexStack = Seq(scorexCore)
+
+val akkaStack = Seq(akkaHttpCore, akkaHttpExperimental, akkaHttpTestkit, akkaHttpSession, akkaDistributedData,
   akkaStream, akkaPersistence, akkaPersistenceQuery, akkaCluster, akkaClusterMetrics, akkaClusterTools)
 
 val commonDependencies = unitTestingStack ++ loggingStack
@@ -112,7 +117,8 @@ lazy val backend: Project = (project in file("backend"))
   .settings(commonSettings)
   .settings(Revolver.settings)
   .settings(
-    libraryDependencies ++= slickStack ++ akkaStack ++ circe ++ Seq(javaxMailSun, typesafeConfig) ++ Seq(sprayJson, kantan, yahoo),
+    libraryDependencies ++= slickStack ++ akkaStack ++ scorexStack ++ circe ++ Seq(javaxMailSun, typesafeConfig)
+      ++ Seq(pickling, sprayJson, kantan, yahoo),
     buildInfoPackage := "com.avalanchain.web.version",
     buildInfoObject := "BuildInfo",
     buildInfoKeys := Seq[BuildInfoKey](

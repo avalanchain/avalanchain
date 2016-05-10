@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorLogging, Props}
 import akka.actor.Actor.Receive
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
-import com.avalanchain.core.domain.ChainStream.{Hash, Signature, SigningPublicKey}
+import com.avalanchain.core.domain.ChainStream.{SigningPublicKey, _}
 import com.avalanchain.core.domain._
 
 import scala.annotation.tailrec
@@ -89,10 +89,21 @@ package object payment {
     }
   }
 
-  val simpleContext = new CryptoContext {override def signer[T]: Signer[T] = ???
+  val simpleContext = new CryptoContext {
+    override def signer[T]: Signer[T] = ???
     override def signingPublicKey: SigningPublicKey = "SigningPublicKey"
-    override def serializer[T]: Serializer[T] = t => t.toString
-    override def hasher[T]: Hasher[T] = t => HashedValue(Hash("Hash"), t.toString(), t)
+    override def serializer[T]: Serializer[T] = t => {
+      val text = t.toString
+      val bytes = text.toCharArray.map(_.toByte)
+      (text, bytes)
+    }
+    override def hasher[T]: Hasher[T] = t => HashedValue(Hash("Hash"), serializer(t), t)
+
+    override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ???
+
+    override def hexed2Bytes: Hexed2Bytes = ???
+
+    override def bytes2Hexed: Bytes2Hexed = ???
   }
 
   def newAccount(name: String, cryptoContext: CryptoContext) = {
