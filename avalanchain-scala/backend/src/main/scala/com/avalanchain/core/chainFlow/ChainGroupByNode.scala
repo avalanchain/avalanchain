@@ -8,7 +8,7 @@ import com.avalanchain.core.domain.{HashedValue, _}
 /**
   * Created by Yuriy on 29/04/2016.
   */
-class ChainGroupByNode[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: T, keySelector: T => String) extends ActorSubscriber {
+class ChainGroupByNode[T](node: CryptoContext, val chainRef: ChainRef, keySelector: T => String, initial: Option[T], val snapshotInterval: Int, maxInFlight: Int) extends ActorSubscriber {
   import ActorSubscriberMessage._
 
   val MaxQueueSize = 10
@@ -16,7 +16,7 @@ class ChainGroupByNode[T](node: CryptoContext, val chainRef: ChainRef, val snaps
   def getChild(name: String) = {
     context.child(name) match {
       case Some(ch) => ch
-      case None => context.actorOf(Props(new ChainPersistentActor[T](node, chainRef, snapshotInterval, initial)), name)
+      case None => context.actorOf(Props(new ChainPersistentActor[T](node, chainRef, initial, snapshotInterval, maxInFlight)), name)
     }
   }
 

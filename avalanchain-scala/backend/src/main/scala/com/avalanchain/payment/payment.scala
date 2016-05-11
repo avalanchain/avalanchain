@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorLogging, Props}
 import akka.actor.Actor.Receive
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
-import com.avalanchain.core.domain.ChainStream.{Hash, Signature, SigningPublicKey}
+import com.avalanchain.core.domain.ChainStream.{SigningPublicKey, _}
 import com.avalanchain.core.domain._
 
 import scala.annotation.tailrec
@@ -89,10 +89,23 @@ package object payment {
     }
   }
 
-  val simpleContext = new CryptoContext {override def signer[T]: Signer[T] = ???
-    override def signingPublicKey: SigningPublicKey = "SigningPublicKey"
-    override def serializer[T]: Serializer[T] = t => t.toString
-    override def hasher[T]: Hasher[T] = t => HashedValue("Hash", t.toString(), t)
+  val simpleContext = new CryptoContext {
+    override def signer[T]: Signer[T] = ???
+    override def signingPublicKey: SigningPublicKey = "SigningPublicKey".getBytes
+    override def serializer[T]: Serializer[T] = t => {
+      val text = t.toString
+      val bytes = text.getBytes
+      (text, bytes)
+    }
+    override def hasher[T]: Hasher[T] = t => HashedValue(Hash("Hash"), serializer(t), t)
+
+    override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ???
+
+    override def hexed2Bytes: Hexed2Bytes = ???
+
+    override def bytes2Hexed: Bytes2Hexed = ???
+
+    override def verifier[T]: Verifier[T] = ???
   }
 
   def newAccount(name: String, cryptoContext: CryptoContext) = {
@@ -139,6 +152,7 @@ package object payment {
   }
 
   val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), simpleContext))
+  //val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), ))
   val balances = accounts.map(a => (a.ref, 1000)).toMap
   //val transactionStorage = TransactionStorage(accounts, balances)
   //let bot = tradingBot (transactionStorage) (new Random())
