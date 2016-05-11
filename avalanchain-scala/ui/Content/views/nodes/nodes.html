@@ -1,0 +1,33 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="Nodes as nodes">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="text-center m-t-lg">
+                <h1>
+                    {{nodes.info}}
+                </h1>
+                <div class="ibox-content m-b-sm border-bottom">
+                    <div class="text-center p-lg">
+                        <h2>Create node</h2>
+                        <span>create new node by selecting </span>
+                        <button class="btn btn-danger  dim " ng-click="addNode()" type="button"><i class="fa fa-plus"></i> <span class="bold">Add node</span></button>
+                        button
+                    </div>
+                </div>
+
+              <div class="row">
+                <div class="col-lg-3" ng-repeat="node in nodes">
+                  <div class="ibox">
+                    <div class="ibox-content">
+                      <h5 class="m-b-md">Node status A{{$index}}</h5>
+                      <h2 class="text-navy">
+                        <i class="fa fa-play fa-rotate-270"></i> Up
+                      </h2>
+                      <small>Last down 42 days ago</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+    </div>
+</div>
