@@ -6,7 +6,7 @@ package com.avalanchain.core
 import java.util.UUID
 
 package object domain {
-  type PublicKey = String
+  type PublicKey = Array[Byte]
   // TODO: Replace with java.security.PublicKey
   type SigningPublicKey = PublicKey
   type EncryptionPublicKey = PublicKey
@@ -36,11 +36,10 @@ package object domain {
     type Serialized = (TextSerialized, BytesSerialized)
     type Hexed = String
 
-    //Array[Byte]
-    type Signature = String
-    type SigningPublicKey = String
+    type SigningPublicKey = Array[Byte]
+    type Signature = (SigningPublicKey, Array[Byte])
 
-    final case class Hash(hash: String) {
+    final case class Hash(hash: Hexed) {
       override def toString = hash
     }
     object Hash {
@@ -48,9 +47,7 @@ package object domain {
     }
 
     final case class Proof(signature: Signature, hash: Hash)
-
     final case class Signed[T](proof: Proof, value: T)
-
   }
 
   import ChainStream._
@@ -99,17 +96,17 @@ package object domain {
   object Verified {
     final case class Passed[T](value: T) extends Verified[T]
     final case class HashCheckFailed[T](value: T, actual: Hash, expected: Hash) extends Verified[T]
-    final case class ProofCheckFailed[T](override val value: T, actual: Hash, expected: Hash) extends Verified[T]
+    final case class ProofCheckFailed[T](override val value: T) extends Verified[T]
   }
 
 
-  type Hasher[T] = T => HashedValue[T]
   type Serializer[T] = T => Serialized
   type Deserializer[T] = (TextSerialized => T, BytesSerialized => T)
-  type Signer[T] = T => Signed[T]
-  type Verifier[T] = (Proof, T) => Verified[T]
+  type Hasher[T] = T => HashedValue[T]
   type Bytes2Hexed = BytesSerialized => Hexed
   type Hexed2Bytes = Hexed => BytesSerialized
+  type Signer[T] = T => Signed[T]
+  type Verifier[T] = (Proof, T) => Verified[T]
 
   trait CryptoContext {
     def hasher[T]: Hasher[T]
@@ -117,8 +114,9 @@ package object domain {
     def deserializer[T]: Deserializer[T]
     def bytes2Hexed: Bytes2Hexed
     def hexed2Bytes: Hexed2Bytes
-    def signer[T]: Signer[T]
     def signingPublicKey: SigningPublicKey
+    def signer[T]: Signer[T]
+    def verifier[T]: Verifier[T]
   }
 
   object FrameBuilder {
