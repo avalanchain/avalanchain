@@ -57,6 +57,11 @@ class PrintActor() extends Actor {
   }
 }
 
+val printActor = new Act {
+  become {
+    case a => println(a)
+  }
+}
 
 val cs1 = deployNode ("2551", Props[Destination], "_AA_")
 val cs2 = deployNode ("2552", Props[Destination], "_AA_")
