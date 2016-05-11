@@ -152,6 +152,7 @@ package object payment {
   }
 
   val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), simpleContext))
+  //val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), ))
   val balances = accounts.map(a => (a.ref, 1000)).toMap
   //val transactionStorage = TransactionStorage(accounts, balances)
   //let bot = tradingBot (transactionStorage) (new Random())

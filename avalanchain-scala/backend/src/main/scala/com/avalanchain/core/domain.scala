@@ -5,6 +5,8 @@ package com.avalanchain.core
 
 import java.util.UUID
 
+import scala.util.Try
+
 package object domain {
   type PublicKey = Array[Byte]
   // TODO: Replace with java.security.PublicKey
@@ -104,7 +106,7 @@ package object domain {
   type Deserializer[T] = (TextSerialized => T, BytesSerialized => T)
   type Hasher[T] = T => HashedValue[T]
   type Bytes2Hexed = BytesSerialized => Hexed
-  type Hexed2Bytes = Hexed => BytesSerialized
+  type Hexed2Bytes = Hexed => Try[BytesSerialized]
   type Signer[T] = T => Signed[T]
   type Verifier[T] = (Proof, T) => Verified[T]
 
