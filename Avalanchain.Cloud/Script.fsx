@@ -40,11 +40,11 @@ let cluster = Config.GetCluster()
 
 let send (queue: CloudQueue<'T>) data = queue.Enqueue data
 
-let sendBatch (queue: CloudQueue<'T>) data = queue.EnqueueBatch data
-
-let sendRandomBatch (queue: CloudQueue<string>) m n = 
-    let words = [| for i in 0 .. n -> [| for i in 0 .. m -> (m * n) % 256 |> char |] |> (fun chars -> new String(chars)) |]
-    sendBatch queue words
+//let sendBatch (queue: CloudQueue<'T>) data = queue.EnqueueBatch data
+//
+//let sendRandomBatch (queue: CloudQueue<string>) m n = 
+//    let words = [| for i in 0 .. n -> [| for i in 0 .. m -> (m * n) % 256 |> char |] |> (fun chars -> new String(chars)) |]
+//    sendBatch queue words
 
 
 let nodeContextDict = cloud { return! CloudDictionary.New<NodeContext>("nodes") } |> cluster.Run
@@ -60,11 +60,11 @@ topChainAll.Length
               
 
 let chain = ChainFlow.ofStream topChain
-            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
+            |> ChainFlow.mapFrame 1000u (fun v -> v.Hash )
             |> ChainFlow.filter 1000u (fun v -> true )
             //|> ChainFlow.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
 //            |> ChainFlow.filter 1000u (fun v -> v.ToString() |> Int64.Parse |> fun ch -> ch % 2L <> 0L )
-            |> ChainFlow.mapFrame 1000u (fun v -> v )
+            |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
             |> cluster.Run
 
 let chainPos = chain.Position() |> cluster.Run
@@ -91,10 +91,10 @@ let sum = chain
             |> ChainFlow.sum 1000u 
             |> cluster.Run
 
-let sumPos = chain.Position() |> cluster.Run
-let sumCurrent = chain.Current() |> cluster.Run
-let sumCurrentPage = chain.GetCurrentPage 20u |> cluster.Run
-let sumCurrentFramesPage = chain.GetCurrentFramesPage 20u |> cluster.Run
+let sumPos = sum.Position() |> cluster.Run
+let sumCurrent = sum.Current() |> cluster.Run
+let sumCurrentPage = sum.GetCurrentPage 20u |> cluster.Run
+let sumCurrentFramesPage = sum.GetCurrentFramesPage 20u |> cluster.Run
 
 sumCurrentFramesPage.Length
 
