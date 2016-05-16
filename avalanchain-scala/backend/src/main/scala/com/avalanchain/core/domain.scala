@@ -110,6 +110,8 @@ package object domain {
   type Signer[T] = T => Signed[T]
   type Verifier[T] = (Proof, T) => Verified[T]
 
+  type ChainRefProvider = () => ChainRef
+
   trait CryptoContext {
     def hasher[T]: Hasher[T]
     def serializer[T]: Serializer[T]
@@ -138,6 +140,14 @@ package object domain {
       val hashedData = node.hasher(data)
       val mr = MerkledRef(cr.hash, state.mref.hash, state.pos + 1, hashedData.hash)
       StateFrame.Frame[T](node.hasher(mr), Some(hashedData))
+    }
+  }
+
+  object ChainRefFactory {
+    def chainRef(hasher: Hasher[ChainRefData], chainRefData: ChainRefData) = hasher(chainRefData)
+
+    def nestedRef(hasher: Hasher[ChainRefData], chainRef: ChainRef, name: String, chainVersion: Version) = {
+      hasher(ChainRefData(UUID.randomUUID(), s"${chainRef.value.name}#${chainRef.value.ver}\\$name", chainVersion))
     }
   }
 }
