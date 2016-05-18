@@ -1,10 +1,15 @@
 package com.avalanchain.toolbox
 
+import java.util.UUID
+
 import akka.NotUsed
-import akka.stream.SinkShape
-import akka.stream.scaladsl.{Broadcast, Flow, Framing, GraphDSL}
-import com.avalanchain.core.domain.ChainStream.{Proof, Signed}
+import akka.actor.Props
+import akka.stream.{FlowShape, SinkShape}
+import akka.stream.scaladsl.{Broadcast, Flow, Framing, GraphDSL, Sink}
+import com.avalanchain.core.chainFlow.ChainPersistentActor
+import com.avalanchain.core.domain.ChainStream.{Hash, Proof, Signed}
 import com.avalanchain.core.domain._
+import GraphDSL.Implicits._
 
 /**
   * Created by Yuriy Habarov on 27/04/2016.
@@ -24,12 +29,20 @@ object HashingFlow {
     Flow[(Proof, In)].
       map(x => verifier(x._1, x._2))
 
-//  def persist[T](node: CryptoContext, chainRef: ChainRef, snapshotInterval: Int, initial: Option[T]) : Flow[T, T, NotUsed] =
-//  = GraphDSL.create() { implicit builder =>
-//    val B = builder.add(Broadcast[T](sinks.length))
-//
-//    sinks.foreach(sink => B ~> builder.add(sink))
-//
-//    SinkShape(B.in)
-//  }.named("broadcastSink")
+  def persistSink[In](node: CryptoContext, chainRefProvider: ChainRefProvider, snapshotInterval: Int = 1000, maxInFlight: Int = 1000) : Sink[In, Any] =
+    Sink.actorSubscriber(Props(new ChainPersistentActor(node, chainRefProvider(), None, snapshotInterval, maxInFlight)))
+
+  def persist[In](node: CryptoContext, chainRefProvider: ChainRefProvider, snapshotInterval: Int = 1000, maxInFlight: Int = 1000) : Flow[In, In, NotUsed] =
+    Flow.fromGraph(
+      GraphDSL.create() { implicit builder =>
+
+        val broadcast = builder.add(Broadcast[In](2))
+        val sink = persistSink[In](node, chainRefProvider, snapshotInterval, maxInFlight)
+
+        broadcast.out(0) ~> builder.add(sink)
+
+        // expose ports
+        FlowShape(broadcast.in, broadcast.out(1))
+      }.named("persistFlow"))
+
 }
