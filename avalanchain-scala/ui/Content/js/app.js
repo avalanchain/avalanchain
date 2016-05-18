@@ -10,7 +10,6 @@
         'ui.bootstrap',                 // Ui Bootstrap
         'common',
         'monospaced.qrcode',
-        'AdalAngular',
         'ngWebSocket'
     ]);
 

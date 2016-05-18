@@ -8,37 +8,18 @@
  * Initial there are written state for all view in theme.
  *
  */
-function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, $locationProvider, adalAuthenticationServiceProvider, $httpProvider) {
+function config($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, $locationProvider, $httpProvider) {
     //$locationProvider.html5Mode({
     //    enabled: true,
     //    requireBase: false
     //});
     //$locationProvider.html5Mode(true).hashPrefix('!');
-    $urlRouterProvider.otherwise("/index/streams");
+    $urlRouterProvider.otherwise("/index/nodes");
 
     $ocLazyLoadProvider.config({
         // Set to true if you want to see what and when is dynamically loaded
         debug: false
     });
-
-    var endpoints = {
-        "http://localhost:48213": "https://avlnchdemo.azurewebsites.net"
-        // Map the location of a request to an API to a the identifier of the associated resource
-        //"Enter the root location of your To Go API here, e.g. https://contosotogo.azurewebsites.net/":
-        //    "Enter the App ID URI of your To Go API here, e.g. https://contoso.onmicrosoft.com/ToGoAPI",
-    };
-
-    //adalAuthenticationServiceProvider.init(
-    //    {
-    //        instance: 'https://login.microsoftonline.com/',
-    //        tenant: 'safytrack.onmicrosoft.com',
-    //        clientId: '02fa79b9-d917-4496-93d4-8fb311611f51',
-    //        extraQueryParameter: 'nux=1',
-    //        //endpoints: endpoints,
-    //        //cacheLocation: 'localStorage', // enable this for IE, as sessionStorage does not work for localhost.
-    //    },
-    //    $httpProvider
-    //    );
 
     $stateProvider
 
