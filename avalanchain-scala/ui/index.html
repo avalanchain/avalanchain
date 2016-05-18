@@ -1,0 +1,94 @@
+﻿<!DOCTYPE html>
+<html ng-app="avalanchain">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Page title set in pageTitle directive -->
+    <title page-title></title>
+
+    <!-- Font awesome -->
+    <link href="../Content/font-awesome/css/font-awesome.css" rel="stylesheet">
+
+    <!-- Bootstrap and Fonts -->
+  <link rel="stylesheet" href="../bower_components/bootstrap/dist/css/bootstrap.css" />
+    <link href="../Content/js/plugins/toastr/toastr.min.css" rel="stylesheet" />
+    <!-- Main avalanchain CSS files -->
+    <link href="../Content/css/animate.css" rel="stylesheet">
+    <link id="loadBefore" href="../Content/css/style.css" rel="stylesheet">
+    <link href="../Content/css/main.css" rel="stylesheet">
+
+</head>
+
+<!-- ControllerAs syntax -->
+<!-- Main controller with serveral data used in avalanchain theme on diferent view -->
+<body ng-controller="MainCtrl as main">
+
+    <!-- Main view  -->
+    <div ui-view></div>
+
+    <!-- jQuery and Bootstrap -->
+    <script src="../bower_components/jquery/dist/jquery.js"></script>
+    <script src="../bower_components/jquery-ui/ui/jquery-ui.js"></script>
+
+    <script src="../bower_components/bootstrap/dist/bootstrap.min.js"></script>
+
+    <!-- MetsiMenu -->
+    <script src="../Content/js/plugins/metisMenu/jquery.metisMenu.js"></script>
+
+    <!-- SlimScroll -->
+    <script src="../Content/js/plugins/slimscroll/jquery.slimscroll.min.js"></script>
+
+    <!-- Peace JS -->
+    <script src="../Content/js/plugins/pace/pace.min.js"></script>
+    <script src="../Content/js/plugins/toastr/toastr.min.js"></script>
+
+    <script src="../Content/js/plugins/qrcode/qrcode.js"></script>
+    <script src="../Content/js/plugins/qrcode/qrcode_UTF8.js"></script>
+
+
+
+
+    <script src="../Content/js/plugins/mnemonic/mnemonic.js"></script>
+
+    <!-- Custom and plugin javascript -->
+    <script src="../Content/js/avalanchain.js"></script>
+
+    <!-- Main Angular scripts-->
+    <script src="../bower_components/angular/angular.js"></script>
+    <script src="../Content/js/plugins/adal/adal.js"></script>
+    <script src="../Content/js/plugins/adal/adal-angular.js"></script>
+    <script src="../Content/js/angular/angular-websocket.min.js"></script>
+    <script src="../Content/js/angular/angular-animate.js"></script>
+    <script src="../Content/js/plugins/oclazyload/dist/ocLazyLoad.min.js"></script>
+    <script src="../bower_components/angular-ui-router/release/angular-ui-router.js"></script>
+    <script src="../Content/js/bootstrap/ui-bootstrap-tpls-1.1.2.min.js"></script>
+    <script src="../Content/js/angular/angular-qrcode.js"></script>
+
+
+    <!-- Anglar App Script -->
+    <script src="../Content/js/app.js"></script>
+    <script src="../Content/js/config.js"></script>
+    <script src="../Content/js/directives.js"></script>
+    <script src="../Content/js/controllers.js"></script>
+    <script src="../Content/js/services/common.js"></script>
+    <script src="../Content/js/services/logger.js"></script>
+    <script src="../Content/js/services/datasevice.js"></script>
+    <script src="../Content/js/services/dataprovider.js"></script>
+
+    <script src="../Content/views/dashboard/dashboard.js"></script>
+    <script src="../Content/views/dashboard/dashboard_2.js"></script>
+    <script src="../Content/views/nodes/nodes.js"></script>
+    <script src="../Content/views/streams/streams.js"></script>
+    <script src="../Content/views/clusters/clusters.js"></script>
+    <script src="../Content/views/doctor/doctor.js"></script>
+    <script src="../Content/views/accounts/accounts.js"></script>
+    <script src="../Content/views/trader/trader.js"></script>
+    <script src="../Content/views/admin/admin.js"></script>
+    <script src="../Content/views/quoka/dashboard.js"></script>
+    <script src="../Content/views/quoka/trader.js"></script>
+</body>
+</html>
+
