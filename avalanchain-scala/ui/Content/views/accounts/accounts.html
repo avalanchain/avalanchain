@@ -1,0 +1,90 @@
+﻿<div ng-controller="accounts">
+    <div class="row wrapper border-bottom white-bg page-heading">
+        <div class="col-lg-8">
+            <h2>Accounts</h2>
+            <ol class="breadcrumb">
+                <li>
+                    Home
+                </li>
+                <li data-ng-class="{'active' : !isAccountPage}">
+                    <a href="#/index/accounts">Account list</a>
+                </li>
+                <li class="active" ng-show="isAccountPage">
+                    <strong>Account</strong>
+                </li>
+            </ol>
+        </div>
+        <div class="col-lg-4">
+            <div class="title-action">
+                <!--<a href="#" class="btn btn-white"><i class="fa fa-pencil"></i> Edit </a>
+                <a href="#" class="btn btn-white"><i class="fa fa-check "></i> Save </a>-->
+                <button ng-click="isAccountPage=!isAccountPage" target="_blank" ng-show="isAccountPage" class="btn btn-primary"><i class="fa fa-arrow-left"></i> Back </button>
+            </div>
+        </div>
+    </div>
+    <div class="row" ng-hide="isAccountPage">
+        <div class="col-lg-12">
+            <div class="wrapper wrapper-content animated fadeInUp">
+
+                <div class="ibox">
+                    <div class="ibox-title">
+                        <h5>All accounts assigned to this admin</h5>
+
+                        <div class="ibox-tools">
+                            <a href="" class="btn btn-primary btn-xs" ng-click="openModal()">Create new account</a>
+                            <!--<a href="" class="btn btn-primary btn-xs" ng-click="toggleModal()">test</a>-->
+                        </div>
+                        <!--<modal title="Login form" template-url="/Content/views/accounts/create_account.html" visible="showModal">
+                        </modal>-->
+                    </div>
+                    <div class="ibox-content">
+                        <div class="row m-b-sm m-t-sm">
+                            <div class="col-md-1">
+                                <button type="button" id="loading-example-btn" class="btn btn-white btn-sm" ng-click="refresh()"><i class="fa fa-refresh"></i> Refresh</button>
+                            </div>
+                            <div class="col-md-11">
+                                <div class="input-group">
+                                    <input type="text" placeholder="Search" class="input-sm form-control" ng-model="searchAccounts"> <span class="input-group-btn">
+                                        <button type="button" class="btn btn-sm btn-primary" ng-click="clean()"> Clean</button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="project-list">
+
+                            <table class="table table-hover">
+                                <tbody>
+                                <tr style="cursor: pointer" ng-repeat="account in accounts | filter:searchAccounts | pagination:(currentPage-1)*10 | limitTo:10" ng-click="showAccount(account)">
+                                    <td class="project-status">
+                                        <span class="label label-primary">Active</span>
+                                    </td>
+                                    <td class="project-title">
+                                        <strong><label class="label label-info">ID:</label>{{account.name}}</strong>
+                                        <br/>
+                                        <small><label class="label label-warning">Address:</label>{{account.ref.address}}</small>
+                                    </td>
+                                    <td class="project-completion">
+                                        <label class="label label-info">Public Key:</label><strong> {{ account.publicKey | limitTo: 40}}...</strong>
+                                    </td>
+                                    <td class="project-people">
+                                        Balance: {{account.balance | number}}
+                                    </td>
+                                    <td class="project-actions">
+                                        <a href="" class="btn btn-white btn-sm"><i class="fa fa-folder"></i> View </a>
+                                    </td>
+                                </tr>
+
+                                </tbody>
+                            </table>
+                            <uib-pagination total-items="totalItems" ng-model="currentPage" max-size="maxSize" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" ng-show="isAccountPage">
+        <div ng-include="'/Content/views/accounts/account.html'"></div>
+    </div>
+</div>
