@@ -1,3 +1,6 @@
+import com.typesafe.sbt.SbtMultiJvm
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
+
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -13,7 +16,7 @@ val scalaLoggingVersion = "3.1.0"
 val slickVersion = "3.1.1"
 val seleniumVersion = "2.53.0"
 val circeVersion = "0.4.1"
-val akkaVersion = "2.4.3"
+val akkaVersion = "2.4.4"
 
 val slf4jApi = "org.slf4j" % "slf4j-api" % slf4jVersion
 val logBackClassic = "ch.qos.logback" % "logback-classic" % logBackVersion
@@ -60,12 +63,14 @@ val akkaCluster          = "com.typesafe.akka"                  %% "akka-cluster
 val akkaClusterMetrics   = "com.typesafe.akka"                  %% "akka-cluster-metrics"                % akkaVersion
 val akkaClusterTools     = "com.typesafe.akka"                  %% "akka-cluster-tools"                  % akkaVersion
 val akkaDistributedData  = "com.typesafe.akka"                  %% "akka-distributed-data-experimental"  % akkaVersion
+val akkaTestkit          = "com.typesafe.akka"                  %% "akka-testkit"                        % akkaVersion
+val akkaMultiNodeTestkit = "com.typesafe.akka"                  %% "akka-multi-node-testkit"             % akkaVersion
 
 val scorexCore           = "org.consensusresearch"              %% "scrypto"                             % "1.1.0"
 val scorexStack = Seq(scorexCore)
 
 val akkaStack = Seq(akkaHttpCore, akkaHttpExperimental, akkaHttpTestkit, akkaHttpSession, akkaDistributedData,
-  akkaStream, akkaPersistence, akkaPersistenceQuery, akkaCluster, akkaClusterMetrics, akkaClusterTools)
+  akkaStream, akkaPersistence, akkaPersistenceQuery, akkaCluster, akkaClusterMetrics, akkaClusterTools, akkaTestkit, akkaMultiNodeTestkit)
 
 val commonDependencies = unitTestingStack ++ loggingStack
 
@@ -75,7 +80,7 @@ lazy val commonSettings = SbtScalariform.scalariformSettings ++ Seq(
     .setPreference(PreserveSpaceBeforeArguments, true)
     .setPreference(CompactControlReadability, true)
     .setPreference(SpacesAroundMultiImports, false),
-  organization := "com.softwaremill",
+  organization := "com.avalanchain",
   version := "0.0.1-SNAPSHOT",
   scalaVersion := "2.11.8",
   scalacOptions ++= Seq("-unchecked", "-deprecation"),
