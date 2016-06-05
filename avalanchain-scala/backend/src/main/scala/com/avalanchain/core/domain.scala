@@ -123,6 +123,8 @@ package object domain {
     def verifier[T]: Verifier[T]
   }
 
+  case class NodeInfo(val signingPublicKey: SigningPublicKey, val encryptionPublicKey: EncryptionPublicKey)
+
   object FrameBuilder {
     def buildNestedRef(node: CryptoContext, cr: ChainRef, nestedName: String): ChainRef = {
       val data = cr.value
