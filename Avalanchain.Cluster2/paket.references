@@ -1,0 +1,19 @@
+Base58Check
+BouncyCastle
+Chessie
+Dynamitey
+FSharp.Control.AsyncSeq
+FSharp.Core
+FSharp.Core.Fluent-4.0
+FSharp.Interop.Dynamic
+FSharp.Quotations.Evaluator
+FSharpx.Async
+FSharpx.Collections
+FSharpx.Extras
+FsPickler
+FsPickler.Json
+Newtonsoft.Json
+
+File: Akkling.fsproj
+File: Akkling.Persistence.fsproj
+File: Akkling.Cluster.fsproj

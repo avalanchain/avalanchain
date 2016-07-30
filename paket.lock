@@ -1,0 +1,256 @@
+REDIRECTS: ON
+FRAMEWORK: NET40, NET45, NET451, NET452
+NUGET
+  remote: https://www.myget.org/F/akkadotnet/api/v2
+    Akka (1.1.2.255-beta)
+      Newtonsoft.Json (>= 7.0.1)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Cluster (1.1.2.255-beta)
+      Akka.Remote (>= 1.1.2.255-beta)
+      Google.ProtocolBuffers (>= 2.4.1.555)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Cluster.Sharding (1.1.2.255-beta)
+      Akka.Cluster.Tools (>= 1.1.2.255-beta)
+      Akka.Persistence (>= 1.1.2.255-beta)
+      Google.ProtocolBuffers (>= 2.4.1.555)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Cluster.Tools (1.1.2.255-beta)
+      Akka.Cluster (>= 1.1.2.255-beta)
+      Google.ProtocolBuffers (>= 2.4.1.555)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Persistence (1.1.2.255-beta)
+      Akka (>= 1.1.2.255-beta)
+      Google.ProtocolBuffers (>= 2.4.1.555)
+      Newtonsoft.Json (>= 7.0.1)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Persistence.Query (1.1.2.255-beta)
+      Akka.Persistence (>= 1.1.2.255-beta)
+      Akka.Streams (>= 1.1.2.255-beta)
+      Reactive.Streams (>= 1.0.0-RC1)
+    Akka.Persistence.Query.Sql (1.1.2.255-beta)
+      Akka.Persistence.Query (>= 1.1.2.255-beta)
+      Akka.Persistence.Sql.Common (>= 1.1.2.255-beta)
+      Reactive.Streams (>= 1.0.0-RC1)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Persistence.Sql.Common (1.1.2.255-beta)
+      Akka.Persistence (>= 1.1.2.255-beta)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Persistence.Sqlite (1.1.2.255-beta)
+      Akka.Persistence.Sql.Common (>= 1.1.2.255-beta)
+      System.Data.SQLite.Core (>= 1.0.98.1)
+    Akka.Remote (1.1.2.255-beta)
+      Akka (>= 1.1.2.255-beta)
+      Google.ProtocolBuffers (>= 2.4.1.555)
+      Helios (>= 2.1.2)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.Serialization.Wire (1.1.2.255-beta)
+      Akka (>= 1.1.2.255-beta)
+      Wire (>= 0.0.6)
+    Akka.Streams (1.1.2.255-beta)
+      Akka (>= 1.1.2.255-beta)
+      Reactive.Streams (>= 1.0.0-RC1)
+      System.Collections.Immutable (>= 1.1.36)
+    Akka.TestKit (1.1.2.255-beta)
+      Akka (>= 1.1.2.255-beta)
+    Akka.TestKit.Xunit2 (1.1.1.244-beta)
+      Akka.TestKit (>= 1.1.1.244-beta)
+      xunit (>= 2.0)
+      xunit.abstractions (>= 2.0)
+      xunit.assert (>= 2.0)
+      xunit.core (>= 2.0)
+      xunit.extensibility.core (>= 2.0)
+  remote: https://www.nuget.org/api/v2
+    Akkling (0.3)
+      Akka (>= 0.0.0-prerelease)
+      Akka.Serialization.Wire
+      FsPickler
+      FSPowerPack.Linq.Community
+      Wire
+    Argu (2.1)
+    Autofac (4.0.0-rc1-177)
+    Base58Check (0.2)
+    bootstrap (3.3.1) - framework: >= net45
+      jQuery (>= 1.9)
+    BouncyCastle (1.7)
+    Chessie (0.5.1)
+      FSharp.Core
+    Dynamitey (1.0.2)
+    FAKE (4.35.1)
+    Flurl (1.0.10)
+    FsCheck (2.5)
+      FSharp.Core (>= 3.1.2.5)
+    FsCheck.Xunit (2.0.7)
+      FsCheck (>= 2.0.7)
+      xunit (>= 1.9.2)
+    FSharp.Compiler.Service (2.0.0.6)
+    FSharp.Control.AsyncSeq (2.0.8)
+    FSharp.Core (4.0.0.1)
+    FSharp.Core.Fluent-4.0 (1.0.0.5)
+    FSharp.Formatting (2.14.4)
+      FSharp.Compiler.Service (2.0.0.6)
+      FSharpVSPowerTools.Core (>= 2.3 < 2.4)
+    FSharp.Interop.Dynamic (3.0)
+      Dynamitey (>= 1.0.2)
+      FSharp.Core (>= 3.1.2.1)
+    FSharp.Quotations.Evaluator (1.0.7)
+    FSharpVSPowerTools.Core (2.3)
+      FSharp.Compiler.Service (>= 2.0.0.3)
+    FSharpx.Async (1.12)
+      FSharp.Control.AsyncSeq
+    FSharpx.Collections (1.14)
+      FSharp.Core (>= 3.0)
+    FSharpx.Extras (1.10.3)
+      FSharpx.Async (>= 1.12)
+      FSharpx.Collections (>= 1.10.1)
+    FsPickler (2.0)
+    FsPickler.Json (2.0)
+      FsPickler (2.0)
+      Newtonsoft.Json (>= 6.0.5)
+    FSPowerPack.Core.Community (3.0)
+    FSPowerPack.Linq.Community (3.0)
+      FSPowerPack.Core.Community
+    FsWebAddRegistryEntries (0.1.1)
+    Google.ProtocolBuffers (2.4.1.555)
+    Helios (2.1.2)
+    jQuery (3.1) - framework: net45, net451, net452
+    MBrace.Core (1.1.6)
+    MBrace.Flow (1.1.6)
+      FSharp.Core (>= 3.0)
+      MBrace.Core (1.1.6)
+      Streams (>= 0.4 < 0.5)
+    MBrace.Runtime (1.1.6)
+      FsPickler (>= 2.0 < 2.1)
+      FsPickler.Json (>= 2.0 < 2.1)
+      MBrace.Core (1.1.6)
+      Vagabond (>= 0.12.9 < 0.13)
+    MBrace.Thespian (1.1.6)
+      Argu (>= 2.0 < 3.0)
+      FsPickler (>= 2.0 < 2.1)
+      MBrace.Core (1.1.6)
+      MBrace.Runtime (1.1.6)
+      Thespian (>= 0.1.10-alpha < 0.2)
+      Vagabond (>= 0.12.9 < 0.13)
+    Microsoft.ApplicationInsights (2.1.0-beta1)
+      Microsoft.Bcl (>= 1.1.10) - framework: net40
+      Microsoft.Bcl.Async (>= 1.0.168) - framework: net40
+      Microsoft.Diagnostics.Tracing.EventSource.Redist (>= 1.1.28) - framework: net40
+    Microsoft.AspNet.OData (5.9)
+      Microsoft.AspNet.WebApi.Client (>= 5.2.2)
+      Microsoft.AspNet.WebApi.Core (>= 5.2.2 < 5.3)
+      Microsoft.OData.Core (> 6.14 < 7.0)
+    Microsoft.AspNet.WebApi (5.2.3) - framework: >= net45
+      Microsoft.AspNet.WebApi.WebHost (>= 5.2.3 < 5.3)
+    Microsoft.AspNet.WebApi.Client (5.2.3)
+      Newtonsoft.Json (>= 6.0.4) - framework: net45, net451, net452
+    Microsoft.AspNet.WebApi.Core (5.2.3)
+      Microsoft.AspNet.WebApi.Client (>= 5.2.3)
+    Microsoft.AspNet.WebApi.Owin (5.2.3)
+      Microsoft.AspNet.WebApi.Core (>= 5.2.3 < 5.3)
+      Microsoft.Owin (>= 2.0.2)
+      Owin (>= 1.0)
+    Microsoft.AspNet.WebApi.WebHost (5.2.3)
+      Microsoft.AspNet.WebApi.Core (>= 5.2.3 < 5.3)
+    Microsoft.Bcl (1.1.10)
+      Microsoft.Bcl.Build (>= 1.0.14)
+    Microsoft.Bcl.Async (1.0.168) - framework: net40
+      Microsoft.Bcl (>= 1.1.8)
+    Microsoft.Bcl.Build (1.0.21) - import_targets: false
+    Microsoft.Diagnostics.Tracing.EventSource.Redist (1.1.28) - framework: net40
+    Microsoft.Net.Http (2.2.29)
+      Microsoft.Bcl (>= 1.1.10)
+      Microsoft.Bcl.Build (>= 1.0.14)
+    Microsoft.OData.Core (6.15)
+      Microsoft.OData.Edm (6.15)
+      Microsoft.Spatial (6.15)
+    Microsoft.OData.Edm (6.15)
+    Microsoft.Owin (3.0.1)
+      Owin (>= 1.0)
+    Microsoft.Owin.Host.SystemWeb (3.0.1)
+      Microsoft.Owin (>= 3.0.1)
+      Owin (>= 1.0)
+    Microsoft.Spatial (6.15)
+    Mono.Cecil (0.9.6.1)
+    MSBuild.Extension.Pack (1.8)
+    Newtonsoft.Json (7.0.1)
+    NLog (4.4.0-beta3)
+    NUnit (3.2)
+    Octokit (0.21.1)
+      Microsoft.Net.Http  - framework: net40
+    Owin (1.0)
+    Reactive.Streams (1.0.1)
+    SourceLink (1.1)
+    Streams (0.4.1)
+    Swashbuckle.Core (5.3.2)
+      Microsoft.AspNet.WebApi.Core (>= 4.0.20710)
+    Swashbuckle.OData (2.18)
+      Flurl (>= 1.0.10) - framework: net452
+      Microsoft.AspNet.OData (>= 5.7) - framework: net452
+      Microsoft.AspNet.WebApi.Client (>= 5.2.3) - framework: net452
+      Microsoft.AspNet.WebApi.Core (>= 5.2.3) - framework: net452
+      Microsoft.AspNet.WebApi.WebHost (>= 5.2.3) - framework: net452
+      Microsoft.OData.Core (>= 6.14) - framework: net452
+      Microsoft.OData.Edm (>= 6.14) - framework: net452
+      Microsoft.Spatial (>= 6.14) - framework: net452
+      Newtonsoft.Json (>= 7.0.1) - framework: net452
+      Swashbuckle.Core (>= 5.3.2) - framework: net452
+    System.Collections (4.0.11-beta-23516)
+    System.Collections.Immutable (1.1.38-beta-23516)
+    System.Data.SQLite.Core (1.0.99)
+    System.Diagnostics.Debug (4.0.11-beta-23516)
+    System.Globalization (4.0.11-beta-23516)
+    System.Linq (4.0.1-beta-23516)
+    System.Resources.ResourceManager (4.0.1-beta-23516)
+    System.Runtime (4.0.21-beta-23516)
+    System.Runtime.Extensions (4.0.11-beta-23516)
+    System.Threading (4.0.11-beta-23516)
+    Thespian (0.1.10-alpha)
+      FsPickler (>= 1.8)
+    Vagabond (0.12.9)
+      FsPickler (>= 2.0 < 2.1)
+      Mono.Cecil (>= 0.9.6.1 < 0.9.7)
+    Wire (0.0.6)
+    xunit (2.0)
+      xunit.assert (2.0)
+      xunit.core (2.0)
+    xunit.abstractions (2.0)
+    xunit.assert (2.0)
+    xunit.core (2.0)
+      xunit.extensibility.core (2.0)
+    xunit.extensibility.core (2.0)
+      xunit.abstractions (2.0)
+    xunit.runner.console (2.1)
+GITHUB
+  remote: cotyar/Akkling
+    FULLPROJECT (1c5969a82b4431661b640dbf894fbad37c944ea1)
+      Akka
+      Akka.Cluster
+      Akka.Cluster.Sharding
+      Akka.Cluster.Tools
+      Akka.Persistence
+      Akka.Persistence.Query
+      Akka.Persistence.Query.Sql
+      Akka.Persistence.Sql.Common
+      Akka.Persistence.Sqlite
+      Akka.Remote
+      Akka.Serialization.Wire
+      Akka.Streams
+      Akka.TestKit
+      Akka.TestKit.Xunit2
+      FAKE
+      FsCheck
+      FsCheck.Xunit
+      FSharp.Formatting
+      FsPickler
+      FSPowerPack.Linq.Community
+      Google.ProtocolBuffers
+      Helios
+      Newtonsoft.Json (7.0.1)
+      Octokit
+      Reactive.Streams
+      SourceLink
+      Wire (0.0.6)
+      xunit.assert (2.0)
+      xunit.runner.console
+  remote: fsharp/FAKE
+    modules/Octokit/Octokit.fsx (def4ef86c0552d7126cbe6756c7b7fdda447245d)
+      Octokit (>= 0.20)

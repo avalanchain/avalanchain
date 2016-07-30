@@ -1,0 +1,91 @@
+framework: net40, net45, net451, net452
+redirects: on
+
+
+source https://www.myget.org/F/akkadotnet/api/v2
+source https://www.nuget.org/api/v2/
+
+nuget Argu 2.1
+nuget Autofac 4.0.0-rc1-177
+nuget Base58Check 0.2.0
+nuget bootstrap 3.3.1 framework: >= net45
+nuget BouncyCastle 1.7.0
+nuget Chessie 0.5.1
+nuget Dynamitey 1.0.2.0
+nuget Flurl 1.0.10
+nuget FSharp.Control.AsyncSeq 2.0.8
+nuget FSharp.Core 4.0.0.1
+nuget FSharp.Core.Fluent-4.0 1.0.0.5
+nuget FSharp.Interop.Dynamic 3.0.0.0
+nuget FSharp.Quotations.Evaluator 1.0.7
+nuget FSharpx.Async 1.12.0
+nuget FSharpx.Collections 1.14.0
+nuget FSharpx.Extras 1.10.3
+nuget FsPickler 2.0.0
+nuget FsPickler.Json 2.0.0
+nuget FSPowerPack.Core.Community 3.0.0.0
+nuget FSPowerPack.Linq.Community 3.0.0.0
+nuget FsWebAddRegistryEntries 0.1.1.0
+nuget Google.ProtocolBuffers 2.4.1.555
+nuget Helios 
+nuget MBrace.Core 1.1.6
+nuget MBrace.Flow 1.1.6
+nuget MBrace.Runtime 1.1.6
+nuget MBrace.Thespian 1.1.6
+nuget Microsoft.ApplicationInsights 2.1.0-beta1
+nuget Microsoft.AspNet.OData 5.9.0
+nuget Microsoft.AspNet.WebApi 5.2.3 framework: >= net45
+nuget Microsoft.AspNet.WebApi.Client 5.2.3
+nuget Microsoft.AspNet.WebApi.Core 5.2.3
+nuget Microsoft.AspNet.WebApi.Owin 5.2.3
+nuget Microsoft.AspNet.WebApi.WebHost 5.2.3
+nuget Microsoft.Bcl 1.1.10
+nuget Microsoft.Bcl.Build 1.0.21
+nuget Microsoft.Net.Http 2.2.29
+nuget Microsoft.OData.Core 6.15.0
+nuget Microsoft.OData.Edm 6.15.0
+nuget Microsoft.Owin 3.0.1
+nuget Microsoft.Owin.Host.SystemWeb 3.0.1
+nuget Microsoft.Spatial 6.15.0
+nuget Mono.Cecil 0.9.6.1
+nuget MSBuild.Extension.Pack 1.8.0
+nuget Newtonsoft.Json 7.0.1
+nuget NLog 4.4.0-beta3
+nuget NUnit 3.2.0
+nuget Owin 1.0
+nuget Streams 0.4.1
+nuget Swashbuckle.Core 5.3.2
+nuget Swashbuckle.OData 2.18.0
+nuget System.Collections 4.0.11-beta-23516
+nuget System.Collections.Immutable 1.1.38-beta-23516
+nuget System.Data.SQLite.Core 1.0.99.0
+nuget System.Diagnostics.Debug 4.0.11-beta-23516
+nuget System.Globalization 4.0.11-beta-23516
+nuget System.Linq 4.0.1-beta-23516
+nuget System.Resources.ResourceManager 4.0.1-beta-23516
+nuget System.Runtime 4.0.21-beta-23516
+nuget System.Runtime.Extensions 4.0.11-beta-23516
+nuget System.Threading 4.0.11-beta-23516
+nuget Thespian 0.1.10-alpha
+nuget Vagabond 0.12.9
+nuget Wire 0.0.6
+
+source https://www.myget.org/F/akkadotnet/api/v2
+
+nuget Akka prerelease 
+nuget Akka.Streams prerelease 
+nuget Akka.Persistence prerelease 
+nuget Akka.Persistence.Sqlite prerelease 
+nuget Akka.Persistence.Sql.Common prerelease 
+nuget Akka.Persistence.Query prerelease 
+nuget Akka.Persistence.Query.Sql prerelease 
+nuget Akka.Remote prerelease 
+nuget Akka.TestKit prerelease 
+nuget Akka.TestKit.Xunit2 prerelease 
+nuget Akka.Cluster prerelease 
+nuget Akka.Cluster.Sharding prerelease 
+nuget Akka.Cluster.Tools prerelease 
+nuget Akka.Serialization.Wire prerelease 
+
+
+github cotyar/Akkling

@@ -1,0 +1,12 @@
+bootstrap
+FSharp.Core
+FsWebAddRegistryEntries
+Microsoft.AspNet.WebApi
+Microsoft.AspNet.WebApi.Client
+Microsoft.AspNet.WebApi.Core
+Microsoft.AspNet.WebApi.WebHost
+Microsoft.Owin
+MSBuild.Extension.Pack
+Newtonsoft.Json
+Owin
+Swashbuckle.Core
