@@ -6,6 +6,9 @@ open System
 open Chessie.ErrorHandling
 open Avalanchain.Projection
 
+open Akkling
+open Akkling.Persistence
+
 type EventSourcingLogic<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> = {
     InitialState: 'TState
     Process: 'TState -> 'TCommand -> Result<'TEvent, 'TMsg> 
@@ -30,7 +33,7 @@ type ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic: 
         | :? 'TEvent as e -> 
             let applyResult = eventSourcingLogic.Apply (getState()) e 
             match applyResult with
-            | Ok ((e, newState), msgs) -> 
+            | Chessie.ErrorHandling.Ok ((e, newState), msgs) -> 
                 frame <- Some(eventSourcingLogic.Bundle frame (e, newState))
                 true
             | Bad msgs -> false
@@ -49,7 +52,7 @@ type ResActor<'TCommand, 'TEvent, 'TState, 'TFrame, 'TMsg> (eventSourcingLogic: 
             let state = getState()
             let event = eventSourcingLogic.Process state c
             match event >>= eventSourcingLogic.Apply state with 
-            | Ok ((e, newState), msgs) -> 
+            | Chessie.ErrorHandling.Ok ((e, newState), msgs) -> 
                 this.Persist(e, (fun ee -> frame <- Some(eventSourcingLogic.Bundle frame (ee, newState))))
                 if List.isEmpty msgs then this.Sender.Tell(msgs, this.Self)
                 this.Log.Info("Command '{0}' processed, Event '{1}' saved, new State '{2}', warnings '{3}", c, e, newState, msgs)
@@ -72,7 +75,6 @@ let simpleEventSourcingLogic = {
 
 module KeyValue =
     open System.Collections.Concurrent
-    open Akka.FSharp
 
     //type AdminCommand = AdminCommand
 

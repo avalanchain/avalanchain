@@ -3,7 +3,7 @@
 open Akka.Actor
 open Akka.Cluster
 open Akka.Persistence.Sqlite
-open Akka.FSharp
+open Akka.Persistence.Sqlite.Journal
 open System
 open FSharp.Core
 open System.Collections.Immutable
@@ -19,7 +19,7 @@ type AutomaticClusterSqlite (system) =
     let cluster = Cluster.Get(system);
     let persistence = SqlitePersistence.Get(system);
     let connectionFactory() = 
-        let conn = new SQLiteConnection(persistence.JournalSettings.ConnectionString)
+        let conn = new SQLiteConnection(persistence.DefaultJournalConfig.GetString("connection-string"))
         conn.Open()
         conn
         

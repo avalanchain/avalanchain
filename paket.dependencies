@@ -86,6 +86,7 @@ nuget Akka.Cluster prerelease
 nuget Akka.Cluster.Sharding prerelease 
 nuget Akka.Cluster.Tools prerelease 
 nuget Akka.Serialization.Wire prerelease 
+nuget Akka.FSharp prerelease 
 
 
 github cotyar/Akkling

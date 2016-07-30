@@ -12,7 +12,6 @@ open FSharp.Core
 
 open Messages
 open AutomaticCluster
-open Akka.Persistence.FSharp
 open Akka.Persistence
 
 open Actors

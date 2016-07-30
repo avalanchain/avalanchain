@@ -5,9 +5,10 @@ open Avalanchain.Quorum
 open System
 open Base58Check
 open Akka
-open Akka.FSharp
 open Akka.Actor
 open Akka.Cluster
+open Akkling
+open Akka.FSharp
 
 type RouterType = 
     | Nothing of string
@@ -46,17 +47,17 @@ let rec processExecutionPolicy (hasher: DataHasher<ExecutionPolicy>) existingRou
             | Mandatory egs, Percentage (p, t) -> 
                 let self = egs |> Set.map(fun (ExecutionGroup eg) -> 
                                             Pool { Name = eg; MaxPerNode = 1u; MaxTotal = t; MinToOperate = uint32(Math.Round(p * float(t))) }) |> Set.toList
-                self @ existingRouters
+                List.append self existingRouters
             | Mandatory egs, FixedCount fc -> 
                 let self = egs |> Set.map(fun (ExecutionGroup eg) -> 
                                             Pool { Name = eg; MaxPerNode = 1u; MaxTotal = fc * 2u; MinToOperate = fc }) |> Set.toList
-                self @ existingRouters
+                List.append self existingRouters
 
 let toSpawnOption routerType = match routerType with
                                 | Nothing id -> routerType, []
                                 | Pool rs -> 
                                     routerType, [ 
-                                                    SpawnOption.Deploy (Deploy(ClusterScope.Instance))
+                                                    SpawnOption.Deploy (Akka.Actor.Deploy(ClusterScope.Instance))
                                                     SpawnOption.Router (
                                                         new Akka.Cluster.Routing.ClusterRouterPool(
                                                             new Akka.Routing.BroadcastPool(int(rs.MaxTotal)),

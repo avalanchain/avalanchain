@@ -18,6 +18,11 @@ NUGET
       Akka.Cluster (>= 1.1.2.255-beta)
       Google.ProtocolBuffers (>= 2.4.1.555)
       System.Collections.Immutable (>= 1.1.36)
+    Akka.FSharp (1.1.2.255-beta)
+      Akka (>= 1.1.2.255-beta)
+      FsPickler (>= 1.2.21)
+      FSPowerPack.Core.Community (>= 3.0)
+      FSPowerPack.Linq.Community (>= 3.0)
     Akka.Persistence (1.1.2.255-beta)
       Akka (>= 1.1.2.255-beta)
       Google.ProtocolBuffers (>= 2.4.1.555)
@@ -60,12 +65,6 @@ NUGET
       xunit.core (>= 2.0)
       xunit.extensibility.core (>= 2.0)
   remote: https://www.nuget.org/api/v2
-    Akkling (0.3)
-      Akka (>= 0.0.0-prerelease)
-      Akka.Serialization.Wire
-      FsPickler
-      FSPowerPack.Linq.Community
-      Wire
     Argu (2.1)
     Autofac (4.0.0-rc1-177)
     Base58Check (0.2)
