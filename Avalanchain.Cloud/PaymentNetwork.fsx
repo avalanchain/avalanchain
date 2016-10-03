@@ -11,7 +11,7 @@
 
 #r "bin/Debug/Avalanchain.dll"
 
-#load "CloudStream.fs"
+#load "ChainStream.fs"
 #load "ChainFlow.fs"
 #load "PaymentNetwork.fs"
 

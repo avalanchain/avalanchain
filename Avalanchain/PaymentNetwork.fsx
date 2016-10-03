@@ -44,11 +44,6 @@ open Avalanchain
 
 let accounts = [for i in 0 .. 200 do yield (newAccount (i.ToString()))]
 
-//let balances1 = accounts |> List.map (fun a -> a.Ref.Address)
-
-//let balances = accounts |> List.map (fun a -> a.Ref, 1000M) |> Map.ofList |> fun b -> { PaymentBalances.Balances = b }
-
-
 let storage = PaymentNetwork.transactionStorage
 
 

@@ -137,7 +137,7 @@ type ChainNode private() =
 //    }
 
 
-type CloudStream<'T> = {
+type ChainStream<'T> = {
     Id: string
     Position: unit -> Cloud<int64>
     Item: uint64 -> Cloud<'T option>
@@ -157,7 +157,7 @@ type StreamSink<'T> = {
     CurrentState: unit -> Cloud<int64 * ('T * int64)[]>
 }
 
-module ChunkedCloudStream =
+module ChunkedChainStream =
     let toStream genericStream = {
         Id = genericStream.Id
         Position = genericStream.Position
@@ -354,7 +354,7 @@ module ChunkedCloudStream =
                                         return! local {
                                             let! v = getFramesPage nonce page |> Cloud.AsLocal
                                             return v |> Array.map (fun kv -> kv.Value) }})
-            let (genericStream: CloudStream<'T>) = {
+            let (genericStream: ChainStream<'T>) = {
                 Id = streamId
                 Position = positionGetter
                 Item = (fun nonce -> cloud { 
@@ -401,7 +401,7 @@ module ChunkedCloudStream =
             return! enqueueStream "ofQueue" clusterContext getter maxBatchSize
         }
 
-    let streamOfStreamFold<'TS, 'TD> streamPath (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = // lastState -> data -> newState
+    let streamOfStreamFold<'TS, 'TD> streamPath (stream: ChainStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = // lastState -> data -> newState
         cloud { 
             let getter (getLast: unit -> LocalCloud<IStreamFrame<'TS> option * int64>) = local {
                 let! last = getLast()
@@ -433,7 +433,17 @@ module ChunkedCloudStream =
             return! enqueueStream (stream.Id + "/" + streamPath) stream.ClusterContext getter maxBatchSize
         } 
 
-    let streamOfStream<'TS, 'TD> streamPath (stream: CloudStream<'TD>) initialValue maxBatchSize (f: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
+    let streamOfStreamGroup<'TS, 'TD> streamPath (stream: ChainStream<'TD>) initialValue maxBatchSize (groupKeySelector: 'TD -> string) = 
+        cloud { 
+            let! dict = CloudDictionary.New<ChainStream<'TD>> ()
+
+
+
+            return dict
+        } 
+
+
+    let streamOfStream<'TS, 'TD> streamPath (stream: ChainStream<'TD>) initialValue maxBatchSize (f: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
         streamOfStreamFold<'TS, 'TD> streamPath stream initialValue maxBatchSize (fun _ -> true) f
 
 
@@ -470,7 +480,7 @@ module ChunkedCloudStream =
             return (sink, stream)
         }
 
-    let everywhereStream<'TS, 'TD> (stream: CloudStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
+    let everywhereStream<'TS, 'TD> (stream: ChainStream<'TD>) initialValue maxBatchSize (preFilter: IStreamFrame<'TD> -> bool) (foldF: 'TS option -> IStreamFrame<'TD> -> 'TS) = 
         cloud {
             return! streamOfStreamFold "everywhere" stream initialValue maxBatchSize preFilter foldF 
         } 

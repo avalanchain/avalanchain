@@ -13,7 +13,7 @@
 
 #r "bin/Debug/Avalanchain.dll"
 
-#load "CloudStream.fs"
+#load "ChainStream.fs"
 #load "ChainFlow.fs"
 
 // Note: Before running, choose your cluster version at the top of this script.
@@ -59,9 +59,9 @@ let topChainAll = topChain.GetFramesPage 0UL 1000000u |> cluster.Run
 topChainAll.Length
               
 
-let chain = ChainFlow.ofStream topChain
+let chain = ChainFlow.ofChain topChain
             |> ChainFlow.mapFrame 1000u (fun v -> v.Hash )
-            |> ChainFlow.filter 1000u (fun v -> true )
+            |> ChainFlow.filter 1000u (fun v -> v.Bytes.Length > 0 )
             //|> ChainFlow.filterFrame 1000u (fun v -> v.Nonce % 2UL = 0UL )
 //            |> ChainFlow.filter 1000u (fun v -> v.ToString() |> Int64.Parse |> fun ch -> ch % 2L <> 0L )
             |> ChainFlow.mapFrame 1000u (fun v -> v.Nonce )
@@ -87,7 +87,7 @@ let last = cloud {
             return! ((streams.[0] |> snd).[0] |> snd).GetPageJson 0UL 5u} |> cluster.Run
 
 let sum = chain 
-            |> ChainFlow.ofStream
+            |> ChainFlow.ofChain
             |> ChainFlow.sum 1000u 
             |> cluster.Run
 
@@ -99,7 +99,7 @@ let sumCurrentFramesPage = sum.GetCurrentFramesPage 20u |> cluster.Run
 sumCurrentFramesPage.Length
 
 let sumEverywhere = chain 
-                    |> ChainFlow.ofStream
+                    |> ChainFlow.ofChain
                     |> ChainFlow.sumEverywhere 1000u 
                     |> cluster.Run
 
@@ -121,21 +121,4 @@ let sumEvrCurrent = [| for node in sumEverywhere -> node.Current() |> cluster.Ru
 
 let str = [|for i in 0UL .. 99999UL do yield "item" + i.ToString()|]
             |> ChainFlow.ofArray clusterContext 10000u
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

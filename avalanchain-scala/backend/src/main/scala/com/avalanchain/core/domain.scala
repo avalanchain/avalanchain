@@ -12,6 +12,8 @@ package object domain {
   // TODO: Replace with java.security.PublicKey
   type SigningPublicKey = PublicKey
   type EncryptionPublicKey = PublicKey
+  // TODO: Rewrite with base58 encoding
+  def pkToString(pk: PublicKey) = new String(pk)
 
   trait ExecGroup
 

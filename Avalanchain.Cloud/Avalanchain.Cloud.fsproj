@@ -51,15 +51,16 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="CloudStream.fs" />
+    <Compile Include="ChainStream.fs" />
     <Compile Include="Confirmation.fs" />
     <Compile Include="ChainFlow.fs" />
     <None Include="AzureCluster.fsx" />
+    <None Include="Currency.fsx" />
     <None Include="ThespianCluster.fsx" />
-    <None Include="Script.fsx" />
     <Content Include="App.config" />
     <Content Include="packages.config" />
     <None Include="PaymentNetwork.fsx" />
+    <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Chessie">
