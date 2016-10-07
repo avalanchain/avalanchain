@@ -1,5 +1,7 @@
 package com.avalanchain.core.builders
 
+import java.nio.charset.StandardCharsets
+
 import com.avalanchain.core.domain.ChainStream.{SigningPublicKey => _, _}
 import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed}
 import com.avalanchain.core.domain._
@@ -25,13 +27,10 @@ import scala.pickling.{Pickler, Unpickler}
 object CryptoContextBuilder {
   // sealed trait Serializer
   object PicklingSerializer {
-    //implicit val pickler = Pickler.generate[T]
-    //implicit val unpickler = Unpickler.generate[T]
-
     def serializer[T: FastTypeTag : Pickler]: Serializer[T] = (value: T) => {
       val pickled = value.pickle
       val text = pickled.toString
-      (text, text.getBytes)
+      (text, text.getBytes(StandardCharsets.UTF_8))
     }
 
     def deserializer[T: FastTypeTag : Unpickler]: Deserializer[T] = {

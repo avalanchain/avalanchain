@@ -11,18 +11,18 @@ import spray.json._
 import fommil.sjs.FamilyFormats._ // this is spray.json.shapeless
 
 object ClusterMemberViewModels {
-  sealed trait ViewModel
+  sealed trait ClusterViewModel
+  final case class MemberUp(address: Address) extends ClusterViewModel
+  final case class MemberDown(address: Address) extends ClusterViewModel
+  final case class MemberJoined(address: Address) extends ClusterViewModel
+  final case class MemberLeft(address: Address) extends ClusterViewModel
+  final case class MemberExited(address: Address) extends ClusterViewModel
+  final case class MemberRemoved(address: Address, previousStatus: MemberStatus) extends ClusterViewModel
+  final case class UnreachableMember(address: Address) extends ClusterViewModel
   //  final case class MemberWeaklyUp(member: Member) extends ViewModel
-  case class MemberUp(address: Address) extends ViewModel
-  case class MemberDown(address: Address) extends ViewModel
-  //  final case class MemberJoined(member: Member) extends ViewModel
-  //  final case class MemberLeft(member: Member) extends ViewModel
-  case class MemberExited(address: Address) extends ViewModel
-  case class MemberRemoved(address: Address, previousStatus: MemberStatus) extends ViewModel
   //  final case class LeaderChanged(leader: Option[Address]) extends ViewModel
   //  final case class RoleLeaderChanged(role: String, leader: Option[Address]) extends ViewModel
   //  final case object ClusterShuttingDown extends ViewModel
-  case class UnreachableMember(address: Address) extends ViewModel
   //  final case class ReachableMember(member: Member) extends ViewModel
 }
 
@@ -48,18 +48,27 @@ class MembersMonitor extends Actor with ActorLogging with ActorPublisher[String]
 
   // handle the member events
   def receive = {
-    case Request(cnt)                          => publishIfNeeded()
-
-    case event: ClusterEvent.MemberUp                       => handle(MemberUp(event.member.address))
-    case event: ClusterEvent.UnreachableMember              => handle(UnreachableMember(event.member.address))
-    case event: ClusterEvent.MemberRemoved                  => handle(MemberRemoved(event.member.address, event.previousStatus))
-    case event: ClusterEvent.MemberExited                   => handle(MemberExited(event.member.address))
-    case _: ClusterEvent.MemberEvent                        => // ignore
+    case Request(cnt)                             => publishIfNeeded()
+    case event: ClusterEvent.ClusterDomainEvent   => handle(event)
   }
 
-  def handle(event: ViewModel) {
+  def enqueue(event: ClusterViewModel) {
     queue.enqueue(event.toJson.toString)
     publishIfNeeded()
+  }
+
+  def handle(event: ClusterEvent.ClusterDomainEvent) {
+    val (model: Option[ClusterViewModel]) = event match {
+      case e: ClusterEvent.MemberUp                       => Some(MemberUp(e.member.address))
+      case e: ClusterEvent.UnreachableMember              => Some(UnreachableMember(e.member.address))
+      case e: ClusterEvent.MemberRemoved                  => Some(MemberRemoved(e.member.address, e.previousStatus))
+      case e: ClusterEvent.MemberExited                   => Some(MemberExited(e.member.address))
+      case e: ClusterEvent.MemberJoined                   => Some(MemberJoined(e.member.address))
+      case e: ClusterEvent.MemberLeft                     => Some(MemberLeft(e.member.address))
+      case _                                              => None
+    }
+
+    if (model.isDefined) enqueue (model.get)
   }
 
   // NOTE: Cannot use a generic handle() because of spray.json.shapeless
