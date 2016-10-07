@@ -97,7 +97,10 @@ package object payment {
       val bytes = text.getBytes
       (text, bytes)
     }
-    override def hasher[T]: Hasher[T] = t => HashedValue(Hash("Hash"), serializer(t), t)
+    override def hasher[T]: Hasher[T] = t => {
+      val serialized = serializer(t)
+      HashedValue(Hash(serialized._1), serialized, t)
+    }
 
     override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ???
 
