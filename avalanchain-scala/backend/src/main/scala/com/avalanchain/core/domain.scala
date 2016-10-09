@@ -154,4 +154,14 @@ package object domain {
       hasher(ChainRefData(UUID.randomUUID(), s"${chainRef.value.name}#${chainRef.value.ver}\\$name", chainVersion))
     }
   }
+
+  type HashedRegistry[T] = Hash => T
+  type ClockTick = Int
+
+  trait AcCommandAction
+  case class AcEvent[T <: AcCommandAction](val action: T, val tick: ClockTick)
+
+  trait AcRegistryAction extends AcCommandAction
+  case class AcRegistryEvent[T <: AcRegistryAction](override val action: T, override val tick: ClockTick) extends AcEvent(action, tick)
+
 }

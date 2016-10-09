@@ -11,14 +11,14 @@ package object confirmation {
   type ConfirmationStateChangedNotifier = Hash => Unit
   case class Confirmation (nodeId: String, valueId: ValueId, value: Hash, notifier: ConfirmationStateChangedNotifier)
 
-  trait ConfirmationResult {
+  sealed trait ConfirmationResult {
     val confirmation: Confirmation
   }
   object ConfirmationResult {
-    case class InvalidConfirmation(confirmation: Confirmation) extends ConfirmationResult
-    case class ConfirmedSame(confirmation: Confirmation) extends ConfirmationResult
-    case class ConfirmedDifferent(confirmation: Confirmation, expectedHash: Hash) extends ConfirmationResult
-    case class NotConfirmedYet(confirmation: Confirmation) extends ConfirmationResult
+    final case class InvalidConfirmation(confirmation: Confirmation) extends ConfirmationResult
+    final case class ConfirmedSame(confirmation: Confirmation) extends ConfirmationResult
+    final case class ConfirmedDifferent(confirmation: Confirmation, expectedHash: Hash) extends ConfirmationResult
+    final case class NotConfirmedYet(confirmation: Confirmation) extends ConfirmationResult
   }
 
   type PolicyChecker = ExecutionPolicy => List[Confirmation] => Option[Hash]
