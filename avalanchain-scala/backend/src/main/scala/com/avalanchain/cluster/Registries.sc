@@ -30,7 +30,7 @@ val res1  = Await.result((cache1 ? GetFromCache("test")), timeout.duration)//.as
 
 val cache2 = systems(2).actorSelection("user/cache")
 val res2  = Await.result((cache2 ? GetFromCache("test")), timeout.duration)//.asInstanceOf[String]
-cache2 ! PutInCache("test", "test value 2")
+//cache2 ! PutInCache("test", "test value 2")
 
 
 //implicit val materializer = ActorMaterializer()

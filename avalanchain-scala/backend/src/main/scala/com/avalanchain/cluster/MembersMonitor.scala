@@ -8,7 +8,7 @@ import akka.stream.actor.ActorPublisherMessage.Request
 
 import scala.collection.mutable
 import spray.json._
-import fommil.sjs.FamilyFormats._ // this is spray.json.shapeless
+import fommil.sjs.FamilyFormats._ // NOTE: this is spray.json.shapeless. Do not remove.
 
 object ClusterMemberViewModels {
   sealed trait ClusterViewModel
@@ -71,32 +71,6 @@ class MembersMonitor extends Actor with ActorLogging with ActorPublisher[String]
     if (model.isDefined) enqueue (model.get)
   }
 
-  // NOTE: Cannot use a generic handle() because of spray.json.shapeless
-  // TODO: Find a way to serialize it with less boilerplate
-//  def handleUnreachable(event: UnreachableMember) {
-//    val e = UnreachableMemberVM(event.member.address)
-//    queue.enqueue((e: ViewModel).toJson.toString)
-//    publishIfNeeded()
-//  }
-//
-//  def handleMemberUp(event: MemberUp) {
-//    val e = MemberUpVM(event.member.address)
-//    queue.enqueue((e: ViewModel).toJson.toString)
-//    publishIfNeeded()
-//  }
-//
-//  def handleRemoved(event: MemberRemoved) {
-//    val e = MemberRemovedVM(event.member.address, event.previousStatus)
-//    queue.enqueue((e: ViewModel).toJson.toString)
-//    publishIfNeeded()
-//  }
-//
-//  def handleExit(event: MemberExited) {
-//    val e = MemberExitedVM(event.member.address)
-//    queue.enqueue((e: ViewModel).toJson.toString)
-//    publishIfNeeded()
-//  }
-//
   def publishIfNeeded() = {
     while (queue.nonEmpty && isActive && totalDemand > 0) {
       onNext(queue.dequeue())

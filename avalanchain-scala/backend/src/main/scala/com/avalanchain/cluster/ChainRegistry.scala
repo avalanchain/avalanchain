@@ -57,6 +57,6 @@ class ChainRegistry[T](val name: String) extends Actor with ActorLogging {
         case GetHashes => replyTo ! Array.empty
       }
 
-    case a => log.info("Message not manged: " + a.toString)
+    case a => log.info("Message not processed: " + a.toString)
   }
 }

@@ -43,7 +43,7 @@ class ChainPersistentActor[T](node: CryptoContext, val chainRef: ChainRef, initi
     case data: HashedValue[T] =>
       val newFrame = FrameBuilder.buildFrame[T](node, chainRef, currentState, data.value)
       inFlight += 1
-      persistAsync(newFrame) (e => {
+      persist(newFrame) (e => {
         saveFrame(newFrame)
         if (newFrame.mref.value.pos != 0 && newFrame.mref.value.pos % snapshotInterval == 0) saveSnapshot(newFrame)
         inFlight -= 1

@@ -57,11 +57,11 @@ class PrintActor() extends Actor {
   }
 }
 
-val printActor = new Act {
-  become {
-    case a => println(a)
-  }
-}
+//val printActor = new Act {
+//  become {
+//    case a => println(a)
+//  }
+//}
 
 val cs1 = deployNode (2551, Props[Destination], "_AA_")
 val cs2 = deployNode (2552, Props[Destination], "_AA_")
@@ -86,7 +86,7 @@ val workerRouter2 = cs2.actorOf(
 val workerRouter3 = cs2.actorOf(ClusterRouterGroup(BroadcastGroup(List("/user/print")),
   ClusterRouterGroupSettings(
     totalInstances = 10, routeesPaths = List("/user/print"),
-    allowLocalRoutees = true, useRole = None)).props(), name = "dest8")
+    allowLocalRoutees = true, useRole = None)).props(), name = "dest9")
 
 
 val path = cs1.actorSelection("/user/dest") ! "tuk"
@@ -109,7 +109,7 @@ val path7 = cs1.actorSelection("/user/print2") ! "tuk"
 val router18=
   cs1.actorOf(BroadcastPool(10).props(Props[PrintActor]), "router18")
 
-val path8 = cs1.actorSelection("/user/router18") ! "tuk"
+val path8 = cs1.actorSelection("/user/router19") ! "tuk"
 
 
 
