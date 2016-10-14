@@ -1,10 +1,7 @@
 package com.avalanchain.cluster
 
-import akka.actor.Extension
-import akka.actor.ActorSystem
-import akka.actor.ExtensionId
-import akka.actor.ExtensionIdProvider
-import akka.actor.ExtendedActorSystem
+import akka.actor.{Actor, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
+import com.avalanchain.core.builders.CryptoContextBuilder
 
 
 /**
@@ -16,7 +13,7 @@ class ACNodeExtensionImpl extends Extension {
   //private val counter = new AtomicLong(0)
 
   //This is the operation this Extension provides
-  //def increment() = counter.incrementAndGet()
+  def cryptoContext = CryptoContextBuilder()
 }
 
 object ACNodeExtension
@@ -36,4 +33,8 @@ object ACNodeExtension
     * Java API: retrieve the ACNode extension for the given system.
     */
   override def get(system: ActorSystem): ACNodeExtensionImpl = super.get(system)
+}
+
+trait ACNodeContext { self: Actor =>
+  def cryptoContext = ACNodeExtension(context.system).cryptoContext
 }
