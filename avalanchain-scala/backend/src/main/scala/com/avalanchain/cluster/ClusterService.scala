@@ -5,7 +5,8 @@ import java.util.UUID
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.routing.BroadcastPool
 import akka.stream.scaladsl.SourceQueue
-import com.avalanchain.core.domain.{HashedValue, StateFrame, ChainStream}
+import com.avalanchain.core.domain.ChainStream.Proofed.Signed
+import com.avalanchain.core.domain.{ChainStream, HashedValue, StateFrame}
 import com.typesafe.config.ConfigFactory
 
 import scala.collection.JavaConverters._
@@ -61,7 +62,7 @@ object ClusterService {
 
   val firstNode = deployNode(2551)
 
-  final case class InternalTransferSigned[T](signedValue: ChainStream.Signed[T])
+  final case class InternalTransferSigned[T](signedValue: Signed[T])
   final case class InternalTransferValue[T](hashedValue: HashedValue[T])
   final case class InternalTransferFrame[T](frame: StateFrame[T])
 }

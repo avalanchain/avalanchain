@@ -9,7 +9,8 @@ import com.avalanchain.core.domain.ExecutionPolicy
 package object confirmation {
   type ValueId = String
   type ConfirmationStateChangedNotifier = Hash => Unit
-  case class Confirmation (nodeId: String, valueId: ValueId, value: Hash, notifier: ConfirmationStateChangedNotifier)
+
+  final case class Confirmation (nodeId: String, valueId: ValueId, value: Hash, notifier: ConfirmationStateChangedNotifier)
 
   sealed trait ConfirmationResult {
     val confirmation: Confirmation

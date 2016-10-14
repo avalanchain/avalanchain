@@ -1,17 +1,17 @@
 package com.avalanchain.toolbox
 
 import java.io.File
-import java.util.UUID
 
 import akka.NotUsed
 import akka.actor.Props
-import akka.stream.{FlowShape, IOResult, SinkShape}
-import akka.stream.scaladsl.{Broadcast, FileIO, Flow, Framing, GraphDSL, Sink, Source}
+import akka.stream.{FlowShape, IOResult}
+import akka.stream.scaladsl.{Broadcast, FileIO, Flow, GraphDSL, Sink, Source}
 import com.avalanchain.core.chainFlow.ChainPersistentActor
-import com.avalanchain.core.domain.ChainStream.{Hash, Proof, Signed}
+import com.avalanchain.core.domain.ChainStream.Proof
 import com.avalanchain.core.domain._
 import GraphDSL.Implicits._
 import akka.util.ByteString
+import com.avalanchain.core.domain.ChainStream.Proofed.Signed
 
 import scala.concurrent.Future
 

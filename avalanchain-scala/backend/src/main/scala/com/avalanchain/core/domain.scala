@@ -5,6 +5,8 @@ package com.avalanchain.core
 
 import java.util.UUID
 
+import com.avalanchain.core.domain.ChainStream.Proofed.Signed
+
 import scala.util.Try
 
 package object domain {
@@ -27,7 +29,6 @@ package object domain {
   object ExecPolicy {
     final case class Pass() extends ExecutionPolicy
     final case class FixedMinimum(minNodes: Int) extends ExecutionPolicy
-    //case class Pass() extends ExecutionPolicy
   }
 
 
@@ -40,8 +41,7 @@ package object domain {
     type Serialized = (TextSerialized, BytesSerialized)
     type Hexed = String
 
-    type SigningPublicKey = Array[Byte]
-    type Signature = (SigningPublicKey, Array[Byte])
+    type Signature = (SigningPublicKey, ClockTick, Array[Byte])
 
     final case class Hash(hash: Hexed) {
       override def toString = hash
@@ -51,7 +51,13 @@ package object domain {
     }
 
     final case class Proof(signature: Signature, hash: Hash)
-    final case class Signed[T](proof: Proof, value: T)
+    sealed trait Proofed[T] {
+      def value: T
+    }
+    object Proofed {
+      final case class Signed[T](proof: Proof, value: T) extends Proofed[T]
+      final case class MultiSigned[T](proofs: Set[Proof], value: T) extends Proofed[T]
+    }
   }
 
   import ChainStream._
@@ -115,6 +121,7 @@ package object domain {
   type ChainRefProvider = () => ChainRef
 
   trait CryptoContext {
+    def vectorClock: VectorClock
     def hasher[T]: Hasher[T]
     def serializer[T]: Serializer[T]
     def deserializer[T]: Deserializer[T]
@@ -156,12 +163,16 @@ package object domain {
   }
 
   type HashedRegistry[T] = Hash => T
-  type ClockTick = Int
+  type ClockTick = Int // TODO: Rename to VectorClock?
+  type VectorClock = () => ClockTick
 
-  trait AcCommandAction
-  case class AcEvent[T <: AcCommandAction](val action: T, val tick: ClockTick)
+  trait AcCommand
+  // def tick: ClockTick
+  case class AcEvent[T <: AcCommand](command: T, tick: ClockTick)
 
-  trait AcRegistryAction extends AcCommandAction
-  case class AcRegistryEvent[T <: AcRegistryAction](override val action: T, override val tick: ClockTick) extends AcEvent(action, tick)
+  trait AcRegistryCommand extends AcCommand
+
+  type SignedCommand[T <: AcCommand] = Signed[T]
+  type SignedEvent[T <: AcCommand] = Proofed[SignedCommand[T]]
 
 }
