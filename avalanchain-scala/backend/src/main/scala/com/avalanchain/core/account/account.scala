@@ -2,9 +2,11 @@ package com.avalanchain.core
 
 import java.util.UUID
 
+import com.avalanchain.core.Certificate.EntityId
 import com.avalanchain.core.domain.ChainStream.Proofed.Signed
-import com.avalanchain.core.domain.{AcEvent, AcRegistryCommand, SigningPublicKey}
+import com.avalanchain.core.domain.{AcEvent, AcRegistryCommand, SignedEvent, SigningPublicKey}
 import com.avalanchain.core.roles.PermissionType.{Allow, Deny, Nested}
+import com.avalanchain.core.roles.RoleState.{Deleted, Empty, Invalid, Valid}
 
 /**
   * Created by Yuriy on 10/10/2016.
@@ -22,12 +24,18 @@ package object account {
 }
 
 package object roles {
-  final case class Permission(name: String)
+
+  trait Permission
+  object Permission {
+    final case class StringPermission(name: String) extends Permission
+    final case class EntityPermission(name: String, entityId: EntityId) extends Permission
+  }
+
   sealed trait PermissionType
   object PermissionType {
-    final case object Deny extends PermissionType
-    final case object Allow extends PermissionType
-    final case object Nested extends PermissionType
+    case object Deny extends PermissionType
+    case object Allow extends PermissionType
+    case object Nested extends PermissionType
   }
 
   final case class ACL(permissions: Map[Permission, PermissionType]) {
@@ -56,32 +64,64 @@ package object roles {
   }
 
   type UserId = UUID
-  type SignedUserId = Signed[UserId]
+  //type SignedUserId = Signed[UserId]
 
   sealed trait Principal
   //TODO: Claims?
 
   final case class RootAdmin(publicKey: SigningPublicKey)
 
-  final case class UserData(id: UserId, name: String) extends Principal
-  type User = Signed[UserData]
+  case class UserData(name: String) extends Principal // TODO: Extend UserData with more fields
+  final case class User(id: UserId, data: UserData) extends Principal
+  type UserEvent = SignedEvent[UserCommand]
+
   sealed trait UserCommand extends AcRegistryCommand
   object UserCommand {
-    final case class Add(user: User) extends UserCommand
+    final case class Create(user: User) extends UserCommand
+    final case class Update(user: User, oldData: UserData) extends UserCommand
+    final case class Delete(userId: UserId, reason: String) extends UserCommand
+    final case class Inactivate(userId: UserId, reason: String) extends UserCommand
+    final case class Reactivate(userId: UserId) extends UserCommand
     final case class AddPermissions(userId: UserId, permissions: ACL) extends UserCommand
     final case class RemovePermission(userId: UserId, permission: Permission) extends UserCommand
-    final case class Rename(user: User, oldName: String) extends UserCommand
+    final case class AddRole(roleId: RoleId) extends UserCommand
+    final case class RemoveRole(roleId: RoleId) extends UserCommand
   }
 
   type RoleId = UUID
-  type SignedRoleId = Signed[RoleId]
+  //type SignedRoleId = Signed[RoleId]
+  type RoleEvent = SignedEvent[RoleCommand]
 
-  final case class RoleData(id: RoleId, name: String) extends Principal
-  type Role = Signed[RoleData]
+  case class RoleData(name: String, description: String) extends Principal
+  final case class Role(roleId: RoleId, data: RoleData) extends Principal
 
-  sealed trait RoleCommand extends AcRegistryCommand
+  sealed trait RoleCommand extends AcRegistryCommand { def roleId: RoleId }
   object RoleCommand {
-    final case class Add(role: Role) extends RoleCommand
-    final case class AddPermission(certId: SignedRoleId) extends RoleCommand
+    final case class Create(role: Role, permissions: ACL) extends RoleCommand { val roleId = role.roleId }
+    final case class Update(roleId: RoleId, data: RoleData) extends RoleCommand
+    final case class Delete(roleId: RoleId, reason: String) extends RoleCommand
+    final case class AddPermissions(roleId: RoleId, permissions: ACL) extends RoleCommand
+    final case class RemovePermission(roleId: RoleId, permission: Permission) extends RoleCommand
+  }
+
+  sealed trait RoleState { def roleId: RoleId }
+  object RoleState {
+    final case class Empty(roleId: RoleId) extends RoleState
+    final case class Valid(role: Role, permissions: ACL) extends RoleState { val roleId = role.roleId }
+    final case class Invalid(roleId: RoleId) extends RoleState
+    final case class Deleted(roleId: RoleId, reason: String) extends RoleState
+  }
+  def applyRoleEvents(roleId: RoleId, events: List[RoleEvent]): RoleState = {
+    events.map(_.value.value).filter(_.roleId == roleId).foldLeft (Empty(roleId).asInstanceOf[RoleState]) ((rs, c) => (rs, c) match {
+      case (Invalid(_), _) => rs
+      case (Deleted(_, _), _) => rs
+      case (Empty(_), RoleCommand.Create(role, acl)) => Valid(role, acl)
+      case (Empty(_), _) => Invalid(roleId)
+      case (Valid(role, acl), RoleCommand.Update(_, data)) => Valid(role.copy(data = data), acl)
+      case (Valid(_, _), RoleCommand.Delete(_, reason)) => Deleted(roleId, reason)
+      case (Valid(role, acl), RoleCommand.AddPermissions(_, newAcl)) => Valid(role, acl + newAcl)
+      case (Valid(role, acl), RoleCommand.RemovePermission(_, permission)) => Valid(role, acl - permission)
+      case _ => Invalid(roleId)
+    })
   }
 }

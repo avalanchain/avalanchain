@@ -12,8 +12,6 @@ import com.avalanchain.core.roles.RootAdmin
 import scorex.crypto.hash.CryptographicHash
 import scorex.crypto.signatures.SigningFunctions
 
-import scala.annotation.tailrec
-
 /**
   * Created by Yuriy Habarov on 09/10/2016.
   */
@@ -41,10 +39,10 @@ object Certificate {
     def certId: CertId
   }
   object CertificateCommand {
-    final case class Add(certificate: Certificate) extends CertificateCommand { def certId = certificate.value.id }
-    final case class Invalidate(signedCertId: SignedCertId) extends CertificateCommand { def certId = signedCertId.value }
-    final case class Refresh(certificate: Certificate) extends CertificateCommand { def certId = certificate.value.id }
-    final case class RequestRefresh(signedCertId: SignedCertId) extends CertificateCommand { def certId = signedCertId.value }
+    final case class Add(certificate: Certificate) extends CertificateCommand { val certId = certificate.value.id }
+    final case class Invalidate(signedCertId: SignedCertId) extends CertificateCommand { val certId = signedCertId.value }
+    final case class Refresh(certificate: Certificate) extends CertificateCommand { val certId = certificate.value.id }
+    final case class RequestRefresh(signedCertId: SignedCertId) extends CertificateCommand { val certId = signedCertId.value }
   }
   type CertificateEvent = AcEvent[CertificateCommand]
 
@@ -53,8 +51,8 @@ object Certificate {
   }
   object CertificateValidity {
     final case class NotExists(certId: CertId) extends CertificateValidity
-    final case class Valid(certificate: Certificate, from: ClockTick, to: ClockTick) extends CertificateValidity { def certId = certificate.value.id}
-    final case class Expired(certificate: Certificate, expiredAt: ClockTick) extends CertificateValidity { def certId = certificate.value.id}
+    final case class Valid(certificate: Certificate, from: ClockTick, to: ClockTick) extends CertificateValidity { val certId = certificate.value.id}
+    final case class Expired(certificate: Certificate, expiredAt: ClockTick) extends CertificateValidity { val certId = certificate.value.id}
     final case class Invalidated(certId: CertId, invalidationEvent: CertificateEvent) extends CertificateValidity //TODO: change to AcEvent[Invalidate]
     final case class Inconsistent(certId: CertId, reason: String) extends CertificateValidity
   }
