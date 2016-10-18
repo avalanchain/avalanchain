@@ -72,21 +72,42 @@ package object roles {
   final case class RootAdmin(publicKey: SigningPublicKey)
 
   case class UserData(name: String) extends Principal // TODO: Extend UserData with more fields
-  final case class User(id: UserId, data: UserData) extends Principal
+  final case class User(userId: UserId, data: UserData) extends Principal
   type UserEvent = SignedEvent[UserCommand]
 
-  sealed trait UserCommand extends AcRegistryCommand
+  sealed trait UserCommand extends AcRegistryCommand { def userId: UserId }
   object UserCommand {
-    final case class Create(user: User) extends UserCommand
-    final case class Update(user: User, oldData: UserData) extends UserCommand
+    final case class Create(user: User, permissions: ACL) extends UserCommand { val userId = user.userId }
+    final case class Update(user: User, oldData: UserData) extends UserCommand { val userId = user.userId }
     final case class Delete(userId: UserId, reason: String) extends UserCommand
     final case class Inactivate(userId: UserId, reason: String) extends UserCommand
     final case class Reactivate(userId: UserId) extends UserCommand
     final case class AddPermissions(userId: UserId, permissions: ACL) extends UserCommand
     final case class RemovePermission(userId: UserId, permission: Permission) extends UserCommand
-    final case class AddRole(roleId: RoleId) extends UserCommand
-    final case class RemoveRole(roleId: RoleId) extends UserCommand
+    final case class AddRole(userId: UserId, roleId: RoleId) extends UserCommand
+    final case class RemoveRole(userId: UserId, roleId: RoleId) extends UserCommand
   }
+
+  sealed trait UserState { def userId: UserId }
+  object UserState {
+    final case class Valid(user: User, permissions: ACL) extends UserState { val userId = user.userId }
+    final case class Invalid(userId: UserId) extends UserState
+    final case class Deleted(userId: UserId, reason: String) extends UserState
+  }
+//  def applyUserEvents(userId: UserId, events: List[UserEvent]): Option[UserState] = {
+//    events.map(_.value.value).filter(_.userId == userId).foldLeft (None) ((us, c) => (us, c) match {
+//      case (Invalid(_), _) => us
+//      case (Deleted(_, _), _) => us
+//      case (Empty(_), RoleCommand.Create(role, acl)) => Valid(role, acl)
+//      case (Empty(_), _) => Invalid(roleId)
+//      case (Valid(role, acl), RoleCommand.Update(_, data)) => Valid(role.copy(data = data), acl)
+//      case (Valid(_, _), RoleCommand.Delete(_, reason)) => Deleted(roleId, reason)
+//      case (Valid(role, acl), RoleCommand.AddPermissions(_, newAcl)) => Valid(role, acl + newAcl)
+//      case (Valid(role, acl), RoleCommand.RemovePermission(_, permission)) => Valid(role, acl - permission)
+//      case _ => Invalid(roleId)
+//    })
+//  }
+
 
   type RoleId = UUID
   //type SignedRoleId = Signed[RoleId]
