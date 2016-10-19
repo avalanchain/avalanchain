@@ -103,7 +103,7 @@ class ExamplePersistentActor extends PersistentActor {
 
 import akka.pattern.ask
 
-val epa = system1.actorOf(Props(new ExamplePersistentActor()))
+val epa = system1.actorOf(Props[ExamplePersistentActor])
 
 epa ! Cmd("foo")
 epa ! "print"
