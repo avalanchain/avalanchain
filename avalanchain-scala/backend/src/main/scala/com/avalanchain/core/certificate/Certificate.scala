@@ -8,7 +8,7 @@ import com.avalanchain.core.Certificate.CertificateCommand.{Add, Invalidate, Ref
 import com.avalanchain.core.Certificate.CertificateValidity._
 import com.avalanchain.core.domain._
 import com.avalanchain.core.domain.ChainStream.Proofed.Signed
-import com.avalanchain.core.roles.RootAdmin
+import com.avalanchain.core.principals.RootAdmin
 import scorex.crypto.hash.CryptographicHash
 import scorex.crypto.signatures.SigningFunctions
 

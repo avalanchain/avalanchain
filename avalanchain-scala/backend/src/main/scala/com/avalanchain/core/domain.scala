@@ -26,7 +26,7 @@ package object domain {
 
   sealed trait ExecutionPolicy
 
-  object ExecPolicy {
+  object ExecutionPolicy {
     final case class Pass() extends ExecutionPolicy
     final case class FixedMinimum(minNodes: Int) extends ExecutionPolicy
   }

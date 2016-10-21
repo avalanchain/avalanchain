@@ -6,7 +6,7 @@ package com.avalanchain.cluster
 import akka.actor.{Actor, ActorRef, Props}
 import akka.cluster.Cluster
 import akka.cluster.ddata.{DistributedData, LWWMap, LWWMapKey}
-import com.avalanchain.core.domain.ChainStream.{SigningPublicKey => _, _}
+import com.avalanchain.core.domain.ChainStream._
 import com.avalanchain.core.domain._
 
 object NodeKeysRepository {
