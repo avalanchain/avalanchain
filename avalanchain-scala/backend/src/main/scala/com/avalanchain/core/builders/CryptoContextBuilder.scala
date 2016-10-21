@@ -31,24 +31,24 @@ import fommil.sjs.FamilyFormats._
   */
 object CryptoContextBuilder {
   // sealed trait Serializer
-  object PicklingSerializer {
-    def serializer[T: FastTypeTag : Pickler]: Serializer[T] = (value: T) => {
-      val pickled = value.pickle
-      val text = pickled.toString
-      (text, text.getBytes(StandardCharsets.UTF_8))
-    }
-
-    def deserializer[T: FastTypeTag : Unpickler]: Deserializer[T] = {
-      def textDeserializer = (text: TextSerialized) => {
-        text.unpickle[T]
-      }
-      def bytesDeserializer = (bytes: BytesSerialized) => {
-        val text = new String(bytes.map(_.toChar))
-        textDeserializer(text)
-      }
-      (textDeserializer, bytesDeserializer)
-    }
-  }
+//  object PicklingSerializer {
+//    def serializer[T: FastTypeTag : Pickler]: Serializer[T] = (value: T) => {
+//      val pickled = value.pickle
+//      val text = pickled.toString
+//      (text, text.getBytes(StandardCharsets.UTF_8))
+//    }
+//
+//    def deserializer[T: FastTypeTag : Unpickler]: Deserializer[T] = {
+//      def textDeserializer = (text: TextSerialized) => {
+//        text.unpickle[T]
+//      }
+//      def bytesDeserializer = (bytes: BytesSerialized) => {
+//        val text = new String(bytes.map(_.toChar))
+//        textDeserializer(text)
+//      }
+//      (textDeserializer, bytesDeserializer)
+//    }
+//  }
 
 //  object SprayJsonSerializer {
 //    def serializer[T]: Serializer[T] = (value: T) => {
@@ -84,10 +84,9 @@ object CryptoContextBuilder {
     }
   }
 
-  def scorexHasher[T](hasher: CryptographicHash, serializer: Serializer[T]): Hasher[T] = (value: T) => {
-    val serialized = serializer(value)
-    val hash = hasher(serialized._2)
-    HashedValue(Hash(hash), serialized, value)
+  def scorexHasher(hasher: CryptographicHash): Hasher = (value: BytesSerialized) => {
+    val hash = hasher(value)
+    HashedValue(Hash(hash), value)
   }
 
   private class SigningECC25519(keyPairOpt: Option[(SigningPrivateKey, SigningPublicKey)] = None) {
@@ -102,17 +101,16 @@ object CryptoContextBuilder {
     def signingPrivateKey = keyPair._1
     def signingPublicKey = keyPair._2
 
-    def signer[T](serializer: Serializer[T], hasher: Hasher[T], vectorClock: VectorClock): Signer[T] = (value: T) => {
-      val signature = curve.sign(keyPair._1.bytes, serializer(value)._2)
+    def signer[T](hasher: Hasher, vectorClock: VectorClock): Signer = (value: BytesSerialized) => {
+      val signature = curve.sign(keyPair._1.bytes, value)
       val hashedValue = hasher(value)
       val proof = Proof((signingPublicKey, vectorClock(), signature), hashedValue.hash)
       Signed(proof, value)
     }
-    def verifier[T](serializer: Serializer[T], hasher: Hasher[T], vectorClock: VectorClock): Verifier[T] = (proof: Proof, value: T) => {
-      val serialized = serializer(value)
+    def verifier[T](hasher: Hasher, vectorClock: VectorClock): Verifier = (proof: Proof, value: BytesSerialized) => {
       val expectedHash = hasher(value).hash
       if (expectedHash != proof.hash) HashCheckFailed(value, proof.hash, expectedHash)
-      else if (curve.verify(proof.signature._3, serialized._2, proof.signature._1.bytes)) Passed(value)
+      else if (curve.verify(proof.signature._3, value, proof.signature._1.bytes)) Passed(value)
       else ProofCheckFailed(value)
     }
   }
@@ -142,18 +140,21 @@ object CryptoContextBuilder {
     (new CryptoContext {
       private val ai = new AtomicInteger(0)
 
-      override def vectorClock: VectorClock = () => ai.getAndAdd(1)
-      override def hasher[T]: Hasher[T] = scorexHasher(hash, serializer)
+      def vectorClock: VectorClock = () => ai.getAndAdd(1)
+      def hasher: Hasher = scorexHasher(hash)
 
-      override def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
-      override def bytes2Hexed: Bytes2Hexed = Hexing.Base58Hexing.bytes2Hexed
+      def text2Bytes: Text2Bytes = _.getBytes(StandardCharsets.UTF_8)
+      def bytes2Text: Bytes2Text = bytes => new String(bytes.map(_.toChar))
 
-      override def serializer[T]: Serializer[T] = ??? //PicklingSerializer.serializer[T] // SprayJsonSerializer.serializer[T]
-      override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ??? //PicklingSerializer.deserializer[T] // SprayJsonSerializer.deserializer[T]
+      def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
+      def bytes2Hexed: Bytes2Hexed = Hexing.Base58Hexing.bytes2Hexed
 
-      override def signingPublicKey: SigningPublicKey = signing.signingPublicKey
-      override def signer[T]: Signer[T] = signing.signer(serializer, hasher, vectorClock)
-      override def verifier[T]: Verifier[T] = signing.verifier(serializer, hasher, vectorClock)
+//      override def serializer[T]: Serializer[T] = ??? //PicklingSerializer.serializer[T] // SprayJsonSerializer.serializer[T]
+//      override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ??? //PicklingSerializer.deserializer[T] // SprayJsonSerializer.deserializer[T]
+
+      def signingPublicKey: SigningPublicKey = signing.signingPublicKey
+      def signer: Signer = signing.signer(hasher, vectorClock)
+      def verifier: Verifier = signing.verifier(hasher, vectorClock)
     }, signing.signingPrivateKey)
   }
 }

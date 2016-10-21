@@ -16,7 +16,7 @@ import scala.concurrent.Future
   */
 class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
 
-  final case class SignedMessage(message: Signed[String])
+  final case class SignedMessage(message: Signed)
 
   def echoServer(host: String, port: Int) = {
     val connections: Source[IncomingConnection, Future[ServerBinding]] =

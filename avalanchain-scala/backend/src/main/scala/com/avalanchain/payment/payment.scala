@@ -91,30 +91,30 @@ package object payment {
     }
   }
 
-  // TODO: Add proper implementation
-  val simpleContext = new CryptoContext {
-    val ai = new AtomicInteger(0)
-    override def vectorClock = () => ai.getAndAdd(1)
-    override def signer[T]: Signer[T] = ???
-    override def signingPublicKey: SigningPublicKey = PublicKey("SigningPublicKey".getBytes)
-    override def serializer[T]: Serializer[T] = t => {
-      val text = t.toString
-      val bytes = text.getBytes
-      (text, bytes)
-    }
-    override def hasher[T]: Hasher[T] = t => {
-      val serialized = serializer(t)
-      HashedValue(Hash(serialized._2), serialized, t)
-    }
-
-    override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ???
-
-    override def hexed2Bytes: Hexed2Bytes = s => Success(s.getBytes())
-
-    override def bytes2Hexed: Bytes2Hexed = Base64.getEncoder.encodeToString
-
-    override def verifier[T]: Verifier[T] = ???
-  }
+//  // TODO: Add proper implementation
+//  val simpleContext = new CryptoContext {
+//    val ai = new AtomicInteger(0)
+//    override def vectorClock = () => ai.getAndAdd(1)
+//    override def signer[T]: Signer[T] = ???
+//    override def signingPublicKey: SigningPublicKey = PublicKey("SigningPublicKey".getBytes)
+//    override def serializer[T]: Serializer[T] = t => {
+//      val text = t.toString
+//      val bytes = text.getBytes
+//      (text, bytes)
+//    }
+//    override def hasher[T]: Hasher[T] = t => {
+//      val serialized = serializer(t)
+//      HashedValue(Hash(serialized._2), serialized, t)
+//    }
+//
+//    override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ???
+//
+//    override def hexed2Bytes: Hexed2Bytes = s => Success(s.getBytes())
+//
+//    override def bytes2Hexed: Bytes2Hexed = Base64.getEncoder.encodeToString
+//
+//    override def verifier[T]: Verifier[T] = ???
+//  }
 
   def newAccount(name: String, cryptoContext: CryptoContext) = {
     val accountRef = PaymentAccountRef(name)
@@ -159,9 +159,9 @@ package object payment {
     }
   }
 
-  val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), simpleContext))
+//  val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), simpleContext))
   //val accounts = List.tabulate(200)(_ => newAccount (UUID.randomUUID().toString(), ))
-  val balances = accounts.map(a => (a.ref, 1000)).toMap
+//  val balances = accounts.map(a => (a.ref, 1000)).toMap
   //val transactionStorage = TransactionStorage(accounts, balances)
   //let bot = tradingBot (transactionStorage) (new Random())
 }

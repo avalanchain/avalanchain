@@ -30,8 +30,8 @@ object Certificate {
                                    from: ClockTick,
                                    to: ClockTick)
 
-  type Certificate = Signed[CertificateData]
-  type SignedCertId = Signed[CertId]
+  type Certificate = (Proofed, CertificateData)
+  //type SignedCertId = Signed[CertId]
 
   type CertificateRegistry = HashedRegistry[Certificate]
 
@@ -39,10 +39,10 @@ object Certificate {
     def certId: CertId
   }
   object CertificateCommand {
-    final case class Add(certificate: Certificate) extends CertificateCommand { val certId = certificate.value.id }
-    final case class Invalidate(signedCertId: SignedCertId) extends CertificateCommand { val certId = signedCertId.value }
-    final case class Refresh(certificate: Certificate) extends CertificateCommand { val certId = certificate.value.id }
-    final case class RequestRefresh(signedCertId: SignedCertId) extends CertificateCommand { val certId = signedCertId.value }
+    final case class Add(certificate: Certificate) extends CertificateCommand { val certId = certificate._2.id }
+    final case class Invalidate(certId: CertId) extends CertificateCommand
+    final case class Refresh(certificate: Certificate) extends CertificateCommand { val certId = certificate._2.id }
+    final case class RequestRefresh(certId: CertId) extends CertificateCommand
   }
   type CertificateEvent = AcEvent[CertificateCommand]
 
@@ -51,8 +51,8 @@ object Certificate {
   }
   object CertificateValidity {
     final case class NotExists(certId: CertId) extends CertificateValidity
-    final case class Valid(certificate: Certificate, from: ClockTick, to: ClockTick) extends CertificateValidity { val certId = certificate.value.id}
-    final case class Expired(certificate: Certificate, expiredAt: ClockTick) extends CertificateValidity { val certId = certificate.value.id}
+    final case class Valid(certificate: Certificate, from: ClockTick, to: ClockTick) extends CertificateValidity { val certId = certificate._2.id}
+    final case class Expired(certificate: Certificate, expiredAt: ClockTick) extends CertificateValidity { val certId = certificate._2.id}
     final case class Invalidated(certId: CertId, invalidationEvent: CertificateEvent) extends CertificateValidity //TODO: change to AcEvent[Invalidate]
     final case class Inconsistent(certId: CertId, reason: String) extends CertificateValidity
   }
@@ -62,16 +62,16 @@ object Certificate {
       def applyEvents(cv: CertificateValidity, e: CertificateEvent): CertificateValidity =
         (cv, e.command) match {
           case (NotExists(_), Add(cert)) =>
-            if (cert.value.from > tick) NotExists(certId)
-            else if (cert.value.to < tick) Expired(cert, cert.value.to)
-            else Valid(cert, cert.value.from, cert.value.to)
+            if (cert._2.from > tick) NotExists(certId)
+            else if (cert._2.to < tick) Expired(cert, cert._2.to)
+            else Valid(cert, cert._2.from, cert._2.to)
           case (Inconsistent(_, _), _) => cv
           case (Invalidated(_, _), _) => cv
           case (Expired(_, expiredAt), Refresh(cert)) =>
-            if (cert.value.from >= tick) Valid(cert, cert.value.from, cert.value.to)
+            if (cert._2.from >= tick) Valid(cert, cert._2.from, cert._2.to)
             else cv
           case (Valid(_, _, _), Invalidate(_)) => Invalidated(certId, e)
-          case (Valid(_, from, to), Refresh(cert)) => Valid(cert, Math.min(from, cert.value.from), Math.max(to, cert.value.to))
+          case (Valid(_, from, to), Refresh(cert)) => Valid(cert, Math.min(from, cert._2.from), Math.max(to, cert._2.to))
           case (Valid(_, _, _), Add(_)) => cv // ignoring reAdd
           case (_, RequestRefresh(_)) => cv // TODO: Rethink RequestRefresh processing
           // TODO: fix and finish the logic

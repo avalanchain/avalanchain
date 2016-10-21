@@ -16,12 +16,12 @@ import scala.util.matching.Regex
   */
 package object account {
   type AccountId = UUID
-  type SignedAccountId = Signed[AccountId]
+  //type SignedAccountId = Signed[AccountId]
 
-  sealed trait AccountCommand extends AcRegistryCommand { def accountId: SignedAccountId }
-  final case class Add(accountId: SignedAccountId) extends AccountCommand
-  final case class Block(accountId: SignedAccountId) extends AccountCommand
-  final case class Invalidate(accountId: SignedAccountId) extends AccountCommand
+  sealed trait AccountCommand extends AcRegistryCommand { def accountId: AccountId }
+  final case class Add(accountId: AccountId) extends AccountCommand
+  final case class Block(accountId: AccountId) extends AccountCommand
+  final case class Invalidate(accountId: AccountId) extends AccountCommand
 
   type AccountEvent = SignedEvent[AccountCommand]
 
@@ -200,7 +200,7 @@ package object principals {
     final case class Deleted(roleId: RoleId, reason: String) extends RoleState
 
     def applyRoleEvents(roleId: RoleId, events: List[RoleEvent]): RoleState = {
-      events.map(_.value.value).filter(_.roleId == roleId).foldLeft (Empty(roleId).asInstanceOf[RoleState]) ((rs, c) => (rs, c) match {
+    events.map(_._2._2).filter(_.roleId == roleId).foldLeft (Empty(roleId).asInstanceOf[RoleState]) ((rs, c) => (rs, c) match {
         case (Invalid(_, _), _) => rs
         case (Deleted(_, _), _) => rs
         case (Empty(_), Create(role, acl)) => Valid(role, acl)
