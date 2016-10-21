@@ -5,6 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Framing, Source, Tcp}
 import akka.stream.scaladsl.Tcp.{IncomingConnection, ServerBinding}
 import akka.util.ByteString
+import com.avalanchain.core.builders.CryptoContextBuilder
 import com.avalanchain.core.domain.CryptoContext
 import com.avalanchain.core.domain.Proofed.Signed
 
@@ -75,9 +76,15 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
 }
 
 object SignedEchoServer extends App {
-  REPL.echoServer("127.0.0.1", 9888)
+  val ctx = CryptoContextBuilder()
+  implicit val system = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+  new REPLS(ctx._1, system, materializer).echoServer("127.0.0.1", 9888)
 }
 
 object SignedEchoClient extends App {
-  REPL.echoClient("127.0.0.1", 9888)
+  val ctx = CryptoContextBuilder()
+  implicit val system = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+  new REPLS(ctx._1, system, materializer).echoClient("127.0.0.1", 9888)
 }

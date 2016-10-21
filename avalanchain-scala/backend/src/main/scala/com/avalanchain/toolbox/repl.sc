@@ -15,7 +15,7 @@ val curve = new Curve25519
 val (context, privKey) = CryptoContextBuilder()
 
 def toHexedK(key: SecurityKey) = context.bytes2Hexed(key.bytes)
-def toHexedH[T](hashedValue: HashedValue[T]) = context.bytes2Hexed(hashedValue.hash.hash)
+def toHexedH(hashedValue: HashedValue) = context.bytes2Hexed(hashedValue.hash.hash)
 
 val pubKey = context.signingPublicKey
 
@@ -23,8 +23,17 @@ println(toHexedK(pubKey))
 println(toHexedK(privKey))
 
 val str = "Hi"
-val hashed = context.hasher(str)
+val hashed = context.hasher(context.text2Bytes(str))
 println(toHexedH(hashed))
+val hashed2 = context.hasher(context.text2Bytes(str))
+println(toHexedH(hashed2))
+hashed.bytes sameElements hashed2.bytes
+
+val signed = context.signer(context.text2Bytes(str))
+println(signed.proof)
+val verified = context.verifier(signed.proof, signed.value)
+println(verified)
+
 //val signed = context.signer(str)
 //
 //println(signed)

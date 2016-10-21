@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.avalanchain.core.domain.Proofed.Signed
-import com.avalanchain.core.domain.{SigningPublicKey, _}
+import com.avalanchain.core.domain._
 import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed}
 import scorex.crypto.encode.{Base16, Base58, Base64}
 import scorex.crypto.hash.{CryptographicHash, Sha256, Sha512}
@@ -109,7 +109,7 @@ object CryptoContextBuilder {
     }
     def verifier[T](hasher: Hasher, vectorClock: VectorClock): Verifier = (proof: Proof, value: BytesSerialized) => {
       val expectedHash = hasher(value).hash
-      if (expectedHash != proof.hash) HashCheckFailed(value, proof.hash, expectedHash)
+      if (!(expectedHash.hash sameElements proof.hash.hash)) HashCheckFailed(value, proof.hash, expectedHash)
       else if (curve.verify(proof.signature._3, value, proof.signature._1.bytes)) Passed(value)
       else ProofCheckFailed(value)
     }
@@ -134,8 +134,8 @@ object CryptoContextBuilder {
 //  Skein
 //  Whirlpool
 
-  def apply(hash: CryptographicHash = Sha512): (CryptoContext, SigningPrivateKey) = {
-    val signing = new SigningECC25519
+  def apply(keyPairOpt: Option[(SigningPrivateKey, SigningPublicKey)] = None, hash: CryptographicHash = Sha512): (CryptoContext, SigningPrivateKey) = {
+    val signing = new SigningECC25519(keyPairOpt)
 
     (new CryptoContext {
       private val ai = new AtomicInteger(0)
