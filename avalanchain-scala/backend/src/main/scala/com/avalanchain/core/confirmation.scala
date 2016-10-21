@@ -1,6 +1,6 @@
 package com.avalanchain.core
 
-import com.avalanchain.core.domain.ChainStream.Hash
+import com.avalanchain.core.domain.Hash
 import com.avalanchain.core.domain.ExecutionPolicy
 
 /**

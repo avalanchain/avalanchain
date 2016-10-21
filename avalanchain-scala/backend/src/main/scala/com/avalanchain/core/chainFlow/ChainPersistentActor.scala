@@ -4,9 +4,7 @@ import java.util.UUID
 
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
-import com.avalanchain.core.domain
-import com.avalanchain.core.domain.ChainStream.Hash
-import com.avalanchain.core.domain.{HashedValue, MerkledRef, StateFrame, _}
+import com.avalanchain.core.domain._
 
 /**
   * Created by Yuriy Habarov on 29/04/2016.

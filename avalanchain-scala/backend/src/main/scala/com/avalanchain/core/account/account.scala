@@ -3,7 +3,7 @@ package com.avalanchain.core
 import java.util.UUID
 
 import com.avalanchain.core.Certificate.EntityId
-import com.avalanchain.core.domain.ChainStream.Proofed.Signed
+import com.avalanchain.core.domain.Proofed.Signed
 import com.avalanchain.core.domain.{AcEvent, AcRegistryCommand, SignedEvent, SigningPublicKey}
 import com.avalanchain.core.permissions.PermissionType.{Allow, Deny, Nested}
 import com.avalanchain.core.permissions.{Permission, UserId}

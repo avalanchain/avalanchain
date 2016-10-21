@@ -3,11 +3,9 @@ package com.avalanchain.core.builders
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.avalanchain.core.domain.ChainStream.Proofed.Signed
-import com.avalanchain.core.domain.ChainStream._
-import com.avalanchain.core.domain.{SigningPublicKey => _, _}
+import com.avalanchain.core.domain.Proofed.Signed
+import com.avalanchain.core.domain.{SigningPublicKey, _}
 import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed}
-import com.avalanchain.core.domain._
 import scorex.crypto.encode.{Base16, Base58, Base64}
 import scorex.crypto.hash.{CryptographicHash, Sha256, Sha512}
 import scorex.crypto.signatures.Curve25519
@@ -70,30 +68,27 @@ object CryptoContextBuilder {
     HashedValue(Hash(b2h), serialized, value)
   }
 
-  trait Signing[T] {
-    def signer: Signer[T]
-    def verifier: Verifier[T]
-  }
-  object Signing {
+  class SigningECC25519(bytes2Hexed: Bytes2Hexed) {
     private val curve = new Curve25519
-    private val keyPair: (PrivateKey, PublicKey) = curve.createKeyPair
+    private val keyPair: (SigningPrivateKey, SigningPublicKey) = {
+      val pair: (scorex.crypto.signatures.SigningFunctions.PrivateKey, scorex.crypto.signatures.SigningFunctions.PublicKey) = curve.createKeyPair
+      (PrivateKey(pair._1, bytes2Hexed), PublicKey(pair._2, bytes2Hexed))
+    }
 
     def signingPublicKey = keyPair._2
 
-    class ECC25519[T](serializer: Serializer[T], hasher: Hasher[T], vectorClock: VectorClock) extends Signing[T] {
-      override def signer: Signer[T] = (value: T) => {
-        val signature = curve.sign(keyPair._1, serializer(value)._2)
-        val hashedValue = hasher(value)
-        val proof = Proof((signingPublicKey, vectorClock(), signature), hashedValue.hash)
-        Signed(proof, value)
-      }
-      override def verifier: Verifier[T] = (proof: Proof, value: T) => {
-        val serialized = serializer(value)
-        val expectedHash = hasher(value).hash
-        if (expectedHash != proof.hash) HashCheckFailed(value, proof.hash, expectedHash)
-        else if (curve.verify(proof.signature._3, serialized._2, proof.signature._1)) Passed(value)
-        else ProofCheckFailed(value)
-      }
+    def signer[T](serializer: Serializer[T], hasher: Hasher[T], vectorClock: VectorClock): Signer[T] = (value: T) => {
+      val signature = curve.sign(keyPair._1.bytes, serializer(value)._2)
+      val hashedValue = hasher(value)
+      val proof = Proof((signingPublicKey, vectorClock(), signature), hashedValue.hash)
+      Signed(proof, value)
+    }
+    def verifier[T](serializer: Serializer[T], hasher: Hasher[T], vectorClock: VectorClock): Verifier[T] = (proof: Proof, value: T) => {
+      val serialized = serializer(value)
+      val expectedHash = hasher(value).hash
+      if (expectedHash != proof.hash) HashCheckFailed(value, proof.hash, expectedHash)
+      else if (curve.verify(proof.signature._3, serialized._2, proof.signature._1.bytes)) Passed(value)
+      else ProofCheckFailed(value)
     }
   }
 
@@ -118,19 +113,40 @@ object CryptoContextBuilder {
 
   def apply(hash: CryptographicHash = Sha512): CryptoContext = {
     val ai = new AtomicInteger(0)
+    val bytes2Hexed = (b: BytesSerialized) => "qwerty" //Hexing.Base58Hexing.bytes2Hexed
+
     new CryptoContext {
+      private val signing = new SigningECC25519(bytes2Hexed)
+
+      override def vectorClock: VectorClock = () => ai.getAndAdd(1)
+      override def hasher[T]: Hasher[T] = ??? // hasher
+
+      override def hexed2Bytes: Hexed2Bytes = ??? // Hexing.Base58Hexing.hexed2Bytes
+      override def bytes2Hexed: Bytes2Hexed = bytes2Hexed
+
+      override def serializer[T]: Serializer[T] = ??? // serializer
+      override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ??? // deserializer
+
+      override def signingPublicKey: SigningPublicKey = signing.signingPublicKey
+      override def signer[T]: Signer[T] = ??? // signing.signer(serializer, hasher, vectorClock)
+      override def verifier[T]: Verifier[T] = ??? // signing.verifier(serializer, hasher, vectorClock)
+    }
+
+    new CryptoContext {
+      private val signing = new SigningECC25519(bytes2Hexed)
+
       override def vectorClock: VectorClock = () => ai.getAndAdd(1)
       override def hasher[T]: Hasher[T] = hasher
 
       override def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
-      override def bytes2Hexed: Bytes2Hexed = Hexing.Base58Hexing.bytes2Hexed
+      override def bytes2Hexed: Bytes2Hexed = bytes2Hexed
 
       override def serializer[T]: Serializer[T] = serializer
       override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = deserializer
 
-      override def signingPublicKey: SigningPublicKey = Signing.signingPublicKey
-      override def signer[T]: Signer[T] = (new Signing.ECC25519[T](serializer, hasher, vectorClock)).signer
-      override def verifier[T]: Verifier[T] = (new Signing.ECC25519[T](serializer, hasher, vectorClock)).verifier
+      override def signingPublicKey: SigningPublicKey = signing.signingPublicKey
+      override def signer[T]: Signer[T] = signing.signer(serializer, hasher, vectorClock)
+      override def verifier[T]: Verifier[T] = signing.verifier(serializer, hasher, vectorClock)
     }
   }
 }

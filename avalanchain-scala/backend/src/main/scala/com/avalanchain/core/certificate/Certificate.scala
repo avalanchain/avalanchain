@@ -7,7 +7,7 @@ import akka.actor.FSM.{Event, StateTimeout}
 import com.avalanchain.core.Certificate.CertificateCommand.{Add, Invalidate, Refresh, RequestRefresh}
 import com.avalanchain.core.Certificate.CertificateValidity._
 import com.avalanchain.core.domain._
-import com.avalanchain.core.domain.ChainStream.Proofed.Signed
+import com.avalanchain.core.domain.Proofed.Signed
 import com.avalanchain.core.principals.RootAdmin
 import scorex.crypto.hash.CryptographicHash
 import scorex.crypto.signatures.SigningFunctions

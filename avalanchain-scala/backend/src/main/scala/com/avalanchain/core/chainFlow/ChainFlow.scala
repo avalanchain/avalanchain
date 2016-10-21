@@ -8,7 +8,6 @@ import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import com.avalanchain.core.domain.ChainStream.Hash
 import com.avalanchain.core.domain._
 
 /**

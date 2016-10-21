@@ -3,20 +3,20 @@ package com.avalanchain
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.Base64
+import java.nio.charset.StandardCharsets
 
 import akka.actor.{Actor, ActorLogging, Props}
 import akka.actor.Actor.Receive
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
-import com.avalanchain.core.domain.ChainStream.{BytesSerialized, Hash, Signature, TextSerialized}
-import com.avalanchain.core.domain.{SigningPublicKey, _}
 import com.avalanchain.core.domain._
 
 import scala.annotation.tailrec
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Random
+import scala.util.{Random, Success}
 
 /**
   * Created by Yuriy Habarov on 19/04/2016.
@@ -96,7 +96,7 @@ package object payment {
     val ai = new AtomicInteger(0)
     override def vectorClock = () => ai.getAndAdd(1)
     override def signer[T]: Signer[T] = ???
-    override def signingPublicKey: SigningPublicKey = "SigningPublicKey".getBytes
+    override def signingPublicKey: SigningPublicKey = PublicKey("SigningPublicKey".getBytes, bytes2Hexed)
     override def serializer[T]: Serializer[T] = t => {
       val text = t.toString
       val bytes = text.getBytes
@@ -109,9 +109,9 @@ package object payment {
 
     override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ???
 
-    override def hexed2Bytes: Hexed2Bytes = ???
+    override def hexed2Bytes: Hexed2Bytes = s => Success(s.getBytes())
 
-    override def bytes2Hexed: Bytes2Hexed = ???
+    override def bytes2Hexed: Bytes2Hexed = Base64.getEncoder.encodeToString
 
     override def verifier[T]: Verifier[T] = ???
   }

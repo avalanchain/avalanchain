@@ -5,17 +5,11 @@ package com.avalanchain.core
 
 import java.util.UUID
 
-import com.avalanchain.core.domain.ChainStream.Proofed.Signed
+import com.avalanchain.core.domain.Proofed.Signed
 
 import scala.util.Try
 
 package object domain {
-  type PublicKey = Array[Byte]
-  // TODO: Replace with java.security.PublicKey
-  type SigningPublicKey = PublicKey
-  type EncryptionPublicKey = PublicKey
-  // TODO: Rewrite with base58 encoding
-  def pkToString(pk: PublicKey) = new String(pk)
 
   trait ExecGroup
 
@@ -32,35 +26,49 @@ package object domain {
   }
 
 
-  object ChainStream {
-    type Id = UUID
-    type Version = Long
+  type Id = UUID
+  type Version = Long
 
-    type TextSerialized = String
-    type BytesSerialized = Array[Byte]
-    type Serialized = (TextSerialized, BytesSerialized)
-    type Hexed = String
+  type TextSerialized = String
+  type BytesSerialized = Array[Byte]
+  type Serialized = (TextSerialized, BytesSerialized)
+  type Hexed = String
 
-    type Signature = (SigningPublicKey, ClockTick, Array[Byte])
+  type Serializer[T] = T => Serialized
+  type Deserializer[T] = (TextSerialized => T, BytesSerialized => T)
+  type Hasher[T] = T => HashedValue[T]
+  type Bytes2Hexed = BytesSerialized => Hexed
+  type Hexed2Bytes = Hexed => Try[BytesSerialized]
 
-    final case class Hash(hash: Hexed) {
-      override def toString = hash
-    }
-    object Hash {
-      val Zero = Hash("")
-    }
 
-    final case class Proof(signature: Signature, hash: Hash)
-    sealed trait Proofed[T] {
-      def value: T
-    }
-    object Proofed {
-      final case class Signed[T](proof: Proof, value: T) extends Proofed[T]
-      final case class MultiSigned[T](proofs: Set[Proof], value: T) extends Proofed[T]
-    }
+  sealed trait SecurityKey
+  // TODO: Replace with java.security.PublicKey
+  // TODO: Make constructor private and use sealed trait
+  final case class PublicKey(bytes: BytesSerialized, hexer: Bytes2Hexed) extends SecurityKey { override def toString = hexer(bytes) }
+  final case class PrivateKey(bytes: BytesSerialized, hexer: Bytes2Hexed) extends SecurityKey { override def toString = hexer(bytes) }
+
+  type SigningPublicKey = PublicKey
+  type EncryptionPublicKey = PublicKey
+  type SigningPrivateKey = PrivateKey
+  type EncryptionPrivateKey = PrivateKey
+
+  type Signature = (SigningPublicKey, ClockTick, Array[Byte])
+
+  final case class Hash(hash: Hexed) {
+    override def toString = hash
+  }
+  object Hash {
+    val Zero = Hash("")
   }
 
-  import ChainStream._
+  final case class Proof(signature: Signature, hash: Hash)
+  sealed trait Proofed[T] {
+    def value: T
+  }
+  object Proofed {
+    final case class Signed[T](proof: Proof, value: T) extends Proofed[T]
+    final case class MultiSigned[T](proofs: Set[Proof], value: T) extends Proofed[T]
+  }
 
   trait Hashed {
     val hash: Hash
@@ -109,12 +117,6 @@ package object domain {
     final case class ProofCheckFailed[T](override val value: T) extends Verified[T]
   }
 
-
-  type Serializer[T] = T => Serialized
-  type Deserializer[T] = (TextSerialized => T, BytesSerialized => T)
-  type Hasher[T] = T => HashedValue[T]
-  type Bytes2Hexed = BytesSerialized => Hexed
-  type Hexed2Bytes = Hexed => Try[BytesSerialized]
   type Signer[T] = T => Signed[T]
   type Verifier[T] = (Proof, T) => Verified[T]
 

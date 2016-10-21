@@ -5,8 +5,8 @@ import java.util.UUID
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.routing.BroadcastPool
 import akka.stream.scaladsl.SourceQueue
-import com.avalanchain.core.domain.ChainStream.Proofed.Signed
-import com.avalanchain.core.domain.{ChainStream, HashedValue, StateFrame}
+import com.avalanchain.core.domain.Proofed.Signed
+import com.avalanchain.core.domain.{HashedValue, StateFrame}
 import com.typesafe.config.ConfigFactory
 
 import scala.collection.JavaConverters._
