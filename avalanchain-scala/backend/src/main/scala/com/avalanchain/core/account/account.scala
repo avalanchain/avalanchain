@@ -151,7 +151,7 @@ package object principals {
     final case class Deleted(userId: UserId, reason: String) extends UserState
 
     def applyUserEvents(userId: UserId, events: List[UserEvent], roleValidator: RoleId => Option[(Role, ACL)]): UserState = {
-      events.map(_.value.value).filter(_.userId == userId).foldLeft (Empty(userId).asInstanceOf[UserState]) ((us, c) => (us, c) match {
+      events.map(_._2._2).filter(_.userId == userId).foldLeft (Empty(userId).asInstanceOf[UserState]) ((us, c) => (us, c) match {
         case (Invalid(_, _), _) => us
         case (Deleted(_, _), _) => us
         case (Empty(_), Create(user, roles, acl)) =>
