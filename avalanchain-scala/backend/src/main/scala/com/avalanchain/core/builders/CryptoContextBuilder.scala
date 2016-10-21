@@ -13,7 +13,8 @@ import scorex.crypto.signatures.SigningFunctions.{PublicKey => _, _}
 
 import scala.pickling._
 import scala.pickling.json._
-import scala.pickling.static._  // Avoid runtime pickler
+import scala.pickling.static._
+import scala.util.Success  // Avoid runtime pickler
 
 // Import pickle ops
 import scala.pickling.Defaults.{ pickleOps, unpickleOps }
@@ -48,16 +49,16 @@ object CryptoContextBuilder {
 
   object Hexing {
     object Base58Hexing {
-      def bytes2Hexed = (bytes: BytesSerialized) => Base58.encode(bytes)
-      def hexed2Bytes = (hexed: Hexed) => Base58.decode(hexed)
+      def bytes2Hexed: Bytes2Hexed = Base58.encode(_)
+      def hexed2Bytes: Hexed2Bytes = Base58.decode(_)
     }
     object Base64Hexing {
-      def bytes2Hexed = (bytes: BytesSerialized) => Base64.encode(bytes)
-      def hexed2Bytes = (hexed: Hexed) => Base64.decode(hexed)
+      def bytes2Hexed: Bytes2Hexed = Base64.encode(_)
+      def hexed2Bytes: Hexed2Bytes = s => Success(Base64.decode(s))
     }
     object Base16Hexing {
-      def bytes2Hexed = (bytes: BytesSerialized) => Base16.encode(bytes)
-      def hexed2Bytes = (hexed: Hexed) => Base16.decode(hexed)
+      def bytes2Hexed: Bytes2Hexed = Base16.encode(_)
+      def hexed2Bytes: Hexed2Bytes = s => Success(Base16.decode(s))
     }
   }
 
@@ -68,13 +69,16 @@ object CryptoContextBuilder {
     HashedValue(Hash(b2h), serialized, value)
   }
 
-  class SigningECC25519(bytes2Hexed: Bytes2Hexed) {
+  private class SigningECC25519(bytes2Hexed: Bytes2Hexed, keyPairOpt: Option[(SigningPrivateKey, SigningPublicKey)] = None) {
     private val curve = new Curve25519
-    private val keyPair: (SigningPrivateKey, SigningPublicKey) = {
-      val pair: (scorex.crypto.signatures.SigningFunctions.PrivateKey, scorex.crypto.signatures.SigningFunctions.PublicKey) = curve.createKeyPair
-      (PrivateKey(pair._1, bytes2Hexed), PublicKey(pair._2, bytes2Hexed))
+    private val keyPair: (SigningPrivateKey, SigningPublicKey) = keyPairOpt match {
+      case Some(kp) => kp
+      case None =>
+        val pair: (scorex.crypto.signatures.SigningFunctions.PrivateKey, scorex.crypto.signatures.SigningFunctions.PublicKey) = curve.createKeyPair
+        (PrivateKey(pair._1, bytes2Hexed), PublicKey(pair._2, bytes2Hexed))
     }
 
+    def signingPrivateKey = keyPair._1
     def signingPublicKey = keyPair._2
 
     def signer[T](serializer: Serializer[T], hasher: Hasher[T], vectorClock: VectorClock): Signer[T] = (value: T) => {
@@ -111,35 +115,18 @@ object CryptoContextBuilder {
 //  Skein
 //  Whirlpool
 
-  def apply(hash: CryptographicHash = Sha512): CryptoContext = {
-    val ai = new AtomicInteger(0)
-    val bytes2Hexed = (b: BytesSerialized) => "qwerty" //Hexing.Base58Hexing.bytes2Hexed
+  def apply(hash: CryptographicHash = Sha512): (CryptoContext, SigningPrivateKey) = {
+    val b2h = Hexing.Base58Hexing.bytes2Hexed
+    val signing = new SigningECC25519(b2h)
 
-    new CryptoContext {
-      private val signing = new SigningECC25519(bytes2Hexed)
-
-      override def vectorClock: VectorClock = () => ai.getAndAdd(1)
-      override def hasher[T]: Hasher[T] = ??? // hasher
-
-      override def hexed2Bytes: Hexed2Bytes = ??? // Hexing.Base58Hexing.hexed2Bytes
-      override def bytes2Hexed: Bytes2Hexed = bytes2Hexed
-
-      override def serializer[T]: Serializer[T] = ??? // serializer
-      override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ??? // deserializer
-
-      override def signingPublicKey: SigningPublicKey = signing.signingPublicKey
-      override def signer[T]: Signer[T] = ??? // signing.signer(serializer, hasher, vectorClock)
-      override def verifier[T]: Verifier[T] = ??? // signing.verifier(serializer, hasher, vectorClock)
-    }
-
-    new CryptoContext {
-      private val signing = new SigningECC25519(bytes2Hexed)
+    (new CryptoContext {
+      private val ai = new AtomicInteger(0)
 
       override def vectorClock: VectorClock = () => ai.getAndAdd(1)
       override def hasher[T]: Hasher[T] = hasher
 
       override def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
-      override def bytes2Hexed: Bytes2Hexed = bytes2Hexed
+      override def bytes2Hexed: Bytes2Hexed = b2h
 
       override def serializer[T]: Serializer[T] = serializer
       override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = deserializer
@@ -147,6 +134,6 @@ object CryptoContextBuilder {
       override def signingPublicKey: SigningPublicKey = signing.signingPublicKey
       override def signer[T]: Signer[T] = signing.signer(serializer, hasher, vectorClock)
       override def verifier[T]: Verifier[T] = signing.verifier(serializer, hasher, vectorClock)
-    }
+    }, signing.signingPrivateKey)
   }
 }
