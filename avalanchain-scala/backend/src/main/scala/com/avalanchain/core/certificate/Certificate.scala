@@ -8,7 +8,7 @@ import com.avalanchain.core.Certificate.CertificateCommand.{Add, Invalidate, Ref
 import com.avalanchain.core.Certificate.CertificateValidity._
 import com.avalanchain.core.domain._
 import com.avalanchain.core.domain.Proofed.Signed
-import com.avalanchain.core.principals.RootAdmin
+import com.avalanchain.core.roles.{RootAdmin, UserId}
 import scorex.crypto.hash.CryptographicHash
 import scorex.crypto.signatures.SigningFunctions
 
@@ -23,8 +23,8 @@ object Certificate {
 
   final case class CertificateData(id: CertId,
                                    entityId: EntityId,
-                                   Issuer: EntityId,
-                                   publicKey: SigningPublicKey,
+                                   issuer: UserId,
+                                   publicKey: KeyBytes,//SigningPublicKey
                                    hashAlgorithm: CryptographicHash,
                                    signingAlgorithm: SigningFunctions,
                                    from: ClockTick,

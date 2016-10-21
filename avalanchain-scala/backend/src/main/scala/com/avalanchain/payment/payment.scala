@@ -96,7 +96,7 @@ package object payment {
     val ai = new AtomicInteger(0)
     override def vectorClock = () => ai.getAndAdd(1)
     override def signer[T]: Signer[T] = ???
-    override def signingPublicKey: SigningPublicKey = PublicKey("SigningPublicKey".getBytes, bytes2Hexed)
+    override def signingPublicKey: SigningPublicKey = PublicKey("SigningPublicKey".getBytes)
     override def serializer[T]: Serializer[T] = t => {
       val text = t.toString
       val bytes = text.getBytes
@@ -104,7 +104,7 @@ package object payment {
     }
     override def hasher[T]: Hasher[T] = t => {
       val serialized = serializer(t)
-      HashedValue(Hash(serialized._1), serialized, t)
+      HashedValue(Hash(serialized._2), serialized, t)
     }
 
     override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ???

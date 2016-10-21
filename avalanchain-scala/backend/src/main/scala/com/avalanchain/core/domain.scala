@@ -40,25 +40,32 @@ package object domain {
   type Bytes2Hexed = BytesSerialized => Hexed
   type Hexed2Bytes = Hexed => Try[BytesSerialized]
 
-
-  sealed trait SecurityKey
+  type KeyBytes = BytesSerialized
+  type HashBytes = BytesSerialized
+  sealed trait SecurityKey { def bytes: KeyBytes }
   // TODO: Replace with java.security.PublicKey
   // TODO: Make constructor private and use sealed trait
-  final case class PublicKey(bytes: BytesSerialized, hexer: Bytes2Hexed) extends SecurityKey { override def toString = hexer(bytes) }
-  final case class PrivateKey(bytes: BytesSerialized, hexer: Bytes2Hexed) extends SecurityKey { override def toString = hexer(bytes) }
+  final case class PublicKey(bytes: KeyBytes) extends SecurityKey
+  final case class PrivateKey(bytes: KeyBytes) extends SecurityKey
+
+//  object SecurityKeyExtensions {
+//    class RichKey(key: SecurityKey, implicit val bytes2Hexed: Bytes2Hexed) {
+//      def toHexed = bytes2Hexed(key.bytes)
+//      //override def toString = context.bytes2Hexed(key.bytes)
+//    }
+//    implicit def toRickKey(key: SecurityKey, bytes2Hexed: Bytes2Hexed) = new RichKey(key)
+//  }
 
   type SigningPublicKey = PublicKey
   type EncryptionPublicKey = PublicKey
   type SigningPrivateKey = PrivateKey
   type EncryptionPrivateKey = PrivateKey
 
-  type Signature = (SigningPublicKey, ClockTick, Array[Byte])
+  type Signature = (SigningPublicKey, ClockTick, BytesSerialized)
 
-  final case class Hash(hash: Hexed) {
-    override def toString = hash
-  }
+  final case class Hash(hash: HashBytes)
   object Hash {
-    val Zero = Hash("")
+    val Zero = Hash(Array[Byte]())
   }
 
   final case class Proof(signature: Signature, hash: Hash)

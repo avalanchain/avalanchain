@@ -4,6 +4,7 @@ import akka.stream.scaladsl.{Flow, Source, Tcp}
 import akka.stream.scaladsl.Tcp.{IncomingConnection, ServerBinding}
 import akka.util.ByteString
 import com.avalanchain.core.builders.CryptoContextBuilder
+import com.avalanchain.core.domain._
 import com.avalanchain.toolbox.REPL
 import scorex.crypto.signatures.Curve25519
 
@@ -13,15 +14,24 @@ val curve = new Curve25519
 
 val (context, privKey) = CryptoContextBuilder()
 
+def toHexedK(key: SecurityKey) = context.bytes2Hexed(key.bytes)
+def toHexedH[T](hashedValue: HashedValue[T]) = context.bytes2Hexed(hashedValue.hash.hash)
+
 val pubKey = context.signingPublicKey
 
-println(pubKey)
-println(privKey)
+println(toHexedK(pubKey))
+println(toHexedK(privKey))
 
+val str = "Hi"
+val hashed = context.hasher(str)
+println(toHexedH(hashed))
+//val signed = context.signer(str)
+//
+//println(signed)
 
 ///////
-implicit val system = ActorSystem()
-implicit val materializer = ActorMaterializer()
+//implicit val system = ActorSystem()
+//implicit val materializer = ActorMaterializer()
 
 /////// Signed communication
 
