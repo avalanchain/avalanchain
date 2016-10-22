@@ -1,4 +1,10 @@
-import io.circe._, io.circe.generic.auto._, io.circe.parser._, io.circe.syntax._
+import akka.util.ByteString
+import cats.data.Xor
+import com.avalanchain.core.domain.{ByteWord, PublicKey}
+import io.circe._
+import io.circe.generic.auto._
+import io.circe.parser._
+import io.circe.syntax._
 // import io.circe._
 // import io.circe.generic.auto._
 // import io.circe.parser._
@@ -21,17 +27,37 @@ foo.asJson.noSpaces
 
 decode[Foo](foo.asJson.spaces4)
 
-trait CirceEncoders {
-  implicit object ClientErrorEncoder extends Encoder[Foo] {
-    override def apply(a: Foo): Json = a.asJson
-  }
+//val pubKey = PublicKey()
+
+//class CirceEncoders {
+//  implicit object ClientErrorEncoder extends Encoder[ByteString] {
+//    override def apply(a: ByteString): Json = a.mkString.asJson
+//  }
+//}
+
+implicit val encodeFoo = new Encoder[ByteString] {
+  final def apply(a: ByteString): Json = a.utf8String.asJson // your implementation goes here
 }
 
-
-
-def f[T <: Foo](v: T): String = {
-  (v.asJson.noSpaces)
+implicit val decodeInstant: Decoder[ByteString] = Decoder.decodeString.emap { str =>
+  Xor.catchNonFatal(ByteString(str)).leftMap(t => "Instant")
 }
 
-val a = f(Qux(13, Some(14.0)))
-println(a)
+val bs: ByteWord = ByteString("10")
+val json = bs.asJson.toString
+decode[ByteString](json)
+
+//val j = parse(json.as[ByteString]).getOrElse(JsonObject.empty)
+
+//def f[T <: Foo](v: T): String = {
+//  (v.asJson.noSpaces)
+//}
+//
+//val a = f(Qux(13, Some(14.0)))
+//println(a)
+
+//implicit class Pipe[T](val v: T) {
+//  def |>[U](f: T => U) = f(v)
+//}
+//
+//List(5, 6, 7) |> (_.map( x => s"${x + 1}:" )) |> println

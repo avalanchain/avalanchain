@@ -5,9 +5,9 @@ package com.avalanchain.core
 
 import java.util.UUID
 
+import akka.util.ByteString
 import com.avalanchain.core.domain.Proofed.Signed
-
-import scala.util.Try
+import io.circe.generic.JsonCodec
 
 package object domain {
 
@@ -29,8 +29,13 @@ package object domain {
   type Id = UUID
   type Version = Long
 
+  type ByteWord = ByteString
+  object ByteWord {
+    def apply(b: Array[Byte]): ByteWord = ByteString(b)
+  }
+
   type TextSerialized = String
-  type BytesSerialized = Array[Byte]
+  type BytesSerialized = ByteString
   type Serialized = (TextSerialized, BytesSerialized)
   type Hexed = TextSerialized
 
@@ -42,24 +47,30 @@ package object domain {
   type BytesDeserializer[T] = BytesSerialized => T
   type Bytes2Text = BytesSerialized => Hexed
 
-  type Hasher = BytesSerialized => HashedValue
+  type Hasher = ByteWord => HashedValue
   type Bytes2Hexed = BytesSerialized => Hexed
-  type Hexed2Bytes = Hexed => Try[BytesSerialized]
+  type Hexed2Bytes = Hexed => BytesSerialized
 
-  type KeyBytes = BytesSerialized
-  type HashBytes = BytesSerialized
-  sealed trait SecurityKey { def bytes: KeyBytes }
+//  type KeyBytes = BytesSerialized
+//  type HashBytes = BytesSerialized
+//  type SignatureBytes = BytesSerialized
+//  type ValueBytes = BytesSerialized
+  type KeyBytes = ByteWord
+  type HashBytes = ByteWord
+  type SignatureBytes = ByteWord
+  type ValueBytes = ByteWord
+  sealed trait SecurityKey { def key: KeyBytes }
   // TODO: Replace with java.security.PublicKey
   // TODO: Make constructor private and use sealed trait
-  final case class PublicKey(bytes: KeyBytes) extends SecurityKey
-  final case class PrivateKey(bytes: KeyBytes) extends SecurityKey
+  final case class PublicKey(key: KeyBytes) extends SecurityKey
+  final case class PrivateKey(key: KeyBytes) extends SecurityKey
 
 //  object SecurityKeyExtensions {
 //    class RichKey(key: SecurityKey, implicit val bytes2Hexed: Bytes2Hexed) {
 //      def toHexed = bytes2Hexed(key.bytes)
 //      //override def toString = context.bytes2Hexed(key.bytes)
 //    }
-//    implicit def toRickKey(key: SecurityKey, bytes2Hexed: Bytes2Hexed) = new RichKey(key)
+//    implicit def toRichKey(key: SecurityKey, bytes2Hexed: Bytes2Hexed) = new RichKey(key)
 //  }
 
   type SigningPublicKey = PublicKey
@@ -67,28 +78,28 @@ package object domain {
   type SigningPrivateKey = PrivateKey
   type EncryptionPrivateKey = PrivateKey
 
-  type Signature = (SigningPublicKey, ClockTick, BytesSerialized)
+  type Signature = (SigningPublicKey, ClockTick, SignatureBytes)
 
   final case class Hash(hash: HashBytes)
   object Hash {
-    val Zero = Hash(Array[Byte]())
+    val Zero = Hash(ByteString.empty)
   }
 
   final case class Proof(signature: Signature, hash: Hash)
   sealed trait Proofed {
-    def value: BytesSerialized
+    def value: ValueBytes
   }
   object Proofed {
-    final case class Signed(proof: Proof, value: BytesSerialized) extends Proofed
-    final case class MultiSigned(proofs: Set[Proof], value: BytesSerialized) extends Proofed
+    final case class Signed(proof: Proof, value: ValueBytes) extends Proofed
+    final case class MultiSigned(proofs: Set[Proof], value: ValueBytes) extends Proofed
   }
 
   trait Hashed {
     val hash: Hash
-    val bytes: BytesSerialized
+    val value: ValueBytes
   }
 
-  final case class HashedValue(hash: Hash, bytes: BytesSerialized) extends Hashed
+  final case class HashedValue(hash: Hash, value: ValueBytes) extends Hashed
 
 //  final case class ChainRefData(id: Id, name: String, ver: Version)
 //  type ChainRef = HashedValue[ChainRefData]
@@ -122,16 +133,16 @@ package object domain {
 //  }
 
   sealed trait Verified {
-    val value: BytesSerialized
+    val value: ValueBytes
   }
   object Verified {
-    final case class Passed(value: BytesSerialized) extends Verified
-    final case class HashCheckFailed(value: BytesSerialized, actual: Hash, expected: Hash) extends Verified
-    final case class ProofCheckFailed(value: BytesSerialized) extends Verified
+    final case class Passed(value: ValueBytes) extends Verified
+    final case class HashCheckFailed(value: ValueBytes, actual: Hash, expected: Hash) extends Verified
+    final case class ProofCheckFailed(value: ValueBytes) extends Verified
   }
 
-  type Signer = BytesSerialized => Signed
-  type Verifier = (Proof, BytesSerialized) => Verified
+  type Signer = ByteWord => Signed
+  type Verifier = (Proof, ValueBytes) => Verified
 
 //  type ChainRefProvider = () => ChainRef
 
@@ -180,7 +191,7 @@ package object domain {
 //  }
 
   type HashedRegistry[T] = Hash => T
-  type ClockTick = Int // TODO: Rename to VectorClock?
+  type ClockTick = BigInt // TODO: Rename to VectorClock?
   type VectorClock = () => ClockTick
 
   trait AcCommand

@@ -72,7 +72,7 @@ object Certificate {
             if (cert._2.from >= tick) Valid(cert, cert._2.from, cert._2.to)
             else cv
           case (Valid(_, _, _), Invalidate(_)) => Invalidated(certId, e)
-          case (Valid(_, from, to), Refresh(cert)) => Valid(cert, Math.min(from, cert._2.from), Math.max(to, cert._2.to))
+          case (Valid(_, from, to), Refresh(cert)) => Valid(cert, (from :: cert._2.from :: Nil).min, (to :: cert._2.to :: Nil).max)
           case (Valid(_, _, _), Add(_)) => cv // ignoring reAdd
           case (_, RequestRefresh(_)) => cv // TODO: Rethink RequestRefresh processing
           // TODO: fix and finish the logic

@@ -6,10 +6,11 @@ import akka.stream.scaladsl.{Flow, Framing, Source, Tcp}
 import akka.stream.scaladsl.Tcp.{IncomingConnection, ServerBinding}
 import akka.util.ByteString
 import com.avalanchain.core.builders.CryptoContextBuilder
-import com.avalanchain.core.domain.CryptoContext
+import com.avalanchain.core.domain._
 import com.avalanchain.core.domain.Proofed.Signed
 
 import scala.concurrent.Future
+import com.avalanchain.toolbox.Pipe._
 
 /**
   * Created by Yuriy Habarov on 21/10/2016.
@@ -76,15 +77,22 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
 }
 
 object SignedEchoServer extends App {
-  val ctx = CryptoContextBuilder()
+  val ctx1 = CryptoContextBuilder()
+  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ctx1._1.hexed2Bytes) |> (PrivateKey(_))
+  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ctx1._1.hexed2Bytes) |> (PublicKey(_))
+  val ctx = CryptoContextBuilder(Some((priv, pub)))
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
   new REPLS(ctx._1, system, materializer).echoServer("127.0.0.1", 9888)
 }
 
 object SignedEchoClient extends App {
-  val ctx = CryptoContextBuilder()
+  val ctx1 = CryptoContextBuilder()
+  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ctx1._1.hexed2Bytes) |> (PrivateKey(_))
+  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ctx1._1.hexed2Bytes) |> (PublicKey(_))
+  val ctx = CryptoContextBuilder(Some((priv, pub)))
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
   new REPLS(ctx._1, system, materializer).echoClient("127.0.0.1", 9888)
 }
+
