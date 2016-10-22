@@ -116,7 +116,7 @@ object CryptoContextBuilder {
     def verifier(hasher: Hasher): Verifier = (proof: Proof, value: ValueBytes) => {
       val expectedHash = hasher(value).hash
       if (!(expectedHash.hash sameElements proof.hash.hash)) HashCheckFailed(value, proof.hash, expectedHash)
-      else if (curve.verify(proof.signature._3.toArray, value.toArray, proof.signature._1.key.toArray)) Passed(value)
+      else if (curve.verify(proof.signature._3.toArray, (ByteWord(proof.signature._2.toByteArray) concat value).toArray, proof.signature._1.key.toArray)) Passed(value)
       else ProofCheckFailed(value)
     }
   }
@@ -150,7 +150,7 @@ object CryptoContextBuilder {
       def hasher: Hasher = scorexHasher(hash)
 
       def text2Bytes: Text2Bytes = _.getBytes(StandardCharsets.UTF_8) |> (ByteWord(_))
-      def bytes2Text: Bytes2Text = _.mkString
+      def bytes2Text: Bytes2Text = _.utf8String
 
       def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
       def bytes2Hexed: Bytes2Hexed = Hexing.Base58Hexing.bytes2Hexed

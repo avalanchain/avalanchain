@@ -19,6 +19,8 @@ case class Bar(xs: List[String]) extends Foo
 case class Qux(i: Int, d: Option[Double]) extends Foo
 // defined class Qux
 
+case class Qux1(i: Int, d: Option[Bar]) extends Foo
+
 val foo: Foo = Qux(13, Some(14.0))
 // foo: Foo = Qux(13,Some(14.0))
 
@@ -26,6 +28,18 @@ foo.asJson.noSpaces
 // res0: String = {"Qux":{"i":13,"d":14.0}}
 
 decode[Foo](foo.asJson.spaces4)
+
+case class AA(msg: Option[String])
+case class BB(aa: AA)
+
+val aa = AA(Some("Test"))
+val jaa = aa.asJson.spaces2.toString
+decode[AA](jaa).toOption.get
+
+val bb = BB(aa)
+val jbb = bb.asJson.spaces2.toString
+decode[BB](jbb).toOption.get
+
 
 //val pubKey = PublicKey()
 

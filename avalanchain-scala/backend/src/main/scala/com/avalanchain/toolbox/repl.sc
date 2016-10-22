@@ -1,3 +1,5 @@
+import java.nio.charset.StandardCharsets
+
 import akka.actor.{Actor, ActorSystem}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Source, Tcp}
@@ -15,6 +17,7 @@ import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
+import sun.nio.cs.StandardCharsets
 
 import scala.concurrent.Future
 

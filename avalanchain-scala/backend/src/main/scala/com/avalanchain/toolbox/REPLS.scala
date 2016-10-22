@@ -13,11 +13,14 @@ import scala.concurrent.Future
 import com.avalanchain.toolbox.Pipe._
 import com.avalanchain.toolbox.CirceEncoders._
 import org.joda.time.DateTime
-
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
+import cats._
+import cats.data.Xor
+import cats.syntax.flatMap._
+import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed}
 
 import scala.util.{Failure, Success}
 
@@ -30,6 +33,9 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
   case class ChatMessage(message: String, time: DateTime)
   case class SignedMessage(signed: Signed)
 
+  private implicit def bytes2Hexed = cryptoContext.bytes2Hexed
+  private implicit def hexed2Bytes = cryptoContext.hexed2Bytes
+
   def echoServer(host: String, port: Int) = {
     val connections: Source[IncomingConnection, Future[ServerBinding]] =
       Tcp().bind(host, port)
@@ -39,11 +45,17 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
       // server logic, parses incoming commands
       val commandParser = Flow[String]
         .map(text => { println(s"${connection.remoteAddress}: Message received: '$text'"); text })
-        .map(decode[ChatMessage](_).toEither)
+        .map(decode[SignedMessage](_).leftMap(e => s"SignedMessage parsing failed: '$e'")
+          .flatMap(sm => cryptoContext.verifier(sm.signed.proof, sm.signed.value) match {
+            case Passed(value) => Xor.right(sm)
+            case HashCheckFailed(value, actual, expected) => Xor.left("Signature hash verification failed")
+            case ProofCheckFailed(value) => Xor.left("Signature proof verification failed")
+          })
+          .flatMap(sm => decode[ChatMessage](sm.signed.value |> (cryptoContext.bytes2Text))).leftMap(e => s"ChatMessage parsing failed: '$e'").toEither)
         .map(tcm => {
           tcm match {
             case Right(cm) => println(s"${connection.remoteAddress}: Message deserialized: '$cm'")
-            case Left(msg) => println(s"${connection.remoteAddress}: Message deserialization failed with message: '$msg'")
+            case Left(msg) => println(s"${connection.remoteAddress}: $msg")
           }
           tcm
         })
@@ -82,7 +94,12 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
       Flow[String].takeWhile(e => e != "q" && e != "BYE")
         .concat(Source.single("BYE"))
         .map(ChatMessage(_, DateTime.now()))
-        .map(m => m.asJson.toString)
+        .map(_.asJson.toString)
+        .map(cryptoContext.text2Bytes(_))
+        .map(cryptoContext.signer(_))
+        .map(SignedMessage(_))
+        .map(_.asJson.toString)
+        .map(text => { println(s"Sending: '$text'"); text })
         .map(ByteString(_))
 
     val repl = Flow[ByteString]
