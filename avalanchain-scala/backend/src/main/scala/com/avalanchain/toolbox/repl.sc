@@ -62,7 +62,10 @@ val s = decode[Signed](json).toOption.get
 
 val same = signed.equals(s)
 
-val json1 = (SignedMessage(signed)).asJson
+val sm = SignedMessage(signed)
+val json1 = sm.asJson.spaces2
+val s1 = decode[SignedMessage](json1).toOption.get
+val same1 = sm.equals(s1)
 
 //val json = pubKey.asJson.noSpaces
 
