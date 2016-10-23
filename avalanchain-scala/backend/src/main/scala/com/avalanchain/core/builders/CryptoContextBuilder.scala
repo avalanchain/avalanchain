@@ -5,8 +5,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.util.ByteString
 import com.avalanchain.core.domain.Proofed.Signed
-import com.avalanchain.core.domain.{PrivateKey, _}
-import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed}
+import com.avalanchain.core.domain.{CryptoContextSettings, PrivateKey, _}
+import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed, PublicKeyNotValid}
 import com.avalanchain.toolbox.Pipe._
 import scorex.crypto.encode.{Base16, Base58, Base64}
 import scorex.crypto.hash.{CryptographicHash, Sha256, Sha512}
@@ -71,96 +71,68 @@ object CryptoContextBuilder {
 //    }
 //  }
 
-  object Hexing {
-    object Base58Hexing {
-      def bytes2Hexed: Bytes2Hexed = _ |> (_.toArray) |> Base58.encode
-      def hexed2Bytes: Hexed2Bytes = _ |> (Base58.decode(_).getOrElse(Array[Byte]())) |> (ByteWord(_))
-    }
-    object Base64Hexing {
-      def bytes2Hexed: Bytes2Hexed = _ |> (_.toArray) |> Base64.encode
-      def hexed2Bytes: Hexed2Bytes = _ |> (Base64.decode(_)) |> (ByteWord(_))
-    }
-    object Base16Hexing {
-      def bytes2Hexed: Bytes2Hexed = _ |> (_.toArray) |> Base16.encode
-      def hexed2Bytes: Hexed2Bytes = _ |> (Base16.decode(_)) |> (ByteWord(_))
-    }
-  }
-
-  def scorexHasher(hasher: CryptographicHash): Hasher = (value: ByteWord) => {
-    val hash = hasher(value.toArray) |> (ByteWord(_)) |> (Hash(_))
-    HashedValue(hash, value)
-  }
-
-  private class SigningECC25519(keyPairOpt: Option[(SigningPrivateKey, SigningPublicKey)] = None) {
+  private final case class ECC25519KeysGenerator() {
     private val curve = new Curve25519
-    private val keyPair: (SigningPrivateKey, SigningPublicKey) = keyPairOpt match {
-      case Some(kp) => kp
-      case None => {
-        val pair: (scorex.crypto.signatures.SigningFunctions.PrivateKey, scorex.crypto.signatures.SigningFunctions.PublicKey) = curve.createKeyPair
-        val priv = pair |> (_._1) |> (ByteWord(_)) |> PrivateKey
-        val pub = pair |> (_._2) |> (ByteWord(_)) |> PublicKey
-        (priv, pub)
-      }
+    def generate(): (SigningPrivateKey, SigningPublicKey) = {
+      val pair: (scorex.crypto.signatures.SigningFunctions.PrivateKey, scorex.crypto.signatures.SigningFunctions.PublicKey) = curve.createKeyPair
+      val priv = pair |> (_._1) |> (ByteWord(_)) |> PrivateKey
+      val pub = pair |> (_._2) |> (ByteWord(_)) |> PublicKey
+      (priv, pub)
     }
+  }
 
-    def signingPrivateKey = keyPair._1
-    def signingPublicKey = keyPair._2
+  def keysGenerator(): KeysGenerator = new ECC25519KeysGenerator().generate
+
+  private final case class ECC25519Signer(signingPrivateKey: SigningPrivateKey, signingPublicKey: SigningPublicKey) {
+    private val curve = new Curve25519
 
     def signer(hasher: Hasher, vectorClock: VectorClock): Signer = (value: ByteWord) => {
       val time = vectorClock()
-      val signature = curve.sign(keyPair._1.key.toArray, (ByteWord(time.toByteArray) concat value).toArray) |> (ByteWord(_))
+      val signature = curve.sign(signingPrivateKey.key.toArray, (ByteWord(time.toByteArray) concat value).toArray) |> (ByteWord(_))
       val hashedValue = hasher(value)
-      val proof = Proof((signingPublicKey, time, signature), hashedValue.hash)
+      val proof = Proof(hashedValue.hash, Signature(signingPublicKey, time, signature))
       Signed(proof, value)
-    }
-    def verifier(hasher: Hasher): Verifier = (proof: Proof, value: ValueBytes) => {
-      val expectedHash = hasher(value).hash
-      if (!(expectedHash.hash sameElements proof.hash.hash)) HashCheckFailed(value, proof.hash, expectedHash)
-      else if (curve.verify(proof.signature._3.toArray, (ByteWord(proof.signature._2.toByteArray) concat value).toArray, proof.signature._1.key.toArray)) Passed(value)
-      else ProofCheckFailed(value)
     }
   }
 
-//  Supported hash algorithms are:
-//
-//  Blake
-//  Blake2b
-//  BMW
-//  CubeHash
-//  Echo
-//  Fugue
-//  Groestl
-//  Hamsi
-//  JH
-//  Keccak
-//  Luffa
-//  Sha
-//  SHAvite
-//  SIMD
-//  Skein
-//  Whirlpool
+  private final case class ECC25519Verifier(keyRing: PublicKeyRing) {
+    private val curve = new Curve25519
 
-  def apply(keyPairOpt: Option[(SigningPrivateKey, SigningPublicKey)] = None, hash: CryptographicHash = Sha512): (CryptoContext, SigningPrivateKey) = {
-    val signing = new SigningECC25519(keyPairOpt)
+    def verifier(hasher: Hasher): Verifier = (proof: Proof, value: ValueBytes) => {
+      if (!keyRing.checkKey(proof.signature.publicKey, proof.signature.tick)) PublicKeyNotValid(proof.signature.publicKey, proof.signature.tick)
+      else {
+        val expectedHash = hasher(value).hash
+        if (!(expectedHash.hash sameElements proof.hash.hash)) HashCheckFailed(proof.hash, expectedHash)
+        else if (curve.verify(
+          proof.signature.signature.toArray,
+          (ByteWord(proof.signature.tick.toByteArray) concat value).toArray,
+          proof.signature.publicKey.key.toArray))
+            Passed(value)
+        else ProofCheckFailed
+      }
+    }
+  }
 
-    (new CryptoContext {
+  final class PublicKeyRingSet(keys: Set[String], from: ClockTick, to: ClockTick, implicit val hexed2Bytes: Hexed2Bytes) extends PublicKeyRing {
+    private val publicKeys: Set[SigningPublicKey] = keys.map(s => s |> hexed2Bytes |> (PublicKey(_)))
+    def checkKey(key: SigningPublicKey, tick: ClockTick): Boolean = {
+      tick >= from &&
+        tick <= to &&
+        publicKeys.contains(key)
+    }
+  }
+
+  def createCryptoContext(signingPrivateKey: SigningPrivateKey, signingPublicKey: SigningPublicKey, knownPublicKeys: Set[String] = Set.empty) (implicit ccs: CryptoContextSettings): CryptoContext = {
+    val signerObject = new ECC25519Signer(signingPrivateKey, signingPublicKey)
+
+    new CryptoContext {
       private val ai = new AtomicInteger(0)
 
       def vectorClock: VectorClock = () => ai.getAndAdd(1)
-      def hasher: Hasher = scorexHasher(hash)
 
-      def text2Bytes: Text2Bytes = _.getBytes(StandardCharsets.UTF_8) |> (ByteWord(_))
-      def bytes2Text: Bytes2Text = _.utf8String
-
-      def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
-      def bytes2Hexed: Bytes2Hexed = Hexing.Base58Hexing.bytes2Hexed
-
-//      override def serializer[T]: Serializer[T] = ??? //PicklingSerializer.serializer[T] // SprayJsonSerializer.serializer[T]
-//      override def deserializer[T]: ((TextSerialized) => T, (BytesSerialized) => T) = ??? //PicklingSerializer.deserializer[T] // SprayJsonSerializer.deserializer[T]
-
-      def signingPublicKey: SigningPublicKey = signing.signingPublicKey
-      def signer: Signer = signing.signer(hasher, vectorClock)
-      def verifier: Verifier = signing.verifier(hasher)
-    }, signing.signingPrivateKey)
+      def signingPublicKey: SigningPublicKey = signerObject.signingPublicKey
+      def signer: Signer = signerObject.signer(ccs.hasher, vectorClock)
+      def verifier: Verifier = new ECC25519Verifier(new PublicKeyRingSet(knownPublicKeys, 0, 100000, ccs.hexed2Bytes)).verifier(ccs.hasher) // TODO: Add self public Key?
+    }
   }
 }

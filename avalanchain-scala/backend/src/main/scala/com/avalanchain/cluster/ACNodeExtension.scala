@@ -1,7 +1,9 @@
 package com.avalanchain.cluster
 
 import akka.actor.{Actor, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
-import com.avalanchain.core.builders.CryptoContextBuilder
+import com.avalanchain.core.builders.{CryptoContextBuilder, CryptoContextSettingsBuilder}
+import com.avalanchain.core.domain.{PrivateKey, PublicKey}
+import com.avalanchain.toolbox.Pipe._
 
 
 /**
@@ -13,7 +15,12 @@ class ACNodeExtensionImpl extends Extension {
   //private val counter = new AtomicLong(0)
 
   //This is the operation this Extension provides
-  def cryptoContext = CryptoContextBuilder()
+  def cryptoContext = {
+    implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
+    val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ccs.hexed2Bytes) |> (PrivateKey(_))
+    val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ccs.hexed2Bytes) |> (PublicKey(_))
+    CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug"))
+  }
 }
 
 object ACNodeExtension

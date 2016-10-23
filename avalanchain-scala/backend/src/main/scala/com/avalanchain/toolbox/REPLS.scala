@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Framing, Source, Tcp}
 import akka.stream.scaladsl.Tcp.{IncomingConnection, OutgoingConnection, ServerBinding}
 import akka.util.ByteString
-import com.avalanchain.core.builders.CryptoContextBuilder
+import com.avalanchain.core.builders.{CryptoContextBuilder, CryptoContextSettingsBuilder}
 import com.avalanchain.core.domain._
 import com.avalanchain.core.domain.Proofed.Signed
 
@@ -20,21 +20,22 @@ import io.circe.syntax._
 import cats._
 import cats.data.Xor
 import cats.syntax.flatMap._
-import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed}
+import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed, PublicKeyNotValid}
 
+import scala.io.StdIn
 import scala.util.{Failure, Success}
 
 /**
   * Created by Yuriy Habarov on 21/10/2016.
   * REPL Signed
   */
-class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
+class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSettings, implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
+
+  implicit private val bytes2Hexed = ccs.bytes2Hexed
+  implicit private val hexed2Bytes = ccs.hexed2Bytes
 
   case class ChatMessage(message: String, time: DateTime)
   case class SignedMessage(signed: Signed)
-
-  private implicit def bytes2Hexed = cryptoContext.bytes2Hexed
-  private implicit def hexed2Bytes = cryptoContext.hexed2Bytes
 
   def echoServer(host: String, port: Int) = {
     val connections: Source[IncomingConnection, Future[ServerBinding]] =
@@ -48,10 +49,11 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
         .map(decode[SignedMessage](_).leftMap(e => s"SignedMessage parsing failed: '$e'")
           .flatMap(sm => cryptoContext.verifier(sm.signed.proof, sm.signed.value) match {
             case Passed(value) => Xor.right(sm)
-            case HashCheckFailed(value, actual, expected) => Xor.left("Signature hash verification failed")
-            case ProofCheckFailed(value) => Xor.left("Signature proof verification failed")
+            case HashCheckFailed(actual, expected) => Xor.left(s"Signature hash verification failed. Actual: '$actual'. Expected: '$expected'")
+            case PublicKeyNotValid(key, tick) => Xor.left(s"Signature public key '$key' unknown or invalid at tick '$tick'")
+            case ProofCheckFailed => Xor.left("Signature proof verification failed")
           })
-          .flatMap(sm => decode[ChatMessage](sm.signed.value |> (cryptoContext.bytes2Text))).leftMap(e => s"ChatMessage parsing failed: '$e'").toEither)
+          .flatMap(sm => decode[ChatMessage](sm.signed.value |> (ccs.bytes2Text))).leftMap(e => s"ChatMessage parsing failed: '$e'").toEither)
         .map(tcm => {
           tcm match {
             case Right(cm) => println(s"${connection.remoteAddress}: Message deserialized: '$cm'")
@@ -95,7 +97,7 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
         .concat(Source.single("BYE"))
         .map(ChatMessage(_, DateTime.now()))
         .map(_.asJson.toString)
-        .map(cryptoContext.text2Bytes(_))
+        .map(ccs.text2Bytes(_))
         .map(cryptoContext.signer(_))
         .map(SignedMessage(_))
         .map(_.asJson.toString)
@@ -109,7 +111,7 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
       //          allowTruncation = true))
       .map(_.utf8String)
       .map(text => println("Server: " + text))
-      .map(_ => readLine("> "))
+      .map(_ => StdIn.readLine("> "))
       .via(replParser)
 
     val outgoingConnection = connection.join(repl).run()
@@ -122,22 +124,22 @@ class REPLS(cryptoContext: CryptoContext, implicit val system: ActorSystem, impl
 }
 
 object SignedEchoServer extends App {
-  val ctx1 = CryptoContextBuilder()
-  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ctx1._1.hexed2Bytes) |> (PrivateKey(_))
-  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ctx1._1.hexed2Bytes) |> (PublicKey(_))
-  val ctx = CryptoContextBuilder(Some((priv, pub)))
+  implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
+  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ccs.hexed2Bytes) |> (PrivateKey(_))
+  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ccs.hexed2Bytes) |> (PublicKey(_))
+  val ctx = CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug"))
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
-  new REPLS(ctx._1, system, materializer).echoServer("127.0.0.1", 9888)
+  new REPLS(ctx, ccs, system, materializer).echoServer("127.0.0.1", 9888)
 }
 
 object SignedEchoClient extends App {
-  val ctx1 = CryptoContextBuilder()
-  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ctx1._1.hexed2Bytes) |> (PrivateKey(_))
-  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ctx1._1.hexed2Bytes) |> (PublicKey(_))
-  val ctx = CryptoContextBuilder(Some((priv, pub)))
+  implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
+  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ccs.hexed2Bytes) |> (PrivateKey(_))
+  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ccs.hexed2Bytes) |> (PublicKey(_))
+  val ctx = CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug"))
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
-  new REPLS(ctx._1, system, materializer).echoClient("127.0.0.1", 9888)
+  new REPLS(ctx, ccs, system, materializer).echoClient("127.0.0.1", 9888)
 }
 

@@ -78,14 +78,14 @@ package object domain {
   type SigningPrivateKey = PrivateKey
   type EncryptionPrivateKey = PrivateKey
 
-  type Signature = (SigningPublicKey, ClockTick, SignatureBytes)
+  final case class Signature(publicKey: SigningPublicKey, tick: ClockTick, signature: SignatureBytes)
 
   final case class Hash(hash: HashBytes)
   object Hash {
     val Zero = Hash(ByteString.empty)
   }
 
-  final case class Proof(signature: Signature, hash: Hash)
+  final case class Proof(hash: Hash, signature: Signature)
   sealed trait Proofed {
     def value: ValueBytes
   }
@@ -133,31 +133,40 @@ package object domain {
 //  }
 
   sealed trait Verified {
-    val value: ValueBytes
+    //val value: ValueBytes
   }
   object Verified {
     final case class Passed(value: ValueBytes) extends Verified
-    final case class HashCheckFailed(value: ValueBytes, actual: Hash, expected: Hash) extends Verified
-    final case class ProofCheckFailed(value: ValueBytes) extends Verified
+    final case class HashCheckFailed(actual: Hash, expected: Hash) extends Verified
+    final case class PublicKeyNotValid(key: SigningPublicKey, tick: ClockTick) extends Verified
+    object ProofCheckFailed extends Verified
   }
 
   type Signer = ByteWord => Signed
   type Verifier = (Proof, ValueBytes) => Verified
+  type KeysGenerator = () => (SigningPrivateKey, SigningPublicKey)
 
 //  type ChainRefProvider = () => ChainRef
 
-  trait CryptoContext {
-    def vectorClock: VectorClock
-    def hasher: Hasher
+  trait CryptoContextSettings {
+    implicit def hasher: Hasher
     //def serializer[T]: Serializer[T]
     //def deserializer[T]: Deserializer[T]
-    def text2Bytes: Text2Bytes
-    def bytes2Text: Bytes2Text
-    def bytes2Hexed: Bytes2Hexed
-    def hexed2Bytes: Hexed2Bytes
+    implicit def text2Bytes: Text2Bytes
+    implicit def bytes2Text: Bytes2Text
+    implicit def bytes2Hexed: Bytes2Hexed
+    implicit def hexed2Bytes: Hexed2Bytes
+  }
+
+  trait CryptoContext {
+    def vectorClock: VectorClock
     def signingPublicKey: SigningPublicKey
     def signer: Signer
     def verifier: Verifier
+  }
+
+  trait PublicKeyRing {
+    def checkKey(key: SigningPublicKey, tick: ClockTick): Boolean
   }
 
   case class NodeInfo(val signingPublicKey: SigningPublicKey, val encryptionPublicKey: EncryptionPublicKey)
