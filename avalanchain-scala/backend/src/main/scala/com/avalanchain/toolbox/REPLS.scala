@@ -1,5 +1,6 @@
 package com.avalanchain.toolbox
 
+import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
 
 import akka.actor.ActorSystem
@@ -26,6 +27,7 @@ import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheck
 
 import scala.io.StdIn
 import scala.util.{Failure, Success}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Created by Yuriy Habarov on 21/10/2016.
@@ -33,15 +35,39 @@ import scala.util.{Failure, Success}
   */
 class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSettings, implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) {
 
+  case class ChatMessage(message: String, time: DateTime)
+  case class SignedMessage(signed: Signed)
+
   implicit private val bytes2Hexed = ccs.bytes2Hexed
   implicit private val hexed2Bytes = ccs.hexed2Bytes
 
-  val text2Bytes: Text2Bytes = _.getBytes(StandardCharsets.UTF_8) |> (ByteWord(_))
-  val bytes2Text: Bytes2Text = _.utf8String
+  private val string2Bytes: String2Bytes = _.getBytes(StandardCharsets.UTF_8) |> (ByteWord(_))
+  private val bytes2String: Bytes2String = _.utf8String
 
+  val signMessage =
+    Flow[String].map(_ |> string2Bytes |> (cryptoContext.signer(_)) |> (SignedMessage(_)) |> (_.asJson.toString))
+      .map(text => { println(s"Sending: '$text'"); text })
+      .map(ByteString(_))
+  def unwrapMessage(remoteAddress: String) =
+    Flow[ByteString].map(_.utf8String)
+      .map(text => { println(s"${remoteAddress}: Message received: '$text'"); text })
+      .map(decode[SignedMessage](_).leftMap(e => s"SignedMessage parsing failed: '$e'")
+        .flatMap(sm => cryptoContext.verifier(sm.signed.proof, sm.signed.value) match {
+          case Passed(value) => Xor.right(sm)
+          case HashCheckFailed(actual, expected) => Xor.left(s"Signature hash verification failed. Actual: '$actual'. Expected: '$expected'")
+          case PublicKeyNotValid(key, tick) => Xor.left(s"Signature public key '${key.toHexed}' unknown or invalid at tick '$tick'")
+          case ProofCheckFailed => Xor.left("Signature proof verification failed")
+        })
+        .map(_.signed.value |> bytes2String)
+      )
 
-  case class ChatMessage(message: String, time: DateTime)
-  case class SignedMessage(signed: Signed)
+  def serialize(chatMessage: ChatMessage) = chatMessage.asJson.spaces2
+  def deserialize(msg: Xor[String, String]): Xor[String, ChatMessage] =
+    msg.flatMap(decode[ChatMessage](_)).leftMap(e => s"ChatMessage parsing failed: '$e'")
+
+  def serializeXor(chatMessage: Xor[String, ChatMessage]) = chatMessage.asJson.spaces2
+  def deserializeXor(msg: Xor[String, String]): Xor[String, Xor[String, ChatMessage]] =
+    msg.flatMap(decode[Xor[String, ChatMessage]](_)).leftMap(e => s"Xor[String, ChatMessage] parsing failed: '$e'")
 
   def echoServer(host: String, port: Int) = {
     val connections: Source[IncomingConnection, Future[ServerBinding]] =
@@ -50,45 +76,40 @@ class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSetting
       println(s"New connection from: ${connection.remoteAddress}")
 
       // server logic, parses incoming commands
-      val commandParser = Flow[String]
-        .map(text => { println(s"${connection.remoteAddress}: Message received: '$text'"); text })
-        .map(decode[SignedMessage](_).leftMap(e => s"SignedMessage parsing failed: '$e'")
-          .flatMap(sm => cryptoContext.verifier(sm.signed.proof, sm.signed.value) match {
-            case Passed(value) => Xor.right(sm)
-            case HashCheckFailed(actual, expected) => Xor.left(s"Signature hash verification failed. Actual: '$actual'. Expected: '$expected'")
-            case PublicKeyNotValid(key, tick) => Xor.left(s"Signature public key '${key.toHexed}' unknown or invalid at tick '$tick'")
-            case ProofCheckFailed => Xor.left("Signature proof verification failed")
-          })
-          .flatMap(sm => decode[ChatMessage](sm.signed.value |> bytes2Text)).leftMap(e => s"ChatMessage parsing failed: '$e'").toEither)
+      val commandParser = Flow[ByteString]
+        .via(unwrapMessage(connection.remoteAddress.toString))
+        .map(deserialize(_))
         .map(tcm => {
           tcm match {
-            case Right(cm) => println(s"${connection.remoteAddress}: Message deserialized: '$cm'")
-            case Left(msg) => println(s"${connection.remoteAddress}: $msg")
+            case Xor.Right(cm) => println(s"${connection.remoteAddress}: Message deserialized: '$cm'")
+            case Xor.Left(msg) => println(s"${connection.remoteAddress}: $msg")
           }
           tcm
         })
         //.takeWhile(_ != "BYE")
-        .takeWhile(_ match {
-          case Right(cm) if cm.message == "BYE" => false
+        .takeWhile {
+          case Xor.Right(cm) if cm.message == "BYE" =>
+            println(s"${connection.remoteAddress}: Client sent a disconnection message. Closing connection.")
+            false
           case _ => true
-        })
-        .map(_ + "!")
+        }
 
       import connection._
       val welcomeMsg = s"Welcome to: $localAddress, you are: $remoteAddress!"
-      val welcome = Source.single(welcomeMsg)
+      val welcome = Source.single(welcomeMsg).map(ChatMessage(_, DateTime.now())).map(Xor.right(_))
 
       val serverLogic = Flow[ByteString]
 //        .via(Framing.delimiter(
 //          ByteString("\n"),
 //          maximumFrameLength = 256,
 //          allowTruncation = true))
-        .map(_.utf8String)
         .via(commandParser)
         // merge in the initial banner after parser
         .merge(welcome)
 //        .map(_ + "\n")
-        .map(ByteString(_))
+        //.map(ByteString(_))
+        .map(m => serializeXor(m))
+        .via(signMessage)
 
       connection.handleWith(serverLogic)
     }
@@ -102,29 +123,34 @@ class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSetting
       Flow[String].takeWhile(e => e != "q" && e != "BYE")
         .concat(Source.single("BYE"))
         .map(ChatMessage(_, DateTime.now()))
-        .map(_.asJson.toString |> text2Bytes)
-        .map(cryptoContext.signer(_))
-        .map(SignedMessage(_))
-        .map(_.asJson.toString)
-        .map(text => { println(s"Sending: '$text'"); text })
-        .map(ByteString(_))
+        .map(serialize)
+        .via(signMessage)
+
 
     val repl = Flow[ByteString]
       //        .via(Framing.delimiter(
       //          ByteString("\n"),
       //          maximumFrameLength = 256,
       //          allowTruncation = true))
-      .map(_.utf8String)
-      .map(text => println("Server: " + text))
+      //.map(_.utf8String)
+      .via(unwrapMessage("Server"))
+      .map(deserializeXor)
+      .map(xcm => {
+        xcm match {
+          case Xor.Right(cm) => println(s"Message deserialized: '$cm'")
+          case Xor.Left(msg) => println(s"$msg")
+        }
+        xcm
+      })
       .map(_ => StdIn.readLine("> "))
       .via(replParser)
 
     val outgoingConnection = connection.join(repl).run()
     println(s"Client connected to Server host: '$host' port '$port'")
-//    outgoingConnection.onComplete {
-//      case Success(s) => println(s"Connection successfully closed with message: $s")
-//      case Failure(s) => println(s"Connection failed with message: $s")
-//    }
+    outgoingConnection.onComplete { // TODO: Doesn't work. Fix it.
+      case Success(s) => println(s"Connection successfully closed with message: $s")
+      case Failure(s) => println(s"Connection failed with message: $s")
+    }
   }
 }
 

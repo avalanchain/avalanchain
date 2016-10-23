@@ -51,13 +51,13 @@ pub.key |> ccs.bytes2Hexed
 //println(a1)
 //
 //val str = "Hi"
-//val hashed = context.hasher(context.text2Bytes(str))
+//val hashed = context.hasher(context.string2Bytes(str))
 //println(toHexedH(hashed))
-//val hashed2 = context.hasher(context.text2Bytes(str))
+//val hashed2 = context.hasher(context.string2Bytes(str))
 //println(toHexedH(hashed2))
 //hashed.value sameElements hashed2.value
 //
-//val signed = context.signer(context.text2Bytes(str))
+//val signed = context.signer(context.string2Bytes(str))
 //println(signed.proof)
 //val verified = context.verifier(signed.proof, signed.value)
 //println(verified)

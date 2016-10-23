@@ -41,11 +41,11 @@ package object domain {
 
   type TextSerializer[T] = T => TextSerialized
   type BytesSerializer[T] = T => BytesSerialized
-  type Text2Bytes = TextSerialized => BytesSerialized
+  type String2Bytes = TextSerialized => BytesSerialized
 
   type TextDeserializer[T] = TextSerialized => T
   type BytesDeserializer[T] = BytesSerialized => T
-  type Bytes2Text = BytesSerialized => Hexed
+  type Bytes2String = BytesSerialized => Hexed
 
   type Hasher = ByteWord => HashedValue
   type Bytes2Hexed = BytesSerialized => Hexed
@@ -166,8 +166,8 @@ package object domain {
     implicit def hasher: Hasher
     //def serializer[T]: Serializer[T]
     //def deserializer[T]: Deserializer[T]
-//    implicit def text2Bytes: Text2Bytes
-//    implicit def bytes2Text: Bytes2Text
+//    implicit def string2Bytes: string2Bytes
+//    implicit def bytes2String: bytes2String
     implicit def bytes2Hexed: Bytes2Hexed
     implicit def hexed2Bytes: Hexed2Bytes
   }
