@@ -59,11 +59,25 @@ package object domain {
   type HashBytes = ByteWord
   type SignatureBytes = ByteWord
   type ValueBytes = ByteWord
-  sealed trait SecurityKey { def key: KeyBytes }
+  sealed trait SecurityKey {
+    def key: KeyBytes
+    def toHexed(implicit bytes2Hexed: Bytes2Hexed) = bytes2Hexed(key)
+  }
   // TODO: Replace with java.security.PublicKey
   // TODO: Make constructor private and use sealed trait
-  final case class PublicKey(key: KeyBytes) extends SecurityKey
-  final case class PrivateKey(key: KeyBytes) extends SecurityKey
+  final case class PublicKey(key: KeyBytes) extends SecurityKey {
+    def this(key: Hexed)(implicit hexed2Bytes: Hexed2Bytes) = this(hexed2Bytes(key))
+  }
+  object PublicKey {
+    def apply(key: Hexed)(implicit hexed2Bytes: Hexed2Bytes) = new PublicKey(key)
+  }
+
+  final case class PrivateKey(key: KeyBytes) extends SecurityKey {
+    def this(key: Hexed)(implicit hexed2Bytes: Hexed2Bytes) = this(hexed2Bytes(key))
+  }
+  object PrivateKey {
+    def apply(key: Hexed)(implicit hexed2Bytes: Hexed2Bytes) = new PrivateKey(key)
+  }
 
 //  object SecurityKeyExtensions {
 //    class RichKey(key: SecurityKey, implicit val bytes2Hexed: Bytes2Hexed) {
@@ -78,7 +92,7 @@ package object domain {
   type SigningPrivateKey = PrivateKey
   type EncryptionPrivateKey = PrivateKey
 
-  final case class Signature(publicKey: SigningPublicKey, tick: ClockTick, signature: SignatureBytes)
+  final case class Signature(publicKey: SigningPublicKey, tick: ClockTick, signature: SignatureBytes) // TODO: Remove and live with just Proofs?
 
   final case class Hash(hash: HashBytes)
   object Hash {
@@ -142,7 +156,7 @@ package object domain {
     object ProofCheckFailed extends Verified
   }
 
-  type Signer = ByteWord => Signed
+  type Signer = ByteWord => Signed // TODO: Replace with Proofed in order to enable Multisig
   type Verifier = (Proof, ValueBytes) => Verified
   type KeysGenerator = () => (SigningPrivateKey, SigningPublicKey)
 
@@ -152,8 +166,8 @@ package object domain {
     implicit def hasher: Hasher
     //def serializer[T]: Serializer[T]
     //def deserializer[T]: Deserializer[T]
-    implicit def text2Bytes: Text2Bytes
-    implicit def bytes2Text: Bytes2Text
+//    implicit def text2Bytes: Text2Bytes
+//    implicit def bytes2Text: Bytes2Text
     implicit def bytes2Hexed: Bytes2Hexed
     implicit def hexed2Bytes: Hexed2Bytes
   }

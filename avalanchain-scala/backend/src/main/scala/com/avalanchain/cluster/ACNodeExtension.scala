@@ -16,10 +16,11 @@ class ACNodeExtensionImpl extends Extension {
 
   //This is the operation this Extension provides
   def cryptoContext = {
+    import CryptoContextSettingsBuilder.CryptoContextSettings._
     implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
-    val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ccs.hexed2Bytes) |> (PrivateKey(_))
-    val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ccs.hexed2Bytes) |> (PublicKey(_))
-    CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug"))
+    val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (PrivateKey(_))
+    val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (PublicKey(_))
+    CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug").map(PublicKey(_)))
   }
 }
 

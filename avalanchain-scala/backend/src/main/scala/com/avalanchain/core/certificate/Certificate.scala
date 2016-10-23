@@ -27,7 +27,7 @@ object Certificate {
                                    issuer: UserId,
                                    publicKey: KeyBytes,//SigningPublicKey
                                    hashAlgorithm: CryptographicHash,
-                                   signingAlgorithm: SigningFunctions,
+                                   signingAlgorithm: String, //SigningFunctions,
                                    from: ClockTick,
                                    to: ClockTick)
 

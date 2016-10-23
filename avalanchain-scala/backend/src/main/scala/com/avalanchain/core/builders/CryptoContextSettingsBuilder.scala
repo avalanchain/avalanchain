@@ -53,9 +53,6 @@ object CryptoContextSettingsBuilder {
   implicit object CryptoContextSettings extends CryptoContextSettings {
     implicit def hasher: Hasher = scorexHasher(Sha512)
 
-    implicit def text2Bytes: Text2Bytes = _.getBytes(StandardCharsets.UTF_8) |> (ByteWord(_))
-    implicit def bytes2Text: Bytes2Text = _.utf8String
-
     implicit def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
     implicit def bytes2Hexed: Bytes2Hexed = Hexing.Base58Hexing.bytes2Hexed
 

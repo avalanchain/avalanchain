@@ -75,8 +75,8 @@ object CryptoContextBuilder {
     private val curve = new Curve25519
     def generate(): (SigningPrivateKey, SigningPublicKey) = {
       val pair: (scorex.crypto.signatures.SigningFunctions.PrivateKey, scorex.crypto.signatures.SigningFunctions.PublicKey) = curve.createKeyPair
-      val priv = pair |> (_._1) |> (ByteWord(_)) |> PrivateKey
-      val pub = pair |> (_._2) |> (ByteWord(_)) |> PublicKey
+      val priv = pair._1 |> (ByteWord(_)) |> (new PrivateKey(_))
+      val pub = pair._2 |> (ByteWord(_)) |> (new PublicKey(_))
       (priv, pub)
     }
   }
@@ -113,16 +113,15 @@ object CryptoContextBuilder {
     }
   }
 
-  final class PublicKeyRingSet(keys: Set[String], from: ClockTick, to: ClockTick, implicit val hexed2Bytes: Hexed2Bytes) extends PublicKeyRing {
-    private val publicKeys: Set[SigningPublicKey] = keys.map(s => s |> hexed2Bytes |> (PublicKey(_)))
+  final class PublicKeyRingSet(keys: Set[SigningPublicKey], from: ClockTick, to: ClockTick, implicit val hexed2Bytes: Hexed2Bytes) extends PublicKeyRing {
     def checkKey(key: SigningPublicKey, tick: ClockTick): Boolean = {
       tick >= from &&
         tick <= to &&
-        publicKeys.contains(key)
+        keys.contains(key)
     }
   }
 
-  def createCryptoContext(signingPrivateKey: SigningPrivateKey, signingPublicKey: SigningPublicKey, knownPublicKeys: Set[String] = Set.empty) (implicit ccs: CryptoContextSettings): CryptoContext = {
+  def createCryptoContext(signingPrivateKey: SigningPrivateKey, signingPublicKey: SigningPublicKey, knownPublicKeys: Set[SigningPublicKey] = Set.empty) (implicit ccs: CryptoContextSettings): CryptoContext = {
     val signerObject = new ECC25519Signer(signingPrivateKey, signingPublicKey)
 
     new CryptoContext {

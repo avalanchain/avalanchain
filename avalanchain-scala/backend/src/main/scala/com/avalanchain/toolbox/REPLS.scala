@@ -1,5 +1,7 @@
 package com.avalanchain.toolbox
 
+import java.nio.charset.StandardCharsets
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Framing, Source, Tcp}
@@ -34,6 +36,10 @@ class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSetting
   implicit private val bytes2Hexed = ccs.bytes2Hexed
   implicit private val hexed2Bytes = ccs.hexed2Bytes
 
+  val text2Bytes: Text2Bytes = _.getBytes(StandardCharsets.UTF_8) |> (ByteWord(_))
+  val bytes2Text: Bytes2Text = _.utf8String
+
+
   case class ChatMessage(message: String, time: DateTime)
   case class SignedMessage(signed: Signed)
 
@@ -50,10 +56,10 @@ class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSetting
           .flatMap(sm => cryptoContext.verifier(sm.signed.proof, sm.signed.value) match {
             case Passed(value) => Xor.right(sm)
             case HashCheckFailed(actual, expected) => Xor.left(s"Signature hash verification failed. Actual: '$actual'. Expected: '$expected'")
-            case PublicKeyNotValid(key, tick) => Xor.left(s"Signature public key '$key' unknown or invalid at tick '$tick'")
+            case PublicKeyNotValid(key, tick) => Xor.left(s"Signature public key '${key.toHexed}' unknown or invalid at tick '$tick'")
             case ProofCheckFailed => Xor.left("Signature proof verification failed")
           })
-          .flatMap(sm => decode[ChatMessage](sm.signed.value |> (ccs.bytes2Text))).leftMap(e => s"ChatMessage parsing failed: '$e'").toEither)
+          .flatMap(sm => decode[ChatMessage](sm.signed.value |> bytes2Text)).leftMap(e => s"ChatMessage parsing failed: '$e'").toEither)
         .map(tcm => {
           tcm match {
             case Right(cm) => println(s"${connection.remoteAddress}: Message deserialized: '$cm'")
@@ -96,8 +102,7 @@ class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSetting
       Flow[String].takeWhile(e => e != "q" && e != "BYE")
         .concat(Source.single("BYE"))
         .map(ChatMessage(_, DateTime.now()))
-        .map(_.asJson.toString)
-        .map(ccs.text2Bytes(_))
+        .map(_.asJson.toString |> text2Bytes)
         .map(cryptoContext.signer(_))
         .map(SignedMessage(_))
         .map(_.asJson.toString)
@@ -124,20 +129,22 @@ class REPLS(cryptoContext: CryptoContext, implicit val ccs: CryptoContextSetting
 }
 
 object SignedEchoServer extends App {
+  import CryptoContextSettingsBuilder.CryptoContextSettings._
   implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
-  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ccs.hexed2Bytes) |> (PrivateKey(_))
-  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ccs.hexed2Bytes) |> (PublicKey(_))
-  val ctx = CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug"))
+  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (PrivateKey(_))
+  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (PublicKey(_))
+  val ctx = CryptoContextBuilder.createCryptoContext(priv, pub, Set("2g9rtvxp3FugrRjawtk8DeuHGsDq3CfnjasnTrbwi95X").map(PublicKey(_)))
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
   new REPLS(ctx, ccs, system, materializer).echoServer("127.0.0.1", 9888)
 }
 
 object SignedEchoClient extends App {
+  import CryptoContextSettingsBuilder.CryptoContextSettings._
   implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
-  val priv = "BHpiB7Zpanb76Unue5bqFaiVD3atAQY4EBi1CzpBvNns" |> (ccs.hexed2Bytes) |> (PrivateKey(_))
-  val pub = "8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug" |> (ccs.hexed2Bytes) |> (PublicKey(_))
-  val ctx = CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug"))
+  val priv = "8ZDAKa2B1YCL6qTnqFEBcwTSUaN7yfihXJpJ3Tr1Fg7e" |> (PrivateKey(_))
+  val pub = "2g9rtvxp3FugrRjawtk8DeuHGsDq3CfnjasnTrbwi95X" |> (PublicKey(_))
+  val ctx = CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug").map(PublicKey(_)))
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
   new REPLS(ctx, ccs, system, materializer).echoClient("127.0.0.1", 9888)
