@@ -9,10 +9,11 @@ import cats.data.Xor
 import com.avalanchain.core.builders.{CryptoContextBuilder, CryptoContextSettingsBuilder}
 import com.avalanchain.core.domain.Proofed.Signed
 import com.avalanchain.core.domain._
+import com.avalanchain.core.toolbox.{CirceEncoders, Pipe}
 import com.avalanchain.toolbox.REPL
-import com.avalanchain.toolbox.CirceEncoders._
+import CirceEncoders._
 import scorex.crypto.signatures.Curve25519
-import com.avalanchain.toolbox.Pipe._
+import Pipe._
 import io.circe._
 import io.circe.generic.auto._
 import io.circe.parser._

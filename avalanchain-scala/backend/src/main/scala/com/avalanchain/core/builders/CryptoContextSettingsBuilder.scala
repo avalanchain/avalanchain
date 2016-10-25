@@ -3,8 +3,9 @@ package com.avalanchain.core.builders
 import java.nio.charset.StandardCharsets
 
 import com.avalanchain.core.domain.{ByteWord, _}
+import com.avalanchain.core.toolbox.Pipe
 import scorex.crypto.encode.{Base16, Base58, Base64}
-import com.avalanchain.toolbox.Pipe._
+import Pipe._
 import scorex.crypto.hash.{CryptographicHash, Sha512}
 
 /**
@@ -45,13 +46,15 @@ object CryptoContextSettingsBuilder {
     }
   }
 
-  def scorexHasher(hasher: CryptographicHash): Hasher = (value: ByteWord) => {
-    val hash = hasher(value.toArray) |> (ByteWord(_)) |> (Hash(_))
-    HashedValue(hash, value)
+  def scorexHasher(hasher: CryptographicHash): BytesHasher = (value: ByteWord) => {
+    new Hashed {
+      val hash = hasher(value.toArray) |> (ByteWord(_)) |> (Hash(_))
+      val valueBytes: ValueBytes = value
+    }
   }
 
   implicit object CryptoContextSettings extends CryptoContextSettings {
-    implicit def hasher: Hasher = scorexHasher(Sha512)
+    implicit def bytesHasher: BytesHasher = scorexHasher(Sha512)
 
     implicit def hexed2Bytes: Hexed2Bytes = Hexing.Base58Hexing.hexed2Bytes
     implicit def bytes2Hexed: Bytes2Hexed = Hexing.Base58Hexing.bytes2Hexed

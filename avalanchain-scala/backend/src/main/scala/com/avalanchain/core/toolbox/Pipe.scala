@@ -1,4 +1,4 @@
-package com.avalanchain.toolbox
+package com.avalanchain.core.toolbox
 
 /**
   * Created by Yuriy Habarov on 22/10/2016.

@@ -11,10 +11,9 @@ import akka.util.ByteString
 import com.avalanchain.core.builders.{CryptoContextBuilder, CryptoContextSettingsBuilder}
 import com.avalanchain.core.domain._
 import com.avalanchain.core.domain.Proofed.Signed
+import com.avalanchain.core.toolbox.Pipe._
 
 import scala.concurrent.Future
-import com.avalanchain.toolbox.Pipe._
-import com.avalanchain.toolbox.CirceEncoders._
 import org.joda.time.DateTime
 import io.circe._
 import io.circe.generic.auto._
@@ -24,6 +23,8 @@ import cats._
 import cats.data.Xor
 import cats.syntax.flatMap._
 import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed, PublicKeyNotValid}
+import com.avalanchain.core.toolbox.{CirceEncoders, Pipe}
+import com.avalanchain.core.toolbox.CirceEncoders._
 
 import scala.io.StdIn
 import scala.util.{Failure, Success}

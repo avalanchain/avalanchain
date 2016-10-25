@@ -7,6 +7,7 @@ import java.util.UUID
 
 import akka.util.ByteString
 import com.avalanchain.core.domain.Proofed.Signed
+import com.avalanchain.core.toolbox.Pipe._
 import io.circe.generic.JsonCodec
 
 package object domain {
@@ -47,7 +48,8 @@ package object domain {
   type BytesDeserializer[T] = BytesSerialized => T
   type Bytes2String = BytesSerialized => Hexed
 
-  type Hasher = ByteWord => HashedValue
+  type BytesHasher = ByteWord => Hashed
+  type Hasher[T] = T => HashedValue[T]
   type Bytes2Hexed = BytesSerialized => Hexed
   type Hexed2Bytes = Hexed => BytesSerialized
 
@@ -110,41 +112,13 @@ package object domain {
 
   trait Hashed {
     val hash: Hash
-    val value: ValueBytes
+    val valueBytes: ValueBytes
   }
 
-  final case class HashedValue(hash: Hash, value: ValueBytes) extends Hashed
+  final case class HashedValue[T](hash: Hash, value: T)(implicit serializer: BytesSerializer[T]) extends Hashed {
+    val valueBytes: ValueBytes = serializer(value)
+  }
 
-//  final case class ChainRefData(id: Id, name: String, ver: Version)
-//  type ChainRef = HashedValue[ChainRefData]
-//
-//  //case class ChainRef (override val hash: Hash, override val bytes: Serialized, override val value: ChainRefData)
-//  //  extends HashedValue[ChainRefData](hash, bytes, value)
-//  //object ChainRef {
-//  //  def UID = this.hash.toString()
-//  //}
-//
-//  final case class ChainDefData(ref: ChainRef, execGroups: Set[ExecGroup])
-//  type ChainDef = HashedValue[ChainDefData]
-//
-//  //case class Data[T](value: HashedValue[T])
-//
-//  final case class MerkledRef(streamRefHash: Hash, pmHash: Hash, pos: Version, ownHash: Hash)
-//
-//  type HashedMR = HashedValue[MerkledRef]
-//
-//  trait StateFrame[T] {
-//    val mref: HashedMR
-//    val value: Option[HashedValue[T]]
-//
-//    def pos = mref.value.pos
-//  }
-//
-//  object StateFrame {
-//    case class InitialFrame[T](override val mref: HashedMR, override val value: Option[HashedValue[T]]) extends StateFrame[T]
-//    case class Frame[T](override val mref: HashedMR, override val value: Option[HashedValue[T]]) // add proofs?
-//      extends StateFrame[T]
-//  }
 
   sealed trait Verified {
     //val value: ValueBytes
@@ -163,7 +137,8 @@ package object domain {
 //  type ChainRefProvider = () => ChainRef
 
   trait CryptoContextSettings {
-    implicit def hasher: Hasher
+    implicit def bytesHasher: BytesHasher
+    implicit def hasher[T](implicit serializer: BytesSerializer[T]): Hasher[T] = v => v |> (serializer(_)) |> bytesHasher |> (h => HashedValue[T](h.hash, v))
     //def serializer[T]: Serializer[T]
     //def deserializer[T]: Deserializer[T]
 //    implicit def string2Bytes: string2Bytes
@@ -184,34 +159,6 @@ package object domain {
   }
 
   case class NodeInfo(val signingPublicKey: SigningPublicKey, val encryptionPublicKey: EncryptionPublicKey)
-
-//  object FrameBuilder {
-//    def buildNestedRef(node: CryptoContext, cr: ChainRef, nestedName: String): ChainRef = {
-//      val data = cr.value
-//      val newData = data.copy(id = UUID.randomUUID(), name = data.name + "/" + nestedName, ver = data.ver)
-//      node.hasher(newData)
-//    }
-//
-//    def buildInitialFrame[T](node: CryptoContext, cr: ChainRef, initial: Option[T]): StateFrame[T] = {
-//      val hashed = initial.map(node.hasher)
-//      val mr = MerkledRef(cr.hash, Hash.Zero, 0, hashed.map(_.hash).getOrElse(Hash.Zero))
-//      StateFrame.InitialFrame[T](node.hasher(mr), hashed).asInstanceOf[StateFrame[T]]
-//    }
-//
-//    def buildFrame[T](node: CryptoContext, cr: ChainRef, state: StateFrame[T], data: T): StateFrame[T] = {
-//      val hashedData = node.hasher(data)
-//      val mr = MerkledRef(cr.hash, state.mref.hash, state.pos + 1, hashedData.hash)
-//      StateFrame.Frame[T](node.hasher(mr), Some(hashedData))
-//    }
-//  }
-//
-//  object ChainRefFactory {
-//    def chainRef(hasher: Hasher[ChainRefData], chainRefData: ChainRefData) = hasher(chainRefData)
-//
-//    def nestedRef(hasher: Hasher[ChainRefData], chainRef: ChainRef, name: String, chainVersion: Version) = {
-//      hasher(ChainRefData(UUID.randomUUID(), s"${chainRef.value.name}#${chainRef.value.ver}\\$name", chainVersion))
-//    }
-//  }
 
   type HashedRegistry[T] = Hash => T
   type ClockTick = BigInt // TODO: Rename to VectorClock?

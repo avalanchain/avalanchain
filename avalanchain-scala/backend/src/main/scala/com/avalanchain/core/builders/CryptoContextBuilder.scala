@@ -7,7 +7,8 @@ import akka.util.ByteString
 import com.avalanchain.core.domain.Proofed.Signed
 import com.avalanchain.core.domain.{CryptoContextSettings, PrivateKey, _}
 import com.avalanchain.core.domain.Verified.{HashCheckFailed, Passed, ProofCheckFailed, PublicKeyNotValid}
-import com.avalanchain.toolbox.Pipe._
+import com.avalanchain.core.toolbox.Pipe
+import Pipe._
 import scorex.crypto.encode.{Base16, Base58, Base64}
 import scorex.crypto.hash.{CryptographicHash, Sha256, Sha512}
 import scorex.crypto.signatures.Curve25519
@@ -86,7 +87,7 @@ object CryptoContextBuilder {
   private final case class ECC25519Signer(signingPrivateKey: SigningPrivateKey, signingPublicKey: SigningPublicKey) {
     private val curve = new Curve25519
 
-    def signer(hasher: Hasher, vectorClock: VectorClock): Signer = (value: ByteWord) => {
+    def signer(hasher: BytesHasher, vectorClock: VectorClock): Signer = (value: ByteWord) => {
       val time = vectorClock()
       val signature = curve.sign(signingPrivateKey.key.toArray, (ByteWord(time.toByteArray) concat value).toArray) |> (ByteWord(_))
       val hashedValue = hasher(value)
@@ -98,7 +99,7 @@ object CryptoContextBuilder {
   private final case class ECC25519Verifier(keyRing: PublicKeyRing) {
     private val curve = new Curve25519
 
-    def verifier(hasher: Hasher): Verifier = (proof: Proof, value: ValueBytes) => {
+    def verifier(hasher: BytesHasher): Verifier = (proof: Proof, value: ValueBytes) => {
       if (!keyRing.checkKey(proof.signature.publicKey, proof.signature.tick)) PublicKeyNotValid(proof.signature.publicKey, proof.signature.tick)
       else {
         val expectedHash = hasher(value).hash
@@ -121,7 +122,8 @@ object CryptoContextBuilder {
     }
   }
 
-  def createCryptoContext(signingPrivateKey: SigningPrivateKey, signingPublicKey: SigningPublicKey, knownPublicKeys: Set[SigningPublicKey] = Set.empty) (implicit ccs: CryptoContextSettings): CryptoContext = {
+  def createCryptoContext(signingPrivateKey: SigningPrivateKey, signingPublicKey: SigningPublicKey, knownPublicKeys: Set[SigningPublicKey] = Set.empty)
+                         (implicit ccs: CryptoContextSettings): CryptoContext = {
     val signerObject = new ECC25519Signer(signingPrivateKey, signingPublicKey)
 
     new CryptoContext {
@@ -130,8 +132,8 @@ object CryptoContextBuilder {
       def vectorClock: VectorClock = () => ai.getAndAdd(1)
 
       def signingPublicKey: SigningPublicKey = signerObject.signingPublicKey
-      def signer: Signer = signerObject.signer(ccs.hasher, vectorClock)
-      def verifier: Verifier = new ECC25519Verifier(new PublicKeyRingSet(knownPublicKeys, 0, 100000, ccs.hexed2Bytes)).verifier(ccs.hasher) // TODO: Add self public Key?
+      def signer: Signer = signerObject.signer(ccs.bytesHasher, vectorClock)
+      def verifier: Verifier = new ECC25519Verifier(new PublicKeyRingSet(knownPublicKeys, 0, 100000, ccs.hexed2Bytes)).verifier(ccs.bytesHasher) // TODO: Add self public Key?
     }
   }
 }

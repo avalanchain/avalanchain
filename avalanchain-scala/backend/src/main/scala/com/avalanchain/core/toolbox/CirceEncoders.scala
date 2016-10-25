@@ -1,4 +1,4 @@
-package com.avalanchain.toolbox
+package com.avalanchain.core.toolbox
 
 import akka.util.ByteString
 import cats.data.Xor

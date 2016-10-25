@@ -3,7 +3,8 @@ package com.avalanchain.cluster
 import akka.actor.{Actor, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 import com.avalanchain.core.builders.{CryptoContextBuilder, CryptoContextSettingsBuilder}
 import com.avalanchain.core.domain.{PrivateKey, PublicKey}
-import com.avalanchain.toolbox.Pipe._
+import com.avalanchain.core.toolbox.Pipe
+import Pipe._
 
 
 /**
