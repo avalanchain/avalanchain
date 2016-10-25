@@ -34,6 +34,9 @@ val circe = Seq(circeCore, circeGeneric, circeParser, circeJawn)
 val sprayJson = "io.spray" %%  "spray-json" % "1.3.2"
 val sprayJsonShapeless = "com.github.fommil" %% "spray-json-shapeless" % "1.3.0"
 val pickling = "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
+val spores = "org.scala-lang.modules" %% "spores-core" % "0.2.4"
+val sporesPickling = "org.scala-lang.modules" %% "spores-pickling" % "0.2.4"
+
 
 val javaxMailSun = "com.sun.mail" % "javax.mail" % "1.5.5"
 
@@ -124,7 +127,7 @@ lazy val backend: Project = (project in file("backend"))
   .settings(Revolver.settings)
   .settings(
     libraryDependencies ++= slickStack ++ akkaStack ++ scorexStack ++ circe ++ Seq(javaxMailSun, typesafeConfig)
-      ++ Seq(pickling, sprayJson, sprayJsonShapeless, kantan, yahoo),
+      ++ Seq(pickling, spores, sporesPickling, sprayJson, sprayJsonShapeless, kantan, yahoo),
     buildInfoPackage := "com.avalanchain.web.version",
     buildInfoObject := "BuildInfo",
     buildInfoKeys := Seq[BuildInfoKey](

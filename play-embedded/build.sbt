@@ -30,7 +30,9 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka"           %% "akka-cluster-tools"                  % "2.4.11",
   "nl.grons"                    %% "metrics-scala"                       % "3.5.2_a2.3",
 
-  //"org.scala-lang.modules"      %% "scala-pickling"                      % "0.10.2-SNAPSHOT",
+  "org.scala-lang.modules"      %% "scala-pickling"                      % "0.10.1",
+  "org.scala-lang.modules"      %% "spores-core"                         % "0.2.4",
+  "org.scala-lang.modules"      %% "spores-pickling"                     % "0.2.4",
 
   "fr.acinq"                    %% "bitcoin-lib"                         % "0.9.5",
   "com.roundeights"             %% "hasher"                              % "1.2.0",

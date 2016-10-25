@@ -6,7 +6,9 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import scala.pickling._
 import scala.pickling.Defaults._
 import scala.pickling.json._
-import scala.spores.{Spore, _}
+
+import scala.spores._
+import SporePicklers._
 
 case class Person(name: String, age: Int)
 
