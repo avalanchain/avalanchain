@@ -44,8 +44,8 @@ package object domain {
   type BytesSerializer[T] = T => BytesSerialized
   type String2Bytes = TextSerialized => BytesSerialized
 
-  type TextDeserializer[T] = TextSerialized => T
-  type BytesDeserializer[T] = BytesSerialized => T
+  type TextDeserializer[T] = TextSerialized => Option[T]
+  type BytesDeserializer[T] = BytesSerialized => Option[T]
   type Bytes2String = BytesSerialized => Hexed
 
   type BytesHasher = ByteWord => Hashed

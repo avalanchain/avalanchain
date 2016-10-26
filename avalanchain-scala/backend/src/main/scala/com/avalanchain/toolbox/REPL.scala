@@ -7,6 +7,7 @@ import akka.stream.scaladsl.Tcp.{IncomingConnection, ServerBinding}
 import akka.util.ByteString
 
 import scala.concurrent.Future
+import scala.io.StdIn
 
 /**
   * Created by Yuriy Habarov on 21/10/2016.
@@ -63,7 +64,7 @@ object REPL {
         allowTruncation = true))
       .map(_.utf8String)
       .map(text => println("Server: " + text))
-      .map(_ => readLine("> "))
+      .map(_ => StdIn.readLine("> "))
       .via(replParser)
 
     connection.join(repl).run()

@@ -23,10 +23,33 @@ import sun.nio.cs.StandardCharsets
 import scala.concurrent.Future
 
 
-implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
-val (priv, pub) = CryptoContextBuilder.keysGenerator()()
-priv.key |> ccs.bytes2Hexed
-pub.key |> ccs.bytes2Hexed
+case class A(aa: String)
+
+object A {
+  def apply[T](aa: T): A = new A(aa.toString)
+  def unapply[T](aa: A)(implicit fromString: String => Option[T]): Option[T] = fromString(aa.aa)
+}
+
+implicit def parseInt(s: String) = {
+  try {
+    Some(s.toInt)
+  } catch {
+    case e: Exception => None
+  }
+}
+
+val intA = A(5)
+println(intA)
+val retA = A.unapply[Int](intA)
+println(retA)
+
+
+def newKeys() ={
+  implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
+  val (priv, pub) = CryptoContextBuilder.keysGenerator()()
+  priv.key |> ccs.bytes2Hexed
+  pub.key |> ccs.bytes2Hexed
+}
 
 
 //

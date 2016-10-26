@@ -69,11 +69,12 @@ val akkaClusterTools     = "com.typesafe.akka"                  %% "akka-cluster
 val akkaDistributedData  = "com.typesafe.akka"                  %% "akka-distributed-data-experimental"  % akkaVersion
 val akkaTestkit          = "com.typesafe.akka"                  %% "akka-testkit"                        % akkaVersion
 val akkaMultiNodeTestkit = "com.typesafe.akka"                  %% "akka-multi-node-testkit"             % akkaVersion
+val akkaSlf4j            = "com.typesafe.akka"                  %% "akka-slf4j"                          % akkaVersion
 
 val scorexCore           = "org.consensusresearch"              %% "scrypto"                             % "1.1.0"
 val scorexStack = Seq(scorexCore)
 
-val akkaStack = Seq(akkaHttpCore, akkaHttpExperimental, akkaHttpTestkit, akkaHttpSession, akkaDistributedData,
+val akkaStack = Seq(akkaHttpCore, akkaHttpExperimental, akkaHttpTestkit, akkaHttpSession, akkaDistributedData, akkaSlf4j,
   akkaStream, akkaPersistence, akkaPersistenceQuery, akkaCluster, akkaClusterMetrics, akkaClusterTools, akkaTestkit, akkaMultiNodeTestkit)
 
 val commonDependencies = unitTestingStack ++ loggingStack
