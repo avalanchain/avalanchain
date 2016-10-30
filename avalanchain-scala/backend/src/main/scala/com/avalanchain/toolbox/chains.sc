@@ -2,9 +2,14 @@
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
+import com.avalanchain.core.builders.CryptoContextSettingsBuilder.CryptoContextSettings._
+import com.avalanchain.core.chain.{ChainRefData, MerkledRef}
 import com.avalanchain.core.chainFlow.ChainFlow
+import com.avalanchain.core.domain.{BytesSerializer, Hash}
 import com.typesafe.config.ConfigFactory
 
+import scala.collection.immutable
 import scala.language.postfixOps
 
 
@@ -46,7 +51,15 @@ val config =
 implicit val system = ActorSystem("test-akka-sys", ConfigFactory.parseString(config))
 implicit val materializer = ActorMaterializer()
 
-val simpleStream = ChainFlow.create[Int]("ints", Source[Int](1 to 1000), Some(0))
+implicit val serializerI: BytesSerializer[Int] = i => ByteString(i.toString)
+implicit val serializerMR: BytesSerializer[MerkledRef] = i => ByteString(i.toString)
+implicit val serializerH: BytesSerializer[ChainRefData] = i => ByteString(i.toString)
+
+
+import language.higherKinds
+val iterable: immutable.Iterable[Int] = (1 to 10000).toIterable
+val source = Source(iterable)
+val simpleStream = ChainFlow.create[Int]("ints", source, Some(0), 300, 400)
 
 val filtered = simpleStream.filter(_ % 10 == 0, 0)
 

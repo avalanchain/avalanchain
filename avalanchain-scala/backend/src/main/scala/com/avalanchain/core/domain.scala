@@ -110,13 +110,22 @@ package object domain {
     final case class MultiSigned(proofs: Set[Proof], value: ValueBytes) extends Proofed
   }
 
-  trait Hashed {
-    val hash: Hash
-    val valueBytes: ValueBytes
+//  trait Hashed {
+//    val hash: Hash
+//    val valueBytes: ValueBytes
+//  }
+
+  final case class Hashed(hash: Hash, valueBytes: ValueBytes) // TODO: Make private
+
+  final case class HashedValue[T](hashed: Hashed, value: T) {
+    val hash = hashed.hash
   }
 
-  final case class HashedValue[T](hash: Hash, value: T)(implicit serializer: BytesSerializer[T]) extends Hashed {
-    val valueBytes: ValueBytes = serializer(value)
+  object HashedValue {
+    def apply[T](hash: Hash, value: T)(implicit serializer: BytesSerializer[T]) =
+      new HashedValue[T](Hashed(hash, serializer(value)), value)
+    def unapply[T](arg: Hashed)(implicit deserializer: BytesDeserializer[T]): Option[(Hash, T)] =
+      deserializer(arg.valueBytes).map((arg.hash, _))
   }
 
 

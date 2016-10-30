@@ -46,12 +46,8 @@ object CryptoContextSettingsBuilder {
     }
   }
 
-  def scorexHasher(hasher: CryptographicHash): BytesHasher = (value: ByteWord) => {
-    new Hashed {
-      val hash = hasher(value.toArray) |> (ByteWord(_)) |> (Hash(_))
-      val valueBytes: ValueBytes = value
-    }
-  }
+  def scorexHasher(hasher: CryptographicHash): BytesHasher =
+    (value: ByteWord) => Hashed(hasher(value.toArray) |> (ByteWord(_)) |> (Hash(_)), value)
 
   implicit object CryptoContextSettings extends CryptoContextSettings {
     implicit def bytesHasher: BytesHasher = scorexHasher(Sha512)
