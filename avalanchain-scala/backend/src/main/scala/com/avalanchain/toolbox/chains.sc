@@ -55,11 +55,7 @@ implicit val serializerI: BytesSerializer[Int] = i => ByteString(i.toString)
 implicit val serializerMR: BytesSerializer[MerkledRef] = i => ByteString(i.toString)
 implicit val serializerH: BytesSerializer[ChainRefData] = i => ByteString(i.toString)
 
-
-import language.higherKinds
-val iterable: immutable.Iterable[Int] = (1 to 10000).toIterable
-val source = Source(iterable)
-val simpleStream = ChainFlow.create[Int]("ints", source, Some(0), 300, 400)
+val simpleStream = ChainFlow.create[Int]("ints", Source(1 until 1000), Some(0))
 
 val filtered = simpleStream.filter(_ % 10 == 0, 0)
 

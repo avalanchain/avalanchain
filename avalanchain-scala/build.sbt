@@ -59,7 +59,7 @@ val seleniumStack = Seq(seleniumJava, seleniumFirefox)
 val akkaHttpCore         = "com.typesafe.akka"                  %% "akka-http-core"                      % akkaVersion
 val akkaHttpExperimental = "com.typesafe.akka"                  %% "akka-http-experimental"              % akkaVersion
 val akkaHttpTestkit      = "com.typesafe.akka"                  %% "akka-http-testkit"                   % akkaVersion % "test"
-val akkaHttpSession      = "com.softwaremill.akka-http-session" %% "core"                                % "0.2.5"
+val akkaHttpSession      = "com.softwaremill.akka-http-session" %% "core"                                % "0.2.7"
 val akkaStream           = "com.typesafe.akka"                  %% "akka-stream"                         % akkaVersion
 val akkaPersistence      = "com.typesafe.akka"                  %% "akka-persistence"                    % akkaVersion
 val akkaPersistenceQuery = "com.typesafe.akka"                  %% "akka-persistence-query-experimental" % akkaVersion
@@ -71,11 +71,16 @@ val akkaTestkit          = "com.typesafe.akka"                  %% "akka-testkit
 val akkaMultiNodeTestkit = "com.typesafe.akka"                  %% "akka-multi-node-testkit"             % akkaVersion
 val akkaSlf4j            = "com.typesafe.akka"                  %% "akka-slf4j"                          % akkaVersion
 
+val leveldb              = "org.iq80.leveldb"                   % "leveldb"                              % "0.7"
+val leveldbjni           = "org.fusesource.leveldbjni"          % "leveldbjni-all"                       % "1.8"
+
+
 val scorexCore           = "org.consensusresearch"              %% "scrypto"                             % "1.1.0"
 val scorexStack = Seq(scorexCore)
 
 val akkaStack = Seq(akkaHttpCore, akkaHttpExperimental, akkaHttpTestkit, akkaHttpSession, akkaDistributedData, akkaSlf4j,
-  akkaStream, akkaPersistence, akkaPersistenceQuery, akkaCluster, akkaClusterMetrics, akkaClusterTools, akkaTestkit, akkaMultiNodeTestkit)
+  akkaStream, akkaPersistence, akkaPersistenceQuery, akkaCluster, akkaClusterMetrics, akkaClusterTools, akkaTestkit, akkaMultiNodeTestkit,
+  leveldb, leveldbjni)
 
 val commonDependencies = unitTestingStack ++ loggingStack
 
