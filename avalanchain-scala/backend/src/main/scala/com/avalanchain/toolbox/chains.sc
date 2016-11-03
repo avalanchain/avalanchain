@@ -1,12 +1,12 @@
 //import com.roundeights.hasher.Hasher
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.avalanchain.core.builders.CryptoContextSettingsBuilder.CryptoContextSettings._
 import com.avalanchain.core.chain.{ChainRefData, MerkledRef}
-import com.avalanchain.core.chainFlow.ChainFlow
-import com.avalanchain.core.domain.{BytesSerializer, Hash}
+import com.avalanchain.core.chainFlow.{ChainFlow, ChainPersistentActor}
+import com.avalanchain.core.domain.{BytesSerializer, Hash, HashedValue}
 import com.typesafe.config.ConfigFactory
 
 import scala.collection.immutable
@@ -48,7 +48,7 @@ val config =
     |}
   """.stripMargin
 
-implicit val system = ActorSystem("test-akka-sys", ConfigFactory.parseString(config))
+implicit val system: ActorSystem = ActorSystem("test-akka-sys", ConfigFactory.parseString(config))
 implicit val materializer = ActorMaterializer()
 
 implicit val serializerI: BytesSerializer[Int] = i => ByteString(i.toString)
@@ -57,9 +57,19 @@ implicit val serializerH: BytesSerializer[ChainRefData] = i => ByteString(i.toSt
 
 val simpleStream = ChainFlow.create[Int]("ints", Source(1 until 1000), Some(0))
 
-val filtered = simpleStream.filter(_ % 10 == 0, 0)
+//val filtered = simpleStream.filter(_ % 10 == 0, 0)
 
-val mapped = filtered.map(_ / 10, 0).groupBy(x => (x % 10).toString(), 10, None)
+//val mapped = filtered.map(_ / 10, 0).groupBy(x => (x % 10).toString(), 10, None)
 
-simpleStream.eventStream().runForeach(println(_))
+simpleStream.eventStream().runForeach(e => println("DONE:" + e))
 
+//Source(1 until 1000).runForeach(println(_))
+
+
+val ar = system.actorOf(Props(new ChainPersistentActor[Int](simpleStream.chainRef, None)), "ar")
+
+ar ! "print"
+
+ar ! 3
+
+val h3: HashedValue[Int] = 3

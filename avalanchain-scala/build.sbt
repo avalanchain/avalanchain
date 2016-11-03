@@ -65,8 +65,10 @@ val akkaStream           = "com.typesafe.akka"                  %% "akka-stream"
 val akkaPersistence      = "com.typesafe.akka"                  %% "akka-persistence"                    % akkaVersion
 val akkaPersistenceQuery = "com.typesafe.akka"                  %% "akka-persistence-query-experimental" % akkaVersion
 val akkaCluster          = "com.typesafe.akka"                  %% "akka-cluster"                        % akkaVersion
+val akkaContrib          = "com.typesafe.akka"                  %% "akka-contrib"                        % akkaVersion
 val akkaClusterMetrics   = "com.typesafe.akka"                  %% "akka-cluster-metrics"                % akkaVersion
 val akkaClusterTools     = "com.typesafe.akka"                  %% "akka-cluster-tools"                  % akkaVersion
+val akkaClusterSharding  = "com.typesafe.akka"                  %% "akka-cluster-sharding"               % akkaVersion
 val akkaDistributedData  = "com.typesafe.akka"                  %% "akka-distributed-data-experimental"  % akkaVersion
 val akkaTestkit          = "com.typesafe.akka"                  %% "akka-testkit"                        % akkaVersion
 val akkaMultiNodeTestkit = "com.typesafe.akka"                  %% "akka-multi-node-testkit"             % akkaVersion
@@ -81,6 +83,7 @@ val scorexStack = Seq(scorexCore)
 
 val akkaStack = Seq(akkaHttpCore, akkaHttpExperimental, akkaHttpTestkit, akkaHttpSession, akkaDistributedData, akkaSlf4j,
   akkaStream, akkaPersistence, akkaPersistenceQuery, akkaCluster, akkaClusterMetrics, akkaClusterTools, akkaTestkit, akkaMultiNodeTestkit,
+  akkaContrib, akkaClusterSharding,
   leveldb, leveldbjni)
 
 val commonDependencies = unitTestingStack ++ loggingStack

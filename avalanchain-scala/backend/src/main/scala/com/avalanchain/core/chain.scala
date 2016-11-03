@@ -10,7 +10,7 @@ import com.avalanchain.core.toolbox.Pipe._
   */
 package object chain {
 
-  final case class ChainRefData(id: Id, name: String, ver: Version)
+  final case class ChainRefData(id: Id, name: String, ver: Version = 0)
   type ChainRef = HashedValue[ChainRefData]
 
   //case class ChainRef (override val hash: Hash, override val bytes: Serialized, override val value: ChainRefData)

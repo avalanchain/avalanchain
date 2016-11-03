@@ -15,7 +15,7 @@ import com.avalanchain.core.domain._
   * Created by Yuriy Habarov on 19/04/2016.
   */
 
-class ChainFlow[T](chainRef: ChainRef)
+class ChainFlow[T](val chainRef: ChainRef)
                   (implicit val system: ActorSystem, implicit val materializer: Materializer, hasherT: Hasher[T], hasherMR: Hasher[MerkledRef], hasherCRD: Hasher[ChainRefData]) {
   private val queries = PersistenceQuery(system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier)
 
@@ -111,6 +111,7 @@ object ChainFlow {
                (implicit system: ActorSystem, materializer: Materializer, hasherT: Hasher[T], hasherMR: Hasher[MerkledRef], hasherCRD: Hasher[ChainRefData]) : ChainFlow[T] = {
     val childChainRef = hasherCRD(ChainRefData(UUID.randomUUID(), name, 0))
     val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor[T](childChainRef, initialValue, snapshotInterval, maxInFlight)(hasherT, hasherMR)))
+    //val sinkActor = Sink.foreach(println)
 
     val stream = source.map(e => hasherT(e)).runWith(sinkActor)
 
