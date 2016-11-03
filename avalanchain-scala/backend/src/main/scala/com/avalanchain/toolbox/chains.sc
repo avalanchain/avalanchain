@@ -60,3 +60,6 @@ val simpleStream = ChainFlow.create[Int]("ints", Source(1 until 1000), Some(0))
 val filtered = simpleStream.filter(_ % 10 == 0, 0)
 
 val mapped = filtered.map(_ / 10, 0).groupBy(x => (x % 10).toString(), 10, None)
+
+simpleStream.eventStream().runForeach(println(_))
+
