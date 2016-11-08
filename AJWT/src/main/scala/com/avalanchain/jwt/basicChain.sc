@@ -20,8 +20,8 @@ import collection.JavaConverters._
 import CurveContext._
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, OverflowStrategy}
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, OverflowStrategy, SinkShape}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RunnableGraph, Sink, Source}
 import com.avalanchain.jwt.KeysDto._
 import com.avalanchain.jwt.basicChain._
 import com.typesafe.config.ConfigFactory
@@ -120,24 +120,28 @@ val res = time {
 
 import collection.JavaConverters._
 
-class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 10, timeWindow: FiniteDuration = 1 second,
+class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 100, timeWindow: FiniteDuration = 1 second,
                        implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) extends FrameTokenStorage {
   val location = folder.resolve(id)
-  private var currentBatchN = 0
-  private var indexInBatch = 0
-  private var batch =
 
   Files.createDirectories(location)
 
   private var groupIdx = -1
-  val queue = Source.queue[FrameToken](batchSize, OverflowStrategy.backpressure)
-      .groupedWithin(batchSize, timeWindow)
-      .map(g => { groupIdx += 1; (groupIdx, g) })
-      .to(Sink.foreach(b => {
-        val fileName = location.resolve(f"${b._1}%08d")
-        Files.deleteIfExists(fileName)
-        Files.write(fileName, b._2.map(_.toString).asJavaCollection, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)
-      })).run()
+
+  val fileSinkDef: Sink[FrameToken, NotUsed] = Flow[FrameToken]
+    .groupedWithin(batchSize, timeWindow)
+    .map(g => { groupIdx += 1; (groupIdx, g) })
+    .to(Sink.foreach(b => {
+      val fileName = location.resolve(f"${b._1}%08d")
+      Files.deleteIfExists(fileName)
+      Files.write(fileName, b._2.map(_.toString).asJavaCollection, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)
+    }))
+
+  val queueDef = Source.queue[FrameToken](batchSize, OverflowStrategy.backpressure)
+
+  val (queue, broadcastQueue) = queueDef.toMat(BroadcastHub.sink(bufferSize = 256))(Keep.both).run()
+
+  val fileSink = broadcastQueue.runWith(fileSinkDef)
 
   override def add(frameToken: FrameToken): Try[Unit] = {
     queue.offer(frameToken)
@@ -146,18 +150,22 @@ class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 10, ti
 
   override def get(frameRef: FrameRef): Option[FrameToken] = ???
 
-  def getFrom(position: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+  def getFromSnapshot(position: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
     Source.fromIterator[Path](() => Files.newDirectoryStream(location).iterator().asScala.toList.sorted.iterator)
       .mapConcat[String](f => Files.readAllLines(f).asScala.toList).map(s => new JwtTokenSym[Frame](s))
-//      .fold(ArrayBuffer[FrameToken]())((acc: ArrayBuffer[FrameToken], ft) => { acc += ft; acc })
-//      .map(a: FrameToken => a.sortBy(_.payload.get.pos))
+//      .fold(ArrayBuffer[FrameToken]())((acc: ArrayBuffer[FrameToken], ft) => { acc += ft; acc }) // TODO: Uncomment for pos sorting within the files
+//      .mapConcat(a => a.sortBy(_.payload.get.pos).toList)
       .filter(_.payload.get.pos >= position)
+  }
+
+  def getFrom(position: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+    getFromSnapshot(position: Position).concat(broadcastQueue)
   }
 }
 
 
 
-val fts = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString, 100, 1 second, system, materializer)
+val fts = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString, 1000, 1 second, system, materializer)
 val cr = new ChainRegistry(savedKeys(), fts)
 val nc = cr.newChain()
 
@@ -165,18 +173,36 @@ val nc = cr.newChain()
 
 case class Data(int: Int, string: String, double: Double)
 
-time {
-  val r = Source(0 until 10000)
-    .map(i => (i, nc.add(Data(i, i.toString, i).asJson)))
-    .map(i => { if (i._1 % 100 == 99) println(i._1); i })
-    .runWith(Sink.ignore)
-  Await.result(r, 120 seconds)
+def runMain() =
+  time {
+    val r = Source(0 until 1000000)
+  //  var idx = 0
+  //  def getIdx = {idx += 1; idx }
+  //  val r = Source.tick(10 microseconds, 10 microseconds, getIdx)
+      .map(i => (i, nc.add(Data(i, i.toString, i).asJson)))
+      .map(i => { if (i._1 % 100 == 99) println(i._1); i })
+      .runWith(Sink.ignore)
+    Await.result(r, 120 seconds)
+  }
+
+import scala.concurrent.ExecutionContext.Implicits.global
+Future {
+  println("Starting parallel")
+  runMain()
+  println("End parallel")
 }
 
-fts.getFrom(0).runForeach(e => println(s"Token: '${e}'"))
-//println(s"Token count: ${fts.getFrom(0).toList.length}")
+//fts.getFrom(0).runForeach(e => println(s"Token: '${e}'"))
+   //println(s"Token count: ${fts.getFrom(0).toList.length}")
+
+fts.getFromSnapshot(1000).runForeach(e => println(s"Token: '${e}'"))
 
 
+val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString + "_map", 1000, 1 second, system, materializer)
+val cr1 = new ChainRegistry(savedKeys(), fts)
+val nc1 = cr.newChain()
+
+fts.getFromSnapshot(0).runForeach(e => nc1.add(e.payload.asJson))
 
 
 
