@@ -10,7 +10,7 @@ import com.avalanchain.core.domain._
   * Created by Yuriy on 29/04/2016.
   */
 class ChainStreamNode[T](node: CryptoContext, val chainRef: ChainRef, val snapshotInterval: Int, initial: Option[T])
-                        (implicit hasherT: Hasher[T], hasherMR: Hasher[MerkledRef]) extends ActorSubscriber {
+                        (implicit hasherT: Hasher[T], hasherMR: Hasher[MerkledRef], bytes2Hexed: Bytes2Hexed) extends ActorSubscriber {
   import ActorSubscriberMessage._
 
   val MaxQueueSize = 1000

@@ -1,8 +1,9 @@
 //import com.roundeights.hasher.Hasher
 import akka.actor.{ActorSystem, Props}
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
+import com.avalanchain.core.builders.CryptoContextSettingsBuilder.CryptoContextSettings
 import com.avalanchain.core.builders.CryptoContextSettingsBuilder.CryptoContextSettings._
 import com.avalanchain.core.chain.{ChainRefData, MerkledRef}
 import com.avalanchain.core.chainFlow.{ChainFlow, ChainPersistentActor}
@@ -61,15 +62,31 @@ val simpleStream = ChainFlow.create[Int]("ints", Source(1 until 1000), Some(0))
 
 //val mapped = filtered.map(_ / 10, 0).groupBy(x => (x % 10).toString(), 10, None)
 
-simpleStream.eventStream().runForeach(e => println("DONE:" + e))
+val ss = simpleStream.eventStream().runForeach(e => println("DONE:" + e))
 
+val aa = simpleStream.eventStream().to(Sink.foreach(e => println("DONE1:" + e)))
+aa.run()
+ss.isCompleted
 //Source(1 until 1000).runForeach(println(_))
 
+def hasher[T](v: T)(implicit serializerI: BytesSerializer[T], serializerMR: BytesSerializer[MerkledRef]) = HashedValue[T](Hash.Zero, v)
 
-val ar = system.actorOf(Props(new ChainPersistentActor[Int](simpleStream.chainRef, None)), "ar")
+val bytes2Hexed = CryptoContextSettings.bytes2Hexed
+
+val pa = Props(new ChainPersistentActor[Int](simpleStream.chainRef, None, 10, 10)(hasher[Int], hasher[MerkledRef], bytes2Hexed))
+val ar = system.actorOf(pa, "ar")
 
 ar ! "print"
 
-ar ! 3
+ar ! HashedValue[Int](Hash.Zero, 3)
 
 val h3: HashedValue[Int] = 3
+
+//val sinkActor = Sink.foreach(println)
+
+val stream = Source(1 until 1000).map(e => HashedValue[Int](Hash.Zero, e)).runWith(Sink.actorSubscriber(pa))
+
+
+val q = Source.queue[Int](10, OverflowStrategy.backpressure).map(e => HashedValue[Int](Hash.Zero, e)).to(Sink.actorSubscriber(pa)).run()
+
+q.offer(1)

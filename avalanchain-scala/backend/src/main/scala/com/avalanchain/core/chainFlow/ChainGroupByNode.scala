@@ -9,7 +9,7 @@ import com.avalanchain.core.domain.{HashedValue, _}
   * Created by Yuriy on 29/04/2016.
   */
 class ChainGroupByNode[T](val chainRef: ChainRef, keySelector: T => String, initial: Option[T], val snapshotInterval: Int, maxInFlight: Int)
-                         (implicit hasherT: Hasher[T], hasherMR: Hasher[MerkledRef])
+                         (implicit hasherT: Hasher[T], hasherMR: Hasher[MerkledRef], bytes2Hexed: Bytes2Hexed)
   extends ActorSubscriber {
   import ActorSubscriberMessage._
 

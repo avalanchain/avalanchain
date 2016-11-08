@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.ActorLogging
 import akka.persistence.{PersistentActor, SnapshotOffer}
+import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import com.avalanchain.core.chain.{ChainRef, FrameBuilder, MerkledRef, StateFrame}
 import com.avalanchain.core.domain._
@@ -12,10 +13,10 @@ import com.avalanchain.core.domain._
   * Created by Yuriy Habarov on 29/04/2016.
   */
 class ChainPersistentActor[T](val chainRef: ChainRef, initial: Option[T], val snapshotInterval: Int = 100, val maxInFlight: Int = 10)
-                             (implicit hasherT: Hasher[T], hasherMR: Hasher[MerkledRef])
+                             (implicit hasherT: Hasher[T], hasherMR: Hasher[MerkledRef], bytes2Hexed: Bytes2Hexed)
   extends PersistentActor with ActorSubscriber with ActorLogging {
 
-  override def persistenceId = chainRef.hash.toString()
+  override def persistenceId = bytes2Hexed(chainRef.hash.hash)
 
   private def saveFrame(frame: StateFrame[T]) = {
     updateState(frame)
@@ -40,22 +41,29 @@ class ChainPersistentActor[T](val chainRef: ChainRef, initial: Option[T], val sn
     case SnapshotOffer(_, snapshot: StateFrame[T]) => state = snapshot
   }
 
-  def save(frame: StateFrame[T]) = {
+  def save(data: HashedValue[T]) = {
+    log.info(s"Received $data, inFlight: ${inFlight}")
+    val frame = FrameBuilder.buildFrame[T](chainRef, currentState, data.value)
     inFlight += 1
     persist(frame) (e => {
-      saveFrame(frame)
-      if (frame.mref.value.pos != 0 && frame.mref.value.pos % snapshotInterval == 0) {saveSnapshot(frame)}
+      saveFrame(e)
+      if (e.mref.value.pos != 0 && e.mref.value.pos % snapshotInterval == 0) {saveSnapshot(currentState)}
       inFlight -= 1
     })
   }
 
   val receiveCommand: Receive = {
+    case OnNext(data: HashedValue[T]) =>
+      save(data)
+
     case data: HashedValue[T] =>
-      log.info(s"Received $data, inFlight: ${inFlight}")
-      val newFrame = FrameBuilder.buildFrame[T](chainRef, currentState, data.value)
-      save(newFrame)
+      save(data)
 
 //    case data: T =>
+//      save(hasherT(data))
+
+
+    //    case data: T =>
 //      val newFrame = FrameBuilder.buildFrame[T](chainRef, currentState, data.value)
 //      save(newFrame)
     case "print" => println(state)

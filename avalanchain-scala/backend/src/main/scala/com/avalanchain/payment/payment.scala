@@ -140,20 +140,20 @@ package object payment {
     val tickActor = context.actorOf(Props(classOf[TickActor], this))
 
     val cancellable =
-    context.system.scheduler.schedule(0 milliseconds,
-      50 milliseconds,
-      self,
-      Tick)
+      context.system.scheduler.schedule(0 milliseconds,
+        50 milliseconds,
+        self,
+        Tick)
 
     //This cancels further Ticks to be sent
-    cancellable.cancel()
+    //cancellable.cancel()
 
     override def receive = {
       case Request(cnt) =>                                                             // 2
-        log.debug("[FibonacciPublisher] Received Request ({}) from Subscriber", cnt)
+        log.debug("[TradingBot] Received Request ({}) from Subscriber", cnt)
         //sendFibs()
       case Cancel =>                                                                   // 3
-        log.info("[FibonacciPublisher] Cancel Message Received -- Stopping")
+        log.info("[TradingBot] Cancel Message Received -- Stopping")
         context.stop(self)
       case _ =>
     }

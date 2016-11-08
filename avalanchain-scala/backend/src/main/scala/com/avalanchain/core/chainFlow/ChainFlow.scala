@@ -16,11 +16,12 @@ import com.avalanchain.core.domain._
   */
 
 class ChainFlow[T](val chainRef: ChainRef)
-                  (implicit val system: ActorSystem, implicit val materializer: Materializer, hasherT: Hasher[T], hasherMR: Hasher[MerkledRef], hasherCRD: Hasher[ChainRefData]) {
+                  (implicit system: ActorSystem, materializer: Materializer, hasherT: Hasher[T], hasherMR: Hasher[MerkledRef],
+                   hasherCRD: Hasher[ChainRefData], bytes2Hexed: Bytes2Hexed) {
   private val queries = PersistenceQuery(system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier)
 
   def envelopStream() = {
-    val src: Source[EventEnvelope, NotUsed] = queries.eventsByPersistenceId(chainRef.hash.toString(), 0L, Long.MaxValue)
+    val src: Source[EventEnvelope, NotUsed] = queries.eventsByPersistenceId(bytes2Hexed(chainRef.hash.hash), 0L, Long.MaxValue)
     src
   }
 
@@ -30,7 +31,8 @@ class ChainFlow[T](val chainRef: ChainRef)
 
   def map[B](f: T => B, snapshotInterval: Int = 1000, maxInFlight: Int = 1000)(implicit hasherB: Hasher[B]): ChainFlow[B] = {
     val childChainRef = hasherCRD(ChainRefData(UUID.randomUUID(), chainRef.value.name + "\\map", 0))
-    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, None, snapshotInterval, maxInFlight)(hasherT, hasherMR)))
+    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, None, snapshotInterval, maxInFlight)
+      (hasherT, hasherMR, bytes2Hexed)))
 
     val stream = eventStream().map(_.map(v => hasherB(f(v.value))).getOrElse(Hash.Zero)).runWith(sinkActor)
 
@@ -70,7 +72,8 @@ class ChainFlow[T](val chainRef: ChainRef)
 
   def mapFrame[B](f: StateFrame[T] => B, initialValue: Option[B], snapshotInterval: Int = 1000, maxInFlight: Int = 1000)(implicit hasherB: Hasher[B]): ChainFlow[B] = {
     val childChainRef = hasherCRD(ChainRefData(UUID.randomUUID(), chainRef.value.name + "\\mapFrame", 0))
-    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, initialValue, snapshotInterval, maxInFlight)(hasherB, hasherMR)))
+    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, initialValue, snapshotInterval, maxInFlight)
+      (hasherB, hasherMR, bytes2Hexed)))
 
     val stream = frameStream().map(e => hasherB(f(e))).runWith(sinkActor)
 
@@ -79,7 +82,8 @@ class ChainFlow[T](val chainRef: ChainRef)
 
   def filterFrame(f: StateFrame[T] => Boolean, initialValue: Option[T], snapshotInterval: Int = 1000, maxInFlight: Int = 1000): ChainFlow[T] = {
     val childChainRef = hasherCRD(ChainRefData(UUID.randomUUID(), chainRef.value.name + "\\filterFrame", 0))
-    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, initialValue, snapshotInterval, maxInFlight)(hasherT, hasherMR)))
+    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, initialValue, snapshotInterval, maxInFlight)
+      (hasherT, hasherMR, bytes2Hexed)))
 
     val stream = frameStream().filter(e => f(e)).runWith(sinkActor)
 
@@ -89,7 +93,8 @@ class ChainFlow[T](val chainRef: ChainRef)
   def foldFrame[B](f: (StateFrame[B], StateFrame[T]) => Option[B], initialValue: Option[B], snapshotInterval: Int = 1000, maxInFlight: Int = 1000)
                   (implicit hasherB: Hasher[B]): ChainFlow[B] = {
     val childChainRef = hasherCRD(ChainRefData(UUID.randomUUID(), chainRef.value.name + "\\fold", 0))
-    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, initialValue, snapshotInterval, maxInFlight)(hasherB, hasherMR)))
+    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor(childChainRef, initialValue, snapshotInterval, maxInFlight)
+      (hasherB, hasherMR, bytes2Hexed)))
 
     val stream = frameStream().fold[StateFrame[B]](FrameBuilder.buildInitialFrame(childChainRef, initialValue))((state: StateFrame[B], e: StateFrame[T]) => state).
       runWith(sinkActor)
@@ -108,9 +113,11 @@ class ChainFlow[T](val chainRef: ChainRef)
 
 object ChainFlow {
   def create[T](name: String, source: Source[T, NotUsed], initialValue: Option[T], snapshotInterval: Int = 1000, maxInFlight: Int = 1000)
-               (implicit system: ActorSystem, materializer: Materializer, hasherT: Hasher[T], hasherMR: Hasher[MerkledRef], hasherCRD: Hasher[ChainRefData]) : ChainFlow[T] = {
+               (implicit system: ActorSystem, materializer: Materializer, hasherT: Hasher[T], hasherMR: Hasher[MerkledRef],
+                hasherCRD: Hasher[ChainRefData], bytes2Hexed: Bytes2Hexed) : ChainFlow[T] = {
     val childChainRef = hasherCRD(ChainRefData(UUID.randomUUID(), name, 0))
-    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor[T](childChainRef, initialValue, snapshotInterval, maxInFlight)(hasherT, hasherMR)))
+    val sinkActor = Sink.actorSubscriber(Props(new ChainPersistentActor[T](childChainRef, initialValue, snapshotInterval, maxInFlight)
+      (hasherT, hasherMR, bytes2Hexed)))
     //val sinkActor = Sink.foreach(println)
 
     val stream = source.map(e => hasherT(e)).runWith(sinkActor)
