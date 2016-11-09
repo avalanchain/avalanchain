@@ -3,6 +3,7 @@
 
 # sbt specific
 .cache
+.idea
 .history
 .lib/
 dist/*
