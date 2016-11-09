@@ -170,7 +170,7 @@ object SignedEchoClient extends App {
   import CryptoContextSettingsBuilder.CryptoContextSettings._
   implicit val ccs = CryptoContextSettingsBuilder.CryptoContextSettings
   val priv = "8ZDAKa2B1YCL6qTnqFEBcwTSUaN7yfihXJpJ3Tr1Fg7e" |> (PrivateKey(_))
-  val pub = "2g9rtvxp3FugrRjawtk8DeuHGsDq3CfnjasnTrbwi95X" |> (PublicKey(_))
+  val pub = "2g9rtvxp3FugrRjawtk8DeuHGsDq3CfnjasnTrbwi951X" |> (PublicKey(_))
   val ctx = CryptoContextBuilder.createCryptoContext(priv, pub, Set("8rAwg7esrUog6UhWJWfrzY91cnhXf4LeaaH3J79aS2ug").map(PublicKey(_)))
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()

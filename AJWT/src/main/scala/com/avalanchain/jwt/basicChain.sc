@@ -32,6 +32,8 @@ import pdi.jwt.exceptions.JwtLengthException
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
+import collection.JavaConverters._
 
 
 val config =
@@ -94,31 +96,6 @@ val res = time {
   Await.result(r, 10 seconds)
 }
 
-//val fts = new MapFrameTokenStorage()
-//val cr = new ChainRegistry(savedKeys(), fts)
-//val nc = cr.newChain()
-//println(s"Token count: ${fts.frameTokens.toList.length}")
-//
-//case class Data(int: Int, string: String, double: Double)
-//
-//time {
-//  val r = Source(0 until 1000000)
-//    .map(i => (i, nc.add(Data(i, i.toString, i).asJson)))
-//    .map(i => { if (i._1 % 100000 == 99999) println(i._1); i })
-//    .runWith(Sink.ignore)
-//  Await.result(r, 120 seconds)
-//}
-//
-//println(s"Token count: ${fts.frameTokens.toList.length}")
-//fts.frameTokens.foreach(e => println(s"Tokens key: '${e._1}', val: '${e._2}'"))
-
-//trait FrameTokenStorage {
-//  def add(frameToken: FrameToken): Try[Unit]
-//  def get(frameRef: FrameRef): Option[FrameToken]
-//  //def get(chainRef: ChainRef, pos: Position): Option[FrameToken]
-//}
-
-import collection.JavaConverters._
 
 class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 100, timeWindow: FiniteDuration = 1 second,
                        implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) extends FrameTokenStorage {
@@ -161,8 +138,8 @@ class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 100, t
   def getFrom(position: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
     getFromSnapshot(position: Position).concat(broadcastQueue)
   }
-}
 
+}
 
 
 val fts = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString, 1000, 1 second, system, materializer)
@@ -173,36 +150,113 @@ val nc = cr.newChain()
 
 case class Data(int: Int, string: String, double: Double)
 
-def runMain() =
-  time {
-    val r = Source(0 until 1000000)
-  //  var idx = 0
-  //  def getIdx = {idx += 1; idx }
-  //  val r = Source.tick(10 microseconds, 10 microseconds, getIdx)
-      .map(i => (i, nc.add(Data(i, i.toString, i).asJson)))
-      .map(i => { if (i._1 % 100 == 99) println(i._1); i })
-      .runWith(Sink.ignore)
-    Await.result(r, 120 seconds)
+def runSimple() =
+  Future {
+    time {
+      val r = Source(0 until 100000)
+        //  var idx = 0
+        //  def getIdx = {idx += 1; idx }
+        //  val r = Source.tick(10 microseconds, 10 microseconds, getIdx)
+        .map(i => (i, nc.add(Data(i, s"Number ${i}", i * Math.PI).asJson)))
+        .map(i => {
+          if (i._1 % 100 == 99) println(i._1); i
+        })
+        .runWith(Sink.ignore)
+      Await.result(r, 120 seconds)
+    }
   }
 
-import scala.concurrent.ExecutionContext.Implicits.global
-Future {
-  println("Starting parallel")
-  runMain()
-  println("End parallel")
-}
+runSimple()
+
+def runPeriodic() =
+  Future {
+    time {
+        var idx = 0
+        def getIdx = {idx += 1; idx }
+        val r = Source.tick(10 microseconds, 10 microseconds, getIdx)
+        .map(i => (i, nc.add(Data(i, s"Number ${i}", i * Math.PI).asJson)))
+        .map(i => {
+          if (i._1 % 100 == 99) println(i._1); i
+        })
+        .runWith(Sink.ignore)
+      Await.result(r, 120 seconds)
+    }
+  }
+
+runPeriodic()
 
 //fts.getFrom(0).runForeach(e => println(s"Token: '${e}'"))
    //println(s"Token count: ${fts.getFrom(0).toList.length}")
 
-fts.getFromSnapshot(1000).runForeach(e => println(s"Token: '${e}'"))
+Future {
+    fts.getFromSnapshot(1000).runForeach(e => println(s"Token: '${e}'"))
+}
 
 
-val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString + "_map", 1000, 1 second, system, materializer)
-val cr1 = new ChainRegistry(savedKeys(), fts)
-val nc1 = cr.newChain()
+Future {
+  val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString, 1000, 1 second, system, materializer)
+  val cr1 = new ChainRegistry(savedKeys(), fts1)
+  val nc1 = cr1.newChain()
 
-fts.getFromSnapshot(0).runForeach(e => nc1.add(e.payload.asJson))
+  fts.getFromSnapshot(0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
+}
+
+
+Future {
+  val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString + "_filter", 1000, 1 second, system, materializer)
+  val cr1 = new ChainRegistry(savedKeys(), fts1)
+  val nc1 = cr1.newChain()
+
+  fts.getFrom(0).filter(e => e.payload.get.pos % 2 == 0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
+}
+
+
+Future {
+  val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString + "_filter2", 1000, 1 second, system, materializer)
+  val cr1 = new ChainRegistry(savedKeys(), fts1)
+  val nc1 = cr1.newChain()
+
+  fts.getFrom(0).filter(e => e.payload.get.pos % 20 == 0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
+}
+
+
+
+
+
+
+
+
+
+
+
+//Future {
+//  println("Starting parallel")
+//  runMain()
+//  println("End parallel")
+//}
+
+
+
+//val fts = new MapFrameTokenStorage()
+//val cr = new ChainRegistry(savedKeys(), fts)
+//val nc = cr.newChain()
+//println(s"Token count: ${fts.frameTokens.toList.length}")
+//
+//case class Data(int: Int, string: String, double: Double)
+//
+//time {
+//  val r = Source(0 until 1000000)
+//    .map(i => (i, nc.add(Data(i, i.toString, i).asJson)))
+//    .map(i => { if (i._1 % 100000 == 99999) println(i._1); i })
+//    .runWith(Sink.ignore)
+//  Await.result(r, 120 seconds)
+//}
+//
+//println(s"Token count: ${fts.frameTokens.toList.length}")
+//fts.frameTokens.foreach(e => println(s"Tokens key: '${e._1}', val: '${e._2}'"))
+
+
+
 
 
 

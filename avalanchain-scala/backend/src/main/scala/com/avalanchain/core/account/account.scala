@@ -7,6 +7,7 @@ import com.avalanchain.core.domain.Proofed.Signed
 import com.avalanchain.core.domain.{AcEvent, AcRegistryCommand, SignedEvent, SigningPublicKey}
 import com.avalanchain.core.permissions.PermissionType.{Allow, Deny, Nested}
 import com.avalanchain.core.permissions.{Permission, UserId}
+import com.avalanchain.core.principals.UserCommand._
 import com.sun.mail.imap.ACL
 
 import scala.util.matching.Regex
@@ -29,12 +30,12 @@ package object account {
   object AccountState {
     import com.avalanchain.core.account._
 
-//    final case class Empty(userId: UserId) extends UserState
-//    final case class Valid(user: User, roles: Set[RoleId], permissions: ACL) extends UserState { val userId = user.userId }
-//    final case class Invalid(userId: UserId, reason: String) extends UserState
-//    final case class Deleted(userId: UserId, reason: String) extends UserState
-//
-//    def applyUserEvents(userId: UserId, events: List[UserEvent], roleValidator: RoleId => Boolean): UserState = {
+//    final case class Empty(userId: UserId) extends AccountState
+//    final case class Valid(user: User, roles: Set[RoleId], permissions: ACL) extends AccountState { val userId = user.userId }
+//    final case class Invalid(userId: UserId, reason: String) extends AccountState
+//    final case class Deleted(userId: UserId, reason: String) extends AccountState
+
+//    def applyUserEvents(userId: UserId, events: List[UserEvent], roleValidator: RoleId => Boolean): AccountState = {
 //      events.map(_.value.value).filter(_.userId == userId).foldLeft (Empty(userId).asInstanceOf[UserState]) ((us, c) => (us, c) match {
 //        case (Invalid(_, _), _) => us
 //        case (Deleted(_, _), _) => us
