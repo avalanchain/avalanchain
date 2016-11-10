@@ -43,6 +43,12 @@ libraryDependencies ++= {
     "com.typesafe.akka" %% "akka-http-xml-experimental"                 % akkaHttpVersion,
     "com.typesafe.akka" %% "akka-http-testkit"                          % akkaHttpVersion,
 
+    "org.iq80.leveldb"            % "leveldb"                           % "0.7",
+    "org.fusesource.leveldbjni"   % "leveldbjni-all"                    % "1.8",
+
+    "com.github.dnvriend" %% "akka-persistence-inmemory"                % "1.3.14",
+    "com.github.dnvriend" %% "akka-persistence-journal-writer"          % "0.0.2",
+
     "org.scalatest"     %% "scalatest"                                  % "2.2.5" % "test",
     "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.7.2",
 

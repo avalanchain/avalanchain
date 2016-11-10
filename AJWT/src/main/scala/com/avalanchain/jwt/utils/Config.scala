@@ -8,4 +8,6 @@ trait Config {
 
   val httpInterface = httpConfig.getString("interface")
   val httpPort = httpConfig.getInt("port")
+
 }
+

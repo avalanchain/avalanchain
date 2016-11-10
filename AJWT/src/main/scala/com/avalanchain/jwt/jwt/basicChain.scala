@@ -136,7 +136,7 @@ package object basicChain {
       val frame = Frame(chainRef, state.pos + 1, state.lastRef, v)
       val frameToken = JwtTokenSym[Frame](frame, state.lastRef.sig)
       tokenStorage.add(frameToken).map(_ => {
-        state = ChainState(Some(frameToken), FrameRef(frameToken.sig), frame.pos)
+        state = ChainState(Some(frameToken), FrameRef(frameToken), frame.pos)
       })
     }
   }

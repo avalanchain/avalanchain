@@ -2,9 +2,3 @@ import scalaj.http.Http
 
 //val page = Http("http://localhost:9911/swagger/index.html").asString
 
-//val post =
-//  Http("https://e-money.setl.io/deloitteuser").
-//    postForm(Seq("data" -> "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzUxMiJ9.eyJpc3MiOiJEZWxvaXR0ZSIsImV4cCI6MTYzNTExMzI3NCwiaWF0IjoxNDc3MzI4NTE0LAogICJmaXJzdE5hbWUiIDogIlJ1YnkiLAogICJsYXN0TmFtZSIgOiAiSG93YXJkIiwKICAiZW1haWxBZGRyZXNzIiA6ICJNZWxpZGEuU2F0dGVyZmllbGRAZGVsb2l0dGUuY28udWsiLAogICJwaG9uZU51bWJlciIgOiAiMDcyODgxOTQyODYiCn0.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAvTpvKxCG1ARYUSyZzT0s5_GyQuIpi_p8phdr3DX5ArAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqXIVftU1GyUKsjvdEMj9qGpZyMFd45fPIC4yZSEN8-",
-//    "cardkey" -> "0436e5818571c58dade0f3a6fa4821657d1a6386e835091a961355abf00000b6a616e9c5afbcd6661891e684ca50b0131317ff051b8eb0bcd56d364c961d8ca832")).asString
-//
-//post.body
