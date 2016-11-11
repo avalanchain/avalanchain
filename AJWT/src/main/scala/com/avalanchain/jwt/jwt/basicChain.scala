@@ -3,7 +3,9 @@ package com.avalanchain.jwt
 import java.security.{KeyPair, PrivateKey}
 import java.util.UUID
 
-import com.avalanchain.jwt.KeysDto.PubKey
+import akka.NotUsed
+import akka.actor.ActorRefFactory
+import akka.stream.scaladsl.Source
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.syntax._
 import io.circe.parser._
@@ -11,6 +13,9 @@ import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtBase64}
 import pdi.jwt.exceptions.JwtLengthException
+
+import com.avalanchain.jwt.KeysDto.PubKey
+import com.avalanchain.jwt.actors._
 
 import scala.collection.immutable.Map
 import scala.util.{Success, Try}
@@ -31,8 +36,9 @@ package object basicChain {
 
   sealed trait ChainDef extends JwtPayload.Asym { val id: Id }
   object ChainDef {
-    case class New(id: Id, puk: PubKey) extends ChainDef
+    case class New(id: Id, puk: PubKey, init: Option[JsonStr]) extends ChainDef
     case class Nested(id: Id, puk: PubKey, parent: ChainRef, pos: Position) extends ChainDef
+    case class Derived(id: Id, puk: PubKey, parent: ChainRef, pos: Position, f: String, init: Option[JsonStr]) extends ChainDef
   }
 
   sealed trait JwtToken {
@@ -119,16 +125,19 @@ package object basicChain {
     def add(frameToken: FrameToken): Try[Unit]
     def get(frameRef: FrameRef): Option[FrameToken]
     //def get(chainRef: ChainRef, pos: Position): Option[FrameToken]
+    def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed]
+    def getFrom(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed]
   }
   type FrameSigner = String => Frame => FrameToken
   case class ChainState(frame: Option[FrameToken], lastRef: FrameRef, pos: Position)
+
   class Chain(val chainDefToken: ChainDefToken, //val publicKey: PublicKey,
-              tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None) {
+              tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None)(implicit actorRefFactory: ActorRefFactory) {
     val chainRef = ChainRef(chainDefToken)
     def status = ChainStatus.Created
 
-    def pos: Position = state.pos
-    def current: Option[FrameToken] = state.frame
+//    def pos: Position = state.pos
+//    def current: Option[FrameToken] = state.frame
 
     private var state = currentState.getOrElse(ChainState(None, FrameRef(chainRef.sig), -1))
 
@@ -139,6 +148,9 @@ package object basicChain {
         state = ChainState(Some(frameToken), FrameRef(frameToken), frame.pos)
       })
     }
+
+    def sink() =
+      PersistentSink(chainRef.sig)(actorRefFactory)
   }
 
   import scala.collection._
@@ -147,14 +159,27 @@ package object basicChain {
 
   class MapFrameTokenStorage extends FrameTokenStorage {
     private var tokens = new ConcurrentHashMap[FrameRef, FrameToken].asScala
+    private val buffer = mutable.ArrayBuffer.empty[FrameToken]
     def frameTokens = tokens
 
     override def add(frameToken: FrameToken): Try[Unit] = {
       tokens += (FrameRef(frameToken) -> frameToken)
+      buffer += frameToken
       Success(())
     }
 
+    // Do not use. Don't work properly.
     override def get(frameRef: FrameRef): Option[FrameToken] = tokens.get(frameRef)
+    def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+      Source.fromIterator(() => buffer.toIterator)
+        .filter(_.payload.get.pos >= fromPosition)
+        .takeWhile(_.payload.get.pos <= toPosition)
+    }
+
+    def getFrom(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+      getFromSnapshot(fromPosition, toPosition)//.concat(broadcastQueue).takeWhile(_.payload.get.pos <= toPosition)
+    }
+
   }
 
   class ChainRegistry(keyPair: KeyPair, frameTokenStorage: FrameTokenStorage = new MapFrameTokenStorage()) {
@@ -166,8 +191,8 @@ package object basicChain {
 
     //TODO: nestedChain, addFrame
 
-    def newChain(): Chain = {
-      val chainDef = ChainDef.New(UUID.randomUUID(), publicKey)
+    def newChain(initValue: Option[JsonStr] = Some("{}")): Chain = {
+      val chainDef = ChainDef.New(UUID.randomUUID(), publicKey, initValue)
       val chainDefToken = JwtTokenAsym[ChainDef](chainDef, privateKey)
       val chainRef = ChainRef(chainDefToken)
       val newChain = new Chain(chainDefToken, frameTokenStorage)

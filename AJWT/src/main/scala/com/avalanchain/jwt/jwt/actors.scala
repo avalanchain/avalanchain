@@ -98,7 +98,6 @@ package object actors {
     override def persistenceId = pid
 
     private var state: ChainState = ChainState(None, new FrameRef(""), -1) // TODO: Replace "" with chainRef.sig
-    //saveFrame(state)
 
     private def applyToken(frameToken: FrameToken): ChainState = {
       ChainState(Some(frameToken), FrameRef(frameToken), frameToken.payload.get.pos)
@@ -139,13 +138,14 @@ package object actors {
       case ChainPersistentActor.GetState | "state" => sender() ! state
       case a => {
         log.info(s"Ignored '${a}' '${a.getClass}'")
-        sender() ! "Ack"
+        sender() ! Ack
       }
     }
 
     log.info(s"Persistent Actor with id: '${persistenceId}' created.")
   }
 
-  def PersistentSink(pid: String)(implicit actorRefFactory: ActorRefFactory) =
-    Sink.actorRefWithAck(actorRefFactory.actorOf(ChainPersistentActor.props("pid2")), ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
+  def PersistentSink[T](pid: String)(implicit actorRefFactory: ActorRefFactory) =
+    Sink.actorRefWithAck[T](actorRefFactory.actorOf(ChainPersistentActor.props(pid), pid),
+      ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
 }

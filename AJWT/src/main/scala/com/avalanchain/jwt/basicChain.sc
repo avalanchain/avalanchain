@@ -7,6 +7,7 @@ import java.time.Instant
 import java.util.UUID
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
 
 import com.avalanchain.jwt.jwt.{CurveContext, UserInfo}
 import io.circe._
@@ -20,6 +21,8 @@ import collection.JavaConverters._
 import CurveContext._
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
+import akka.persistence.query.PersistenceQuery
 import akka.stream.{ActorMaterializer, OverflowStrategy, SinkShape}
 import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, MergeHub, RunnableGraph, Sink, Source}
 import com.avalanchain.jwt.KeysDto._
@@ -34,57 +37,15 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import collection.JavaConverters._
+import com.avalanchain.jwt.utils._
 
+import scala.collection.mutable
 
-val config =
-  """
-    |akka {
-    |  version = 2.4.12
-    |
-    |  # Loggers to register at boot time (akka.event.Logging$DefaultLogger logs
-    |  # to STDOUT)
-    |  loggers = ["akka.event.slf4j.Slf4jLogger"]
-    |
-    |  # Log level used by the configured loggers (see "loggers") as soon
-    |  # as they have been started; before that, see "stdout-loglevel"
-    |  # Options: OFF, ERROR, WARNING, INFO, DEBUG
-    |  loglevel = "DEBUG"
-    |
-    |  # Log level for the very basic logger activated during ActorSystem startup.
-    |  # This logger prints the log messages to stdout (System.out).
-    |  # Options: OFF, ERROR, WARNING, INFO, DEBUG
-    |  stdout-loglevel = "DEBUG"
-    |
-    |  # Filter of log events that is used by the LoggingAdapter before
-    |  # publishing log events to the eventStream.
-    |  logging-filter = "akka.event.slf4j.Slf4jLoggingFilter"
-    |
-    |  persistence.journal.plugin = "akka.persistence.journal.leveldb"
-    |  persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.local"
-    |
-    |  persistence.journal.leveldb.dir = "target/state/journal"
-    |  persistence.snapshot-store.local.dir = "target/state/snapshots"
-    |
-    |# DO NOT USE THIS IN PRODUCTION !!!
-    |# See also https://github.com/typesafehub/activator/issues/287
-    |  persistence.journal.leveldb.native = false
-    |
-    |}
-  """.stripMargin
-
-implicit val system = ActorSystem("test", ConfigFactory.parseString(config))
+implicit val system = ActorSystem("test", ConfigFactory.parseString(AkkaConfigs.PersLevelDb))
 //implicit val system = ActorSystem("mySystem")
 implicit val materializer = ActorMaterializer()
 
 //Source(0 until 200).to(Sink.foreach(println)).run()
-
-def time[R](block: => R): R = {
-  val t0 = System.nanoTime()
-  val result = block    // call-by-name
-  val t1 = System.nanoTime()
-  println(s"Elapsed time: ${(t1 - t0)} ns or ${(t1 - t0)/1000000} ms")
-  result
-}
 
 val result = time { 1 to 1000000 sum }
 
@@ -100,6 +61,7 @@ val res = time {
 class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 100, timeWindow: FiniteDuration = 1 second,
                        implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) extends FrameTokenStorage {
   val location = folder.resolve(id)
+  val sigMap = new ConcurrentHashMap[FrameRef, FrameToken].asScala
 
   Files.createDirectories(location)
 
@@ -122,23 +84,45 @@ class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 100, t
 
   override def add(frameToken: FrameToken): Try[Unit] = {
     queue.offer(frameToken)
+    sigMap += (FrameRef(frameToken) -> frameToken)
+    Success()
+  }
+
+  override def get(frameRef: FrameRef): Option[FrameToken] = sigMap.get(frameRef)
+
+  def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+    Source.fromIterator[Path](() => Files.newDirectoryStream(location).iterator().asScala.toList.sorted.iterator)
+      .mapConcat[String](f => Files.readAllLines(f).asScala.toList).map(s => new JwtTokenSym[Frame](s))
+//      .fold(ArrayBuffer[FrameToken]())((acc: ArrayBuffer[FrameToken], ft) => { acc += ft; acc }) // TODO: Uncomment for pos sorting within the files
+//      .mapConcat(a => a.sortBy(_.payload.get.pos).toList)
+      .filter(_.payload.get.pos >= fromPosition)
+      .takeWhile(_.payload.get.pos <= toPosition)
+  }
+
+  def getFrom(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+    getFromSnapshot(fromPosition, toPosition).concat(broadcastQueue).takeWhile(_.payload.get.pos <= toPosition)
+  }
+}
+
+
+class PersistenceTokenStorage(pid: String, implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) extends FrameTokenStorage {
+  val readJournal: InMemoryReadJournal = PersistenceQuery(system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
+
+  override def add(frameToken: FrameToken): Try[Unit] = {
+    //queue.offer(frameToken)
+    //sigMap += (FrameRef(frameToken) -> frameToken)
     Success()
   }
 
   override def get(frameRef: FrameRef): Option[FrameToken] = ???
 
-  def getFromSnapshot(position: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
-    Source.fromIterator[Path](() => Files.newDirectoryStream(location).iterator().asScala.toList.sorted.iterator)
-      .mapConcat[String](f => Files.readAllLines(f).asScala.toList).map(s => new JwtTokenSym[Frame](s))
-//      .fold(ArrayBuffer[FrameToken]())((acc: ArrayBuffer[FrameToken], ft) => { acc += ft; acc }) // TODO: Uncomment for pos sorting within the files
-//      .mapConcat(a => a.sortBy(_.payload.get.pos).toList)
-      .filter(_.payload.get.pos >= position)
+  def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+    readJournal.eventsByPersistenceId(pid, fromPosition, toPosition).map(_.event.asInstanceOf[FrameToken])
   }
 
-  def getFrom(position: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
-    getFromSnapshot(position: Position).concat(broadcastQueue)
+  def getFrom(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
+    getFromSnapshot(fromPosition, toPosition)
   }
-
 }
 
 
