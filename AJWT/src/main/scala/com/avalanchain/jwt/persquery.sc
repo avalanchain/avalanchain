@@ -1,3 +1,4 @@
+
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.event.Logging
@@ -102,3 +103,41 @@ Source.single(ChainPersistentActor.PrintState).runWith(Sink.actorRef(myActor,  "
 //Source.single("print").runWith(Sink.actorRef(pa,  "complete"))
 
 
+import javax.script.ScriptEngineManager
+import javax.script.Invocable
+
+val engine = new ScriptEngineManager().getEngineByMimeType("text/javascript")
+val result = time {
+  (0 until 100000).foreach(_ => engine.eval("1 + 1"))
+}
+println(result)
+
+val result1 = time {
+  (0 until 100000).foreach(_ => 1 + 1)
+}
+
+
+engine.eval("function sum(a, b) { return a + b; }");
+val invocable = engine.asInstanceOf[Invocable]
+
+invocable.invokeFunction("sum", new Integer(1), new Integer(2))
+
+val result2 = time {
+  (0 until 100000).foreach(i => invocable.invokeFunction("sum", new Integer(i + 1), new Integer(i + 2)))
+}
+
+val res = engine.eval("1 + 1")
+
+
+engine.eval("function jp2(json) { var j = JSON.parse(json); j.val += 1; return JSON.stringify(j); }");
+println(invocable.invokeFunction("jp2", """{ "val":  10}"""))
+
+val result3 = time {
+  (0 until 10000).foreach(i => invocable.invokeFunction("jp2", s"""{ "val":  $i}"""))
+}
+
+engine.eval("var f = function(j){return j.val + 11};")
+engine.eval("function jp3(f, json) { var j = JSON.parse(json); var r = f(j); return JSON.stringify(j); }; function jp4(j) { return jp3(f, j); }");
+val result4 = time {
+  (0 until 10000).foreach(i => invocable.invokeFunction("jp4", s"""{ "val":  $i}"""))
+}

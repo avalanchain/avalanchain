@@ -31,14 +31,28 @@ package object basicChain {
   sealed trait JwtPayload
   object JwtPayload {
     trait Sym extends JwtPayload
-    trait Asym extends JwtPayload { val puk: PubKey }
+    trait Asym extends JwtPayload { val pub: PubKey }
   }
 
-  sealed trait ChainDef extends JwtPayload.Asym { val id: Id }
+  case class ResourceGroup(name: String)
+
+  type Func1 = String
+  type Func2 = String
+  sealed trait ChainDerivationFunction
+  object ChainDerivationFunction {
+//    case class Fork(pos: Position) extends ChainDerivationFunction
+    case class Map(f: Func1) extends ChainDerivationFunction
+    case class Filter(f: Func1) extends ChainDerivationFunction
+    case class Fold(f: Func2, init: JsonStr = "{}") extends ChainDerivationFunction
+    case class GroupBy(f: Func1, max: Int) extends ChainDerivationFunction
+    //case class Reduce(f: Func2) extends ChainDerivationFunction
+  }
+
+  sealed trait ChainDef extends JwtPayload.Asym { val id: Id; val pub: PubKey }
   object ChainDef {
-    case class New(id: Id, puk: PubKey, init: Option[JsonStr]) extends ChainDef
-    case class Nested(id: Id, puk: PubKey, parent: ChainRef, pos: Position) extends ChainDef
-    case class Derived(id: Id, puk: PubKey, parent: ChainRef, pos: Position, f: String, init: Option[JsonStr]) extends ChainDef
+    case class New(id: Id, pub: PubKey, init: Option[JsonStr]) extends ChainDef
+    case class Nested(id: Id, pub: PubKey, parent: ChainRef, pos: Position) extends ChainDef
+    case class Derived(id: Id, pub: PubKey, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
   }
 
   sealed trait JwtToken {
@@ -182,7 +196,7 @@ package object basicChain {
 
   }
 
-  class ChainRegistry(keyPair: KeyPair, frameTokenStorage: FrameTokenStorage = new MapFrameTokenStorage()) {
+  class ChainRegistry(keyPair: KeyPair, frameTokenStorage: FrameTokenStorage = new MapFrameTokenStorage())(implicit actorRefFactory: ActorRefFactory) {
     private val privateKey = keyPair.getPrivate
     val publicKey = keyPair.getPublic
 
