@@ -1,11 +1,21 @@
 package com.avalanchain.jwt
 
-import akka.actor.{ActorContext, ActorLogging, ActorRefFactory, Props}
+import akka.NotUsed
+import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, Props}
+import akka.pattern.{ask, pipe}
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
-import akka.stream.scaladsl.Sink
-import com.avalanchain.jwt.basicChain.{ChainState, FrameRef, FrameToken}
+import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.util.Timeout
+import com.avalanchain.jwt.actors.ChainRegistryActor._
+import com.avalanchain.jwt.basicChain._
+
+import scala.collection._
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.util.Try
+
 
 /**
   * Created by Yuriy on 10/11/2016.
@@ -79,6 +89,91 @@ package object actors {
     log.info(s"Persistent Actor with id: '${persistenceId}' created.")
   }
 
+  object ChainRegistryActor {
+    sealed trait Command
+    final case class CreateChain(chainDefToken: ChainDefToken) extends Command
+    final case class GetChainByRef(chainRef: ChainRef) extends Command
+    object GetState extends Command
+    object PrintState extends Command
+
+    sealed trait ChainCreationResult { val chainDefToken: ChainDefToken; val ref: ActorRef }
+    final case class ChainCreated(chainDefToken: ChainDefToken, ref: ActorRef) extends ChainCreationResult
+    final case class ChainAlreadyExists(chainDefToken: ChainDefToken, ref: ActorRef) extends ChainCreationResult
+    //final case class ChainCreationFailed(chainDefToken: ChainDefToken, ref: ActorRef) extends ChainCreationResult
+
+    sealed trait GetChainByRefResult
+    final case class ChainFound(chainDefToken: ChainDefToken, actorRef: ActorRef) extends GetChainByRefResult
+    final case class ChainNotFound(chainRef: ChainRef) extends GetChainByRefResult
+
+    def props() = Props(new ChainRegistryActor())
+    val actorId = "chainregistry"
+  }
+
+  class ChainRegistryActor() extends PersistentActor with ActorLogging {
+    import ChainRegistryActor._
+
+    override def persistenceId = actorId
+
+    private val state = mutable.HashMap.empty[ChainRef, ChainDefToken]
+
+    private def updateState(chainDefToken: ChainDefToken): Unit = {
+      state += (ChainRef(chainDefToken) -> chainDefToken)
+      log.info(s"ChainDefToken $chainDefToken registered.")
+    }
+
+    def currentState = state
+
+    val receiveRecover: Receive = {
+      case chainDefToken: ChainDefToken => updateState(chainDefToken)
+    }
+
+    def save(chainDefToken: ChainDefToken, actorRef: ActorRef) = {
+      if (log.isDebugEnabled) {
+        log.debug(s"ChainDefToken received: $chainDefToken")
+      }
+      persist(chainDefToken) (cdf => {
+        updateState(cdf)
+        sender() ! ChainCreated(cdf, actorRef)
+      })
+    }
+
+    val receiveCommand: Receive = {
+      case CreateChain(chainDefToken) => {
+        val pid: String = chainDefToken.sig
+        context.child(pid) match {
+          case Some(actorRef) => sender() ! ChainAlreadyExists(chainDefToken, actorRef)
+          case None => {
+            val actorRef = context.actorOf(ChainPersistentActor.props(pid), pid)
+            save(chainDefToken, actorRef)
+          }
+        }
+      }
+
+      case GetChainByRef(chainRef) => {
+        val pid: String = chainRef.sig
+        val ret: GetChainByRefResult = state.get(chainRef) match {
+          case None => ChainNotFound(chainRef)
+          case Some(chainDefToken) => {
+            context.child(pid) match {
+              case Some(actorRef) => ChainFound(chainDefToken, actorRef)
+              case None => {
+                val actorRef = context.actorOf(ChainPersistentActor.props(pid), pid)
+                ChainFound(chainDefToken, actorRef)
+              }
+            }
+          }
+        }
+        sender() ! ret
+      }
+
+      case PrintState | "print" => println(s"State: $state")
+      case GetState | "state" => sender() ! state
+      case a => log.info(s"Ignored '${a}' '${a.getClass}'")
+    }
+
+    log.info(s"Persistent Actor with id: '${persistenceId}' created.")
+  }
+
   object ChainPersistentActor {
     trait Command
     object GetState extends Command
@@ -92,12 +187,12 @@ package object actors {
     def props(pid: String) = Props(new ChainPersistentActor(pid))
   }
 
-  class ChainPersistentActor(val pid: String, val snapshotInterval: Int = 100) extends PersistentActor with ActorLogging {
+  class ChainPersistentActor(val pid: String, val snapshotInterval: Int = 10000) extends PersistentActor with ActorLogging {
     import ChainPersistentActor._
 
     override def persistenceId = pid
 
-    private var state: ChainState = ChainState(None, new FrameRef(""), -1) // TODO: Replace "" with chainRef.sig
+    private var state: ChainState = ChainState(None, new FrameRef(pid), -1) // pid expected to be chainRef
 
     private def applyToken(frameToken: FrameToken): ChainState = {
       ChainState(Some(frameToken), FrameRef(frameToken), frameToken.payload.get.pos)
@@ -130,7 +225,7 @@ package object actors {
 
     val receiveCommand: Receive = {
       case Init => sender() ! Ack
-      case (data: FrameToken) => save(data)
+      case data: FrameToken => save(data)
       //case OnNext(data: FrameToken) => save(data)
       case Complete =>
 
@@ -145,7 +240,47 @@ package object actors {
     log.info(s"Persistent Actor with id: '${persistenceId}' created.")
   }
 
-  def PersistentSink[T](pid: String)(implicit actorRefFactory: ActorRefFactory) =
-    Sink.actorRefWithAck[T](actorRefFactory.actorOf(ChainPersistentActor.props(pid), pid),
+//  def PersistentSink2[T](pid: String)(implicit actorRefFactory: ActorRefFactory) =
+//    Sink.actorRefWithAck[T](actorRefFactory.actorOf(ChainPersistentActor.props(pid), pid),
+//      ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
+
+
+  def PersistentSink[T](chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory) = {
+    val chainCreationResult = Await.result({
+      (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? CreateChain(chainDefToken)).mapTo[ChainCreationResult]
+    }, 5 seconds)
+
+    //    implicit val askTimeout = Timeout(5.seconds)
+    //    val flow = Source
+    //      .single(chainRef)
+    //      .mapAsync(parallelism = 1)(ccr => (actorRefFactory.actorSelection(ccr.sig) ? GetChainByRef(chainRef)).mapTo[ChainCreationResult])
+    //      .map(e => e.ref)
+
+    Sink.actorRefWithAck[T](chainCreationResult.ref,
       ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
+  }
+
+  def PersistentSink[T](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory): Option[Sink[T, NotUsed]] = {
+    val chainByRefResult = Await.result({
+      (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
+    }, 5 seconds)
+
+    chainByRefResult match {
+      case ChainFound(chainDefToken, actorRef) => Some(Sink.actorRefWithAck[T](actorRef,
+        ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
+      case ChainNotFound(chainRef) => None
+    }
+  }
+
+//  def PersistentSource[T](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory) = {
+//    val chainByRefResult = Await.result({
+//      (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
+//    }, 5 seconds)
+//
+//    chainByRefResult match {
+//      case ChainFound(chainDefToken, actorRef) => Some(Sink.actorRefWithAck[T](actorRef,
+//        ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
+//      case ChainNotFound(chainRef) => None
+//    }
+//  }
 }
