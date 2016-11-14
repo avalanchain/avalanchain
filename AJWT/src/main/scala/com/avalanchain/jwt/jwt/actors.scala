@@ -93,6 +93,7 @@ package object actors {
     sealed trait Command
     final case class CreateChain(chainDefToken: ChainDefToken) extends Command
     final case class GetChainByRef(chainRef: ChainRef) extends Command
+    object GetChains extends Command
     object GetState extends Command
     object PrintState extends Command
 
@@ -167,7 +168,7 @@ package object actors {
       }
 
       case PrintState | "print" => println(s"State: $state")
-      case GetState | "state" => sender() ! state
+      case GetChains | GetState | "state" => sender() ! collection.mutable.Map(state.toSeq: _*)
       case a => log.info(s"Ignored '${a}' '${a.getClass}'")
     }
 
@@ -245,7 +246,7 @@ package object actors {
 //      ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
 
 
-  def PersistentSink[T](chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory) = {
+  def PersistentSink[T](chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout) = {
     val chainCreationResult = Await.result({
       (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? CreateChain(chainDefToken)).mapTo[ChainCreationResult]
     }, 5 seconds)
@@ -260,13 +261,13 @@ package object actors {
       ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
   }
 
-  def PersistentSink[T](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory): Option[Sink[T, NotUsed]] = {
+  def PersistentSink[T](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout): Option[Sink[T, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
     }, 5 seconds)
 
     chainByRefResult match {
-      case ChainFound(chainDefToken, actorRef) => Some(Sink.actorRefWithAck[T](actorRef,
+      case ChainFound(chainDefToken: ChainDefToken, actorRef) => Some(Sink.actorRefWithAck[T](actorRef,
         ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
       case ChainNotFound(chainRef) => None
     }

@@ -19,6 +19,7 @@ import com.avalanchain.jwt.actors._
 
 import scala.collection.immutable.Map
 import scala.util.{Success, Try}
+import scala.concurrent.duration._
 
 /**
   * Created by Yuriy Habarov on 08/11/2016.
@@ -164,7 +165,7 @@ package object basicChain {
     }
 
     def sink() =
-      PersistentSink(chainRef.sig)(actorRefFactory)
+      PersistentSink(chainRef)(actorRefFactory, 5 seconds)
   }
 
   import scala.collection._
