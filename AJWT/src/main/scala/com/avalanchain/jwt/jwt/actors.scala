@@ -1,14 +1,20 @@
 package com.avalanchain.jwt
 
 import akka.NotUsed
-import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, Props}
+import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
+import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
+import akka.persistence.query.PersistenceQuery
+import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
+import akka.persistence.query.scaladsl.{EventsByPersistenceIdQuery, ReadJournal}
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
+import cats.data.Xor
 import com.avalanchain.jwt.actors.ChainRegistryActor._
+import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Nested, New}
 import com.avalanchain.jwt.basicChain._
 
 import scala.collection._
@@ -245,6 +251,19 @@ package object actors {
 //    Sink.actorRefWithAck[T](actorRefFactory.actorOf(ChainPersistentActor.props(pid), pid),
 //      ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
 
+  sealed trait SinkCreationError
+  object SinkCreationError {
+    final case class ChainNotDefined(chainRef: ChainRef) extends SinkCreationError
+    final case class CannotWriteIntoDerivedChain(chainRef: ChainRef) extends SinkCreationError
+    final case class InvalidChainDefToken(chainDefToken: ChainDefToken) extends SinkCreationError
+  }
+
+  sealed trait SourceCreationError
+  object SourceCreationError {
+    final case class ChainNotDefined(chainRef: ChainRef) extends SourceCreationError
+  }
+
+  import SinkCreationError._
 
   def PersistentSink[T](chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout) = {
     val chainCreationResult = Await.result({
@@ -261,27 +280,40 @@ package object actors {
       ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
   }
 
-  def PersistentSink[T](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout): Option[Sink[T, NotUsed]] = {
+  def PersistentSink[T <: FrameToken](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout): Xor[SinkCreationError, Sink[T, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
     }, 5 seconds)
 
     chainByRefResult match {
-      case ChainFound(chainDefToken: ChainDefToken, actorRef) => Some(Sink.actorRefWithAck[T](actorRef,
-        ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
-      case ChainNotFound(chainRef) => None
+      case ChainFound(chainDefToken: ChainDefToken, actorRef) =>
+        if (chainDefToken.payload.isEmpty) Xor.left(InvalidChainDefToken(chainDefToken))
+        else chainDefToken.payload.get match {
+          case New(_, _, _, _) | Nested(_, _, _, _, _) => Xor.right(Sink.actorRefWithAck[T](actorRef,
+            ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
+          case Derived(_, _, _, _, _) => Xor.left(CannotWriteIntoDerivedChain(chainRef))
+        }
+      case ChainNotFound(chainRef) => Xor.left(ChainNotDefined(chainRef))
     }
   }
 
-//  def PersistentSource[T](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory) = {
-//    val chainByRefResult = Await.result({
-//      (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
-//    }, 5 seconds)
-//
-//    chainByRefResult match {
-//      case ChainFound(chainDefToken, actorRef) => Some(Sink.actorRefWithAck[T](actorRef,
-//        ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
-//      case ChainNotFound(chainRef) => None
-//    }
-//  }
+  import SourceCreationError._
+
+  def PersistentSource[T](chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[SourceCreationError, Source[T, NotUsed]] = {
+    val chainByRefResult = Await.result({
+      (actorSystem.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
+    }, 5 seconds)
+
+    chainByRefResult match {
+      case ChainFound(chainDefToken, actorRef) => {
+        val readJournal: EventsByPersistenceIdQuery =
+          if (inMem) PersistenceQuery(actorSystem).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
+          else PersistenceQuery(actorSystem).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[EventsByPersistenceIdQuery]
+
+        Xor.right(readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[T]))
+      }
+      case ChainNotFound(chainRef) => Xor.left(SourceCreationError.ChainNotDefined(chainRef))
+    }
+  }
 }
