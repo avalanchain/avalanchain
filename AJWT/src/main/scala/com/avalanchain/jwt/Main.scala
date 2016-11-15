@@ -206,7 +206,7 @@ class AdminService()
     get {
       complete {
         val keys: KeyPair = CurveContext.savedKeys()
-        toKeysDto(keys).pub
+        toPubKeyDto(keys.getPublic)
       }
     }
 }

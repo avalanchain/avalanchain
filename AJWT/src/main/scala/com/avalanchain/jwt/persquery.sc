@@ -1,8 +1,10 @@
 
+import java.security.PrivateKey
+import java.util.UUID
+
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.event.Logging
-
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
@@ -13,13 +15,15 @@ import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import com.avalanchain.jwt.actors.{ChainPersistentActor, PersistentSink}
-import com.avalanchain.jwt.basicChain.{ChainState, FrameRef, FrameToken}
+import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.utils._
 import com.typesafe.config.ConfigFactory
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 import akka.persistence.inmemory.query.InMemoryReadJournalProvider
 import com.avalanchain.jwt.actors
+import com.avalanchain.jwt.jwt.CurveContext._
+import com.avalanchain.jwt.KeysDto._
 
 import scala.concurrent.Future
 
@@ -36,12 +40,18 @@ import akka.actor.ActorDSL._
 //})
 
 
+val privateKey: PrivateKey = savedKeys().getPrivate
 
-//
+val chainDef = ChainDef.New(JwtAlgo.HS512, UUID.randomUUID(), savedKeys().getPublic, None)
+val chainDefToken = time { TypedJwtToken[ChainDef](chainDef, privateKey) }
+
+val chainDef2 = ChainDef.New(JwtAlgo.ES512, UUID.randomUUID(), savedKeys().getPublic, None)
+val chainDefToken2 = time { TypedJwtToken[ChainDef](chainDef2, privateKey) }
+
 
 //val a = Source(0 until 10).map(e => new FrameToken(e.toString)).runWith(Sink.actorSubscriber(ChainPersistentActor.props("pid")))
 val a = Source(0 until 100).map(e => new FrameToken("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJjciI6eyJzaWciOiJBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBUWRpQ1lpS1kyQ1VBY2RUaVA0SjFRMlg2cHFmV0FSZF9QSzVxcVBKenl3QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQTBJekFKaWZfdHg2QWhEVC01MklBRVNEMk9lNFZsam91cXNtazAwOWFvQyJ9LCJwb3MiOjg4NDE3LCJwcmVmIjp7InNpZyI6IlJiOW1FNS1lWXJ1MHNvQ0NRblZHS2pZQ0dqMFZEZFBqcEZ5YnMzaDVuZnI1cGI2MlBYRXM0ZUd5TEN1cFBaX3hpVVBYZWdjZ2FhXy14UWZReFV4aWZBIn0sInYiOnsiaW50Ijo4ODQxNywic3RyaW5nIjoiTnVtYmVyIDg4NDE3IiwiZG91YmxlIjoyNzc3NzAuMTk3NjUyNDQ4N319.ASEh6ElsFaunmc-Z0Dv8rxxrrLpLUd93VvVCvA1lcLGRhxZhnETFZ9obxIS1WEqsSFhiL6TntOyRHbcEJugAAQ")).
-  to(PersistentSink("pid2")).run()
+  to(PersistentSink(ChainRef(chainDefToken)).toList.head).run()
 
 val b = Source.queue[Int](10, OverflowStrategy.backpressure).map(e => new FrameToken("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJjciI6eyJzaWciOiJBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBUWRpQ1lpS1kyQ1VBY2RUaVA0SjFRMlg2cHFmV0FSZF9QSzVxcVBKenl3QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQTBJekFKaWZfdHg2QWhEVC01MklBRVNEMk9lNFZsam91cXNtazAwOWFvQyJ9LCJwb3MiOjg4NDE3LCJwcmVmIjp7InNpZyI6IlJiOW1FNS1lWXJ1MHNvQ0NRblZHS2pZQ0dqMFZEZFBqcEZ5YnMzaDVuZnI1cGI2MlBYRXM0ZUd5TEN1cFBaX3hpVVBYZWdjZ2FhXy14UWZReFV4aWZBIn0sInYiOnsiaW50Ijo4ODQxNywic3RyaW5nIjoiTnVtYmVyIDg4NDE3IiwiZG91YmxlIjoyNzc3NzAuMTk3NjUyNDQ4N319.ASEh6ElsFaunmc-Z0Dv8rxxrrLpLUd93VvVCvA1lcLGRhxZhnETFZ9obxIS1WEqsSFhiL6TntOyRHbcEJugAAQ")).
   to(Sink.actorSubscriber(ChainPersistentActor.props("pid"))).run()

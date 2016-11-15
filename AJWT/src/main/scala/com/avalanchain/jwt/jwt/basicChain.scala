@@ -58,10 +58,10 @@ package object basicChain {
   sealed trait ChainDef extends JwtPayload.Asym { val algo: JwtAlgo; val id: Id; val pub: PubKey }
   object ChainDef {
     final case class New(algo: JwtAlgo, id: Id, pub: PubKey, init: Option[JsonStr]) extends ChainDef
-    final case class Nested(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, pos: Position) extends ChainDef
+    final case class Fork(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, pos: Position) extends ChainDef
     final case class Derived(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
   }
-  
+
   sealed trait JwtToken {
     val token: String
     private val chunks = splitToken(token)
@@ -206,7 +206,7 @@ package object basicChain {
 
   }
 
-  class ChainRegistry(keyPair: KeyPair, frameTokenStorage: FrameTokenStorage = new MapFrameTokenStorage())
+  class ChainRegistry(keyPair: KeyPair)
                      (implicit actorRefFactory: ActorRefFactory, encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]) {
     private val privateKey = keyPair.getPrivate
     val publicKey = keyPair.getPublic
@@ -216,26 +216,23 @@ package object basicChain {
 
     //TODO: nestedChain, addFrame
 
-    def newChain(jwtAlgo: JwtAlgo, initValue: Option[JsonStr] = Some("{}")): Chain = {
-      val chainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), publicKey, initValue)
+    private def addChainDef(chainDef: ChainDef) = {
       val chainDefToken = TypedJwtToken[ChainDef](chainDef, privateKey)
       val chainRef = ChainRef(chainDefToken)
-      val newChain = new Chain(chainDefToken, keyPair, frameTokenStorage)
+      val newChain = new Chain(chainDefToken, keyPair, new MapFrameTokenStorage())
       chains += (chainRef -> newChain)
       newChain
     }
 
-    //  def nestedChain(parentChainRef: ChainRef, pos: Position): Chain = {
-    //    val chainDef = ChainDef.Nested(UUID.randomUUID(), publicKey, parentChainRef, pos)
-    //    val chainDefToken = JwtTokenAsym[ChainDef](chainDef, privateKey)
-    //    val chainRef = ChainRef(chainDefToken)
-    //    val
-    //    val shackle = Shackle.Seed(chainRef, publicKey)
-    //    val shackleToken = JwtTokenSym[Shackle](shackle, chainRef.sig)
-    //    val newChain = new Chain(chainDefToken, -1, ChainStatus.Created, shackleToken)
-    //    chains += (chainRef -> newChain)
-    //    newChain
-    //  }
+    def newChain(jwtAlgo: JwtAlgo, initValue: Option[JsonStr] = Some("{}")): Chain =
+      addChainDef(ChainDef.New(jwtAlgo, UUID.randomUUID(), publicKey, initValue))
+
+    def nestedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain =
+      addChainDef(ChainDef.Fork(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, pos))
+
+    def derivedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain =
+      addChainDef(ChainDef.Fork(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, pos))
+
   }
 
 }

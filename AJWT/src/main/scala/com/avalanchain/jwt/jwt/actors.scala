@@ -14,7 +14,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import cats.data.Xor
 import com.avalanchain.jwt.actors.ChainRegistryActor._
-import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Nested, New}
+import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
 import com.avalanchain.jwt.basicChain._
 
 import scala.collection._
@@ -289,7 +289,7 @@ package object actors {
       case ChainFound(chainDefToken: ChainDefToken, actorRef) =>
         if (chainDefToken.payload.isEmpty) Xor.left(InvalidChainDefToken(chainDefToken))
         else chainDefToken.payload.get match {
-          case New(_, _, _, _) | Nested(_, _, _, _, _) => Xor.right(Sink.actorRefWithAck[T](actorRef,
+          case New(_, _, _, _) | Fork(_, _, _, _, _) => Xor.right(Sink.actorRefWithAck[T](actorRef,
             ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
           case Derived(_, _, _, _, _) => Xor.left(CannotWriteIntoDerivedChain(chainRef))
         }

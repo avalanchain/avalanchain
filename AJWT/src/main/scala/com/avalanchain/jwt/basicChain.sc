@@ -92,7 +92,7 @@ class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 100, t
 
   def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
     Source.fromIterator[Path](() => Files.newDirectoryStream(location).iterator().asScala.toList.sorted.iterator)
-      .mapConcat[String](f => Files.readAllLines(f).asScala.toList).map(s => new JwtTokenSym[Frame](s))
+      .mapConcat[String](f => Files.readAllLines(f).asScala.toList).map(s => new TypedJwtToken[Frame](s))
 //      .fold(ArrayBuffer[FrameToken]())((acc: ArrayBuffer[FrameToken], ft) => { acc += ft; acc }) // TODO: Uncomment for pos sorting within the files
 //      .mapConcat(a => a.sortBy(_.payload.get.pos).toList)
       .filter(_.payload.get.pos >= fromPosition)
