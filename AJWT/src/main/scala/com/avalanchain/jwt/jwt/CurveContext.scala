@@ -13,10 +13,15 @@ import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
 
 import scala.util.Try
 
+trait CurveContext {
+  def newKeys(): KeyPair
+  def savedKeys(S: BigInt, X: BigInt, Y: BigInt): KeyPair
+}
+
 /**
   * Created by Yuriy Habarov on 26/10/2016.
   */
-object CurveContext {
+object CurveContext extends CurveContext {
   Security.addProvider(new BouncyCastleProvider())
 
   private val curve25519 = new Curve25519()

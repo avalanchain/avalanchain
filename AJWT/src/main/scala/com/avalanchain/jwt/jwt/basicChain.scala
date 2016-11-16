@@ -41,7 +41,7 @@ package object basicChain {
   type Func2 = String
   sealed trait ChainDerivationFunction
   object ChainDerivationFunction {
-//    case class Fork(pos: Position) extends ChainDerivationFunction
+    case object Copy extends ChainDerivationFunction
     final case class Map(f: Func1) extends ChainDerivationFunction
     final case class Filter(f: Func1) extends ChainDerivationFunction
     final case class Fold(f: Func2, init: JsonStr = "{}") extends ChainDerivationFunction
@@ -230,9 +230,8 @@ package object basicChain {
     def nestedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain =
       addChainDef(ChainDef.Fork(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, pos))
 
-    def derivedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain =
-      addChainDef(ChainDef.Fork(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, pos))
-
+    def derivedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, cdf: ChainDerivationFunction): Chain =
+      addChainDef(ChainDef.Derived(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, cdf))
   }
 
 }

@@ -10,11 +10,12 @@ import akka.persistence.query.scaladsl.{EventsByPersistenceIdQuery, ReadJournal}
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
 import akka.util.Timeout
 import cats.data.Xor
 import com.avalanchain.jwt.actors.ChainRegistryActor._
 import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
+import com.avalanchain.jwt.basicChain.ChainDerivationFunction._
 import com.avalanchain.jwt.basicChain._
 
 import scala.collection._
@@ -251,19 +252,14 @@ package object actors {
 //    Sink.actorRefWithAck[T](actorRefFactory.actorOf(ChainPersistentActor.props(pid), pid),
 //      ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
 
-  sealed trait SinkCreationError
-  object SinkCreationError {
-    final case class ChainNotDefined(chainRef: ChainRef) extends SinkCreationError
-    final case class CannotWriteIntoDerivedChain(chainRef: ChainRef) extends SinkCreationError
-    final case class InvalidChainDefToken(chainDefToken: ChainDefToken) extends SinkCreationError
+  sealed trait ChainCreationError
+  object ChainCreationError {
+    final case class ChainNotDefined(chainRef: ChainRef) extends ChainCreationError
+    final case class CannotWriteIntoDerivedChain(chainRef: ChainRef) extends ChainCreationError
+    final case class InvalidChainDefToken(chainDefToken: ChainDefToken) extends ChainCreationError
   }
 
-  sealed trait SourceCreationError
-  object SourceCreationError {
-    final case class ChainNotDefined(chainRef: ChainRef) extends SourceCreationError
-  }
-
-  import SinkCreationError._
+  import ChainCreationError._
 
   def PersistentSink[T](chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout) = {
     val chainCreationResult = Await.result({
@@ -280,7 +276,8 @@ package object actors {
       ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
   }
 
-  def PersistentSink[T <: FrameToken](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout): Xor[SinkCreationError, Sink[T, NotUsed]] = {
+  def PersistentSink[T <: FrameToken](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout):
+    Xor[ChainCreationError, Sink[T, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
     }, 5 seconds)
@@ -297,10 +294,8 @@ package object actors {
     }
   }
 
-  import SourceCreationError._
-
   def PersistentSource[T](chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[SourceCreationError, Source[T, NotUsed]] = {
+                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[T, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorSystem.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
     }, 5 seconds)
@@ -313,7 +308,23 @@ package object actors {
 
         Xor.right(readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[T]))
       }
-      case ChainNotFound(chainRef) => Xor.left(SourceCreationError.ChainNotDefined(chainRef))
+      case ChainNotFound(chainRef) => Xor.left(ChainNotDefined(chainRef))
+    }
+  }
+
+  def derivedChain[T](chainDefToken: ChainDefToken, inMem: Boolean)(implicit actorSystem: ActorSystem, timeout: Timeout):
+    Xor[ChainCreationError, RunnableGraph[NotUsed]] = {
+    chainDefToken.payload.get match {
+      case derived: Derived => {
+        val source = PersistentSource[T](derived.parent, 0, Long.MaxValue, inMem)
+        derived.cdf match {
+          case Copy => source.map(_.to(PersistentSink[T](chainDefToken)))
+          case Map(f) =>
+          case Filter(f) =>
+          case Fold(f, init) =>
+          case GroupBy(f, max) =>
+        }
+      }
     }
   }
 }
