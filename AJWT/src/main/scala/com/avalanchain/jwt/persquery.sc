@@ -114,9 +114,6 @@ Source.single(ChainPersistentActor.PrintState).runWith(Sink.actorRef(myActor,  "
 //Source.single("print").runWith(Sink.actorRef(pa,  "complete"))
 
 
-import javax.script.ScriptEngineManager
-import javax.script.Invocable
-
 val engine = new ScriptEngineManager().getEngineByMimeType("text/javascript")
 val result = time {
   (0 until 100000).foreach(_ => engine.eval("1 + 1"))
@@ -148,7 +145,13 @@ val result3 = time {
 }
 
 engine.eval("var f = function(j){return j.val + 11};")
-engine.eval("function jp3(f, json) { var j = JSON.parse(json); var r = f(j); return JSON.stringify(j); }; function jp4(j) { return jp3(f, j); }");
+engine.eval("function jw(f, json) { var j = JSON.parse(json); var r = f(j); return JSON.stringify(r); }; function jex(json) { return jw(f, json); }");
 val result4 = time {
-  (0 until 10000).foreach(i => invocable.invokeFunction("jp4", s"""{ "val":  $i}"""))
+  (0 until 10000).foreach(i => invocable.invokeFunction("jex", s"""{ "val":  $i}"""))
 }
+
+engine.eval("""function jex(json) { var f = function(j){return { val: j.val + 11 }}; function jw(f, json) { var j = JSON.parse(json); var r = f(j); return JSON.stringify(r); }; return jw(f, json); }""");
+invocable.invokeFunction("jex", s"""{ "val":  10}""")
+
+val sf = ScriptFunction("function(j){return j.val + 11}")
+sf(s"""{ "val":  10}""")

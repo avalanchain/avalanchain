@@ -37,14 +37,15 @@ package object basicChain {
 
   case class ResourceGroup(name: String)
 
-  type Func1 = String
-  type Func2 = String
+  type Func = String
+  type Func1 = Func
+  type Func2 = Func
   sealed trait ChainDerivationFunction
   object ChainDerivationFunction {
     case object Copy extends ChainDerivationFunction
     final case class Map(f: Func1) extends ChainDerivationFunction
     final case class Filter(f: Func1) extends ChainDerivationFunction
-    final case class Fold(f: Func2, init: JsonStr = "{}") extends ChainDerivationFunction
+    final case class Fold(f: Func2, init: Json = Json.fromString("{}")) extends ChainDerivationFunction
     final case class GroupBy(f: Func1, max: Int) extends ChainDerivationFunction
     //case class Reduce(f: Func2) extends ChainDerivationFunction
   }
@@ -68,7 +69,7 @@ package object basicChain {
     val header64 = chunks._1
     val header = chunks._2
     val payload64 = chunks._3
-    val payloadJson = chunks._4
+    val  payloadJson = chunks._4
     val sig = chunks._5
     override def toString() = token
 
@@ -176,6 +177,9 @@ package object basicChain {
     def sink() =
       PersistentSink(chainRef)(actorRefFactory, 5 seconds)
   }
+  object Chain {
+
+  }
 
   import scala.collection._
   import scala.collection.convert.decorateAsScala._
@@ -233,5 +237,6 @@ package object basicChain {
     def derivedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, cdf: ChainDerivationFunction): Chain =
       addChainDef(ChainDef.Derived(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, cdf))
   }
+
 
 }

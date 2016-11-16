@@ -1,11 +1,6 @@
 package com.avalanchain.jwt.jwt
 
 import akka.actor.{Actor, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
-import com.avalanchain.core.builders.{CryptoContextBuilder, CryptoContextSettingsBuilder}
-import com.avalanchain.core.domain.{PrivateKey, PublicKey}
-import com.avalanchain.core.toolbox.Pipe
-import Pipe._
-
 
 /**
   * Created by Yuriy on 14/10/2016.

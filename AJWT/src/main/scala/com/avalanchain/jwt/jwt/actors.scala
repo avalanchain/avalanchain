@@ -17,6 +17,8 @@ import com.avalanchain.jwt.actors.ChainRegistryActor._
 import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
 import com.avalanchain.jwt.basicChain.ChainDerivationFunction._
 import com.avalanchain.jwt.basicChain._
+import com.avalanchain.jwt.jwt.script.{ScriptFunction, ScriptFunction2, ScriptPredicate}
+import io.circe.Json
 
 import scala.collection._
 import scala.concurrent._
@@ -151,21 +153,20 @@ package object actors {
         context.child(pid) match {
           case Some(actorRef) => sender() ! ChainAlreadyExists(chainDefToken, actorRef)
           case None => {
-            val actorRef = context.actorOf(ChainPersistentActor.props(pid), pid)
+            val actorRef = context.actorOf(ChainPersistentActor.props(ChainRef(chainDefToken)), pid)
             save(chainDefToken, actorRef)
           }
         }
       }
 
       case GetChainByRef(chainRef) => {
-        val pid: String = chainRef.sig
         val ret: GetChainByRefResult = state.get(chainRef) match {
           case None => ChainNotFound(chainRef)
           case Some(chainDefToken) => {
-            context.child(pid) match {
+            context.child(chainRef.sig) match {
               case Some(actorRef) => ChainFound(chainDefToken, actorRef)
               case None => {
-                val actorRef = context.actorOf(ChainPersistentActor.props(pid), pid)
+                val actorRef = context.actorOf(ChainPersistentActor.props(chainRef), chainRef.sig)
                 ChainFound(chainDefToken, actorRef)
               }
             }
@@ -192,15 +193,15 @@ package object actors {
     object Ack extends WithAck
     object Complete extends WithAck
 
-    def props(pid: String) = Props(new ChainPersistentActor(pid))
+    def props(chainRef: ChainRef) = Props(new ChainPersistentActor(chainRef))
   }
 
-  class ChainPersistentActor(val pid: String, val snapshotInterval: Int = 10000) extends PersistentActor with ActorLogging {
+  class ChainPersistentActor(val chainRef: ChainRef, val snapshotInterval: Int = 10000) extends PersistentActor with ActorLogging {
     import ChainPersistentActor._
 
-    override def persistenceId = pid
+    override def persistenceId = chainRef.sig
 
-    private var state: ChainState = ChainState(None, new FrameRef(pid), -1) // pid expected to be chainRef
+    private var state: ChainState = ChainState(None, new FrameRef(chainRef.sig), -1) // pid expected to be chainRef
 
     private def applyToken(frameToken: FrameToken): ChainState = {
       ChainState(Some(frameToken), FrameRef(frameToken), frameToken.payload.get.pos)
@@ -312,17 +313,18 @@ package object actors {
     }
   }
 
-  def derivedChain[T](chainDefToken: ChainDefToken, inMem: Boolean)(implicit actorSystem: ActorSystem, timeout: Timeout):
+  def derivedChain(chainDefToken: ChainDefToken, inMem: Boolean)(implicit actorSystem: ActorSystem, timeout: Timeout):
     Xor[ChainCreationError, RunnableGraph[NotUsed]] = {
     chainDefToken.payload.get match {
       case derived: Derived => {
-        val source = PersistentSource[T](derived.parent, 0, Long.MaxValue, inMem)
+        val source = PersistentSource[Json](derived.parent, 0, Long.MaxValue, inMem)
         derived.cdf match {
-          case Copy => source.map(_.to(PersistentSink[T](chainDefToken)))
-          case Map(f) =>
-          case Filter(f) =>
-          case Fold(f, init) =>
-          case GroupBy(f, max) =>
+          case Copy => source.map(_.to(PersistentSink[Json](chainDefToken)))
+          case ChainDerivationFunction.Map(f) => source.map(_.map(e => ScriptFunction(f)(e)).to(PersistentSink[Json](chainDefToken)))
+          case Filter(f) => source.map(_.filter(e => ScriptPredicate(f)(e)).to(PersistentSink[Json](chainDefToken)))
+          //case Fold(f, init) => source.map(_.fold(init)((acc, e) => ScriptFunction2(f)(acc, e)).to(PersistentSink[Json](chainDefToken)))
+          case Fold(f, init) => source.map(_.scan(init)((acc, e) => ScriptFunction2(f)(acc, e)).to(PersistentSink[Json](chainDefToken)))
+          case GroupBy(f, max) => source.map(_.groupBy(max, e => ScriptFunction(f)(e)).to(PersistentSink[Json](chainDefToken)))
         }
       }
     }
