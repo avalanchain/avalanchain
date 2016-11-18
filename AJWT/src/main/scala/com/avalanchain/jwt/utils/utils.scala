@@ -11,4 +11,11 @@ package object utils {
     println(s"Elapsed time: ${(t1 - t0)} ns or ${(t1 - t0)/1000000} ms")
     result
   }
+
+  object Pipe {
+    implicit def toPipe[A](x : A) = new {
+      def |> [B](f : A => B) = f(x)
+    }
+    implicit def not (b: Boolean) = !b
+  }
 }

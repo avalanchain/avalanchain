@@ -16,6 +16,7 @@ import scala.util.Try
 trait CurveContext {
   def newKeys(): KeyPair
   def savedKeys(S: BigInt, X: BigInt, Y: BigInt): KeyPair
+  val currentKeys: KeyPair
 }
 
 /**
@@ -52,6 +53,8 @@ object CurveContext extends CurveContext {
     new KeyPair(KeyFactory.getInstance("ECDSA", "BC").generatePublic(publicSpec),
       KeyFactory.getInstance("ECDSA", "BC").generatePrivate(privateSpec))
   }
+
+  val currentKeys = savedKeys()
 
   def encodeUser(privateKey: PrivateKey, userInfo: UserInfo) = {
     val content = userInfo.asJson.spaces2

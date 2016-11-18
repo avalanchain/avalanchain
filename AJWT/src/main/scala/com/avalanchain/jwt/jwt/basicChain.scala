@@ -175,7 +175,7 @@ package object basicChain {
     }
 
     def sink() =
-      PersistentSink(chainRef)(actorRefFactory, 5 seconds)
+      PersistentFrameSink(chainRef)(actorRefFactory, 5 seconds)
   }
   object Chain {
 

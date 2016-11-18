@@ -14,11 +14,18 @@ import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
 import akka.util.Timeout
 import cats.data.Xor
 import com.avalanchain.jwt.actors.ChainRegistryActor._
+import com.avalanchain.jwt.actors.JwtError.{IncorrectJwtTokenFormat, JwtTokenPayloadParsingError}
 import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
 import com.avalanchain.jwt.basicChain.ChainDerivationFunction._
+import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 import com.avalanchain.jwt.basicChain._
+import com.avalanchain.jwt.jwt.{NodeContext, NodeExtension}
 import com.avalanchain.jwt.jwt.script.{ScriptFunction, ScriptFunction2, ScriptPredicate}
-import io.circe.Json
+import io.circe.{Decoder, DecodingFailure, Encoder, Json}
+import io.circe.syntax._
+import io.circe.parser._
+import io.circe.generic.JsonCodec
+import io.circe.generic.auto._
 
 import scala.collection._
 import scala.concurrent._
@@ -153,7 +160,7 @@ package object actors {
         context.child(pid) match {
           case Some(actorRef) => sender() ! ChainAlreadyExists(chainDefToken, actorRef)
           case None => {
-            val actorRef = context.actorOf(ChainPersistentActor.props(ChainRef(chainDefToken)), pid)
+            val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), pid)
             save(chainDefToken, actorRef)
           }
         }
@@ -166,7 +173,7 @@ package object actors {
             context.child(chainRef.sig) match {
               case Some(actorRef) => ChainFound(chainDefToken, actorRef)
               case None => {
-                val actorRef = context.actorOf(ChainPersistentActor.props(chainRef), chainRef.sig)
+                val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), chainRef.sig)
                 ChainFound(chainDefToken, actorRef)
               }
             }
@@ -193,11 +200,13 @@ package object actors {
     object Ack extends WithAck
     object Complete extends WithAck
 
-    def props(chainRef: ChainRef) = Props(new ChainPersistentActor(chainRef))
+    def props(chainDefToken: ChainDefToken) = Props(new ChainPersistentActor(chainDefToken))
   }
 
-  class ChainPersistentActor(val chainRef: ChainRef, val snapshotInterval: Int = 10000) extends PersistentActor with ActorLogging {
+  class ChainPersistentActor(val chainDefToken: ChainDefToken, val snapshotInterval: Int = 10000) extends PersistentActor with NodeContext with ActorLogging {
     import ChainPersistentActor._
+
+    val chainRef = ChainRef(chainDefToken)
 
     override def persistenceId = chainRef.sig
 
@@ -232,10 +241,19 @@ package object actors {
       })
     }
 
+    def add(v: Json) = {
+      val newPos = state.pos + 1
+      val frameToken: TypedJwtToken[Frame] = chainDefToken.payload.get.algo match {
+        case HS512 => TypedJwtToken[FSym](FSym(chainRef, newPos, state.lastRef, v), state.lastRef.sig).asInstanceOf[TypedJwtToken[Frame]]
+        case ES512 => TypedJwtToken[FAsym](FAsym(chainRef, newPos, state.lastRef, v, cryptoContext.currentKeys.getPublic), cryptoContext.currentKeys.getPrivate).asInstanceOf[TypedJwtToken[Frame]]
+      }
+      save(frameToken)
+    }
+
     val receiveCommand: Receive = {
       case Init => sender() ! Ack
-      case data: FrameToken => save(data)
-      //case OnNext(data: FrameToken) => save(data)
+      case frameToken: FrameToken => save(frameToken)
+      case json: Json => add(json)
       case Complete =>
 
       case ChainPersistentActor.PrintState | "print" => println(s"State: $state")
@@ -260,9 +278,16 @@ package object actors {
     final case class InvalidChainDefToken(chainDefToken: ChainDefToken) extends ChainCreationError
   }
 
+  sealed trait JwtError
+  object JwtError {
+    final case object IncorrectJwtTokenFormat
+    final case class JwtTokenPayloadParsingError(e: DecodingFailure)
+  }
+
   import ChainCreationError._
 
-  def PersistentSink[T](chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout) = {
+  def PersistentJsonSink(chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout) = {
+    //: Xor[ChainCreationError, Sink[FrameToken, NotUsed]] = {
     val chainCreationResult = Await.result({
       (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? CreateChain(chainDefToken)).mapTo[ChainCreationResult]
     }, 5 seconds)
@@ -273,12 +298,15 @@ package object actors {
     //      .mapAsync(parallelism = 1)(ccr => (actorRefFactory.actorSelection(ccr.sig) ? GetChainByRef(chainRef)).mapTo[ChainCreationResult])
     //      .map(e => e.ref)
 
-    Sink.actorRefWithAck[T](chainCreationResult.ref,
+    Sink.actorRefWithAck[Json](chainCreationResult.ref,
       ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete)
   }
 
-  def PersistentSink[T <: FrameToken](chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout):
-    Xor[ChainCreationError, Sink[T, NotUsed]] = {
+  def PersistentSink[T](chainDefToken: ChainDefToken)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout, encoder: Encoder[T]) = {
+    Flow[T].map(_.asJson).to(PersistentJsonSink(chainDefToken))
+  }
+
+  def PersistentFrameSink(chainRef: ChainRef)(implicit actorRefFactory: ActorRefFactory, timeout: Timeout): Xor[ChainCreationError, Sink[FrameToken, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorRefFactory.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
     }, 5 seconds)
@@ -287,7 +315,7 @@ package object actors {
       case ChainFound(chainDefToken: ChainDefToken, actorRef) =>
         if (chainDefToken.payload.isEmpty) Xor.left(InvalidChainDefToken(chainDefToken))
         else chainDefToken.payload.get match {
-          case New(_, _, _, _) | Fork(_, _, _, _, _) => Xor.right(Sink.actorRefWithAck[T](actorRef,
+          case New(_, _, _, _) | Fork(_, _, _, _, _) => Xor.right(Sink.actorRefWithAck[FrameToken](actorRef,
             ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
           case Derived(_, _, _, _, _) => Xor.left(CannotWriteIntoDerivedChain(chainRef))
         }
@@ -295,8 +323,8 @@ package object actors {
     }
   }
 
-  def PersistentSource[T](chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[T, NotUsed]] = {
+  def PersistentFrameTokenSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[FrameToken, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorSystem.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
     }, 5 seconds)
@@ -307,25 +335,43 @@ package object actors {
           if (inMem) PersistenceQuery(actorSystem).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
           else PersistenceQuery(actorSystem).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[EventsByPersistenceIdQuery]
 
-        Xor.right(readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[T]))
+        Xor.right(readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken]))
       }
       case ChainNotFound(chainRef) => Xor.left(ChainNotDefined(chainRef))
     }
+  }
+
+  def PersistentFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                        (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[Xor[JwtError, Frame], NotUsed]] = {
+    PersistentFrameTokenSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
+      map(_.map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat.asInstanceOf[JwtError])))
+  }
+
+  def PersistentJsonSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[Xor[JwtError, Json], NotUsed]] = {
+    PersistentFrameSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).map(_.map(_.map(_.v)))
+  }
+
+  def PersistentSource[T](chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                         (implicit actorSystem: ActorSystem, timeout: Timeout, decoder: Decoder[T]): Xor[ChainCreationError, Source[Xor[JwtError, T], NotUsed]] = {
+    PersistentJsonSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
+      map(_.map(_.flatMap(_.as[T].leftMap(e => JwtTokenPayloadParsingError(e).asInstanceOf[JwtError]))))
   }
 
   def derivedChain(chainDefToken: ChainDefToken, inMem: Boolean)(implicit actorSystem: ActorSystem, timeout: Timeout):
     Xor[ChainCreationError, RunnableGraph[NotUsed]] = {
     chainDefToken.payload.get match {
       case derived: Derived => {
-        val source = PersistentSource[Json](derived.parent, 0, Long.MaxValue, inMem)
-        derived.cdf match {
-          case Copy => source.map(_.to(PersistentSink[Json](chainDefToken)))
-          case ChainDerivationFunction.Map(f) => source.map(_.map(e => ScriptFunction(f)(e)).to(PersistentSink[Json](chainDefToken)))
-          case Filter(f) => source.map(_.filter(e => ScriptPredicate(f)(e)).to(PersistentSink[Json](chainDefToken)))
-          //case Fold(f, init) => source.map(_.fold(init)((acc, e) => ScriptFunction2(f)(acc, e)).to(PersistentSink[Json](chainDefToken)))
-          case Fold(f, init) => source.map(_.scan(init)((acc, e) => ScriptFunction2(f)(acc, e)).to(PersistentSink[Json](chainDefToken)))
-          case GroupBy(f, max) => source.map(_.groupBy(max, e => ScriptFunction(f)(e)).to(PersistentSink[Json](chainDefToken)))
-        }
+        PersistentJsonSource(derived.parent, 0, Long.MaxValue, inMem).map(source =>
+          derived.cdf match {
+            case Copy => source.map(_.toOption.get).to(PersistentJsonSink(chainDefToken)) // TODO: Deal with failures explicitely
+            case ChainDerivationFunction.Map(f) => source.map(_.toOption.get).map(e => ScriptFunction(f)(e)).to(PersistentSink[Json](chainDefToken))
+            case Filter(f) => source.map(_.toOption.get).filter(e => ScriptPredicate(f)(e)).to(PersistentSink[Json](chainDefToken))
+            //case Fold(f, init) => source.map(_.fold(init)((acc, e) => ScriptFunction2(f)(acc, e)).to(PersistentSink[Json](chainDefToken)))
+            case Fold(f, init) => source.map(_.toOption.get).scan(init)((acc, e) => ScriptFunction2(f)(acc, e)).to(PersistentSink[Json](chainDefToken))
+            case GroupBy(f, max) => source.map(_.toOption.get).groupBy(max, e => ScriptFunction(f)(e)).to(PersistentSink[Json](chainDefToken))
+          }
+        )
       }
     }
   }
