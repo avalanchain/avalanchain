@@ -58,7 +58,7 @@ package object basicChain {
 
   sealed trait ChainDef extends JwtPayload.Asym { val algo: JwtAlgo; val id: Id; val pub: PubKey }
   object ChainDef {
-    final case class New(algo: JwtAlgo, id: Id, pub: PubKey, init: Option[JsonStr]) extends ChainDef
+    final case class New(algo: JwtAlgo, id: Id, pub: PubKey, init: Option[Json]) extends ChainDef
     final case class Fork(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, pos: Position) extends ChainDef
     final case class Derived(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
   }
@@ -228,7 +228,7 @@ package object basicChain {
       newChain
     }
 
-    def newChain(jwtAlgo: JwtAlgo, initValue: Option[JsonStr] = Some("{}")): Chain =
+    def newChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))): Chain =
       addChainDef(ChainDef.New(jwtAlgo, UUID.randomUUID(), publicKey, initValue))
 
     def nestedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain =

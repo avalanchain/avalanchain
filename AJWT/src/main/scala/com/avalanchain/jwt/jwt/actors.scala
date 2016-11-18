@@ -1,18 +1,23 @@
 package com.avalanchain.jwt
 
+import java.security.{KeyPair, PublicKey}
+import java.util.UUID
+
 import akka.NotUsed
+import akka.util.Timeout
+import akka.actor.ActorDSL._
 import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
-import akka.persistence.query.scaladsl.{EventsByPersistenceIdQuery, ReadJournal}
+import akka.persistence.query.scaladsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal}
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
-import akka.util.Timeout
 import cats.data.Xor
+import com.avalanchain.jwt.actors.ChainNode.NewChain
 import com.avalanchain.jwt.actors.ChainRegistryActor._
 import com.avalanchain.jwt.actors.JwtError.{IncorrectJwtTokenFormat, JwtTokenPayloadParsingError}
 import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
@@ -21,6 +26,8 @@ import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.{NodeContext, NodeExtension}
 import com.avalanchain.jwt.jwt.script.{ScriptFunction, ScriptFunction2, ScriptPredicate}
+import com.avalanchain.jwt.utils.Pipe
+import com.typesafe.config.ConfigFactory
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._
 import io.circe.parser._
@@ -31,6 +38,8 @@ import scala.collection._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.util.Try
+
+
 
 
 /**
@@ -183,7 +192,7 @@ package object actors {
       }
 
       case PrintState | "print" => println(s"State: $state")
-      case GetChains | GetState | "state" => sender() ! collection.mutable.Map(state.toSeq: _*)
+      case GetChains | GetState | "state" => sender() ! collection.immutable.Map(state.toSeq: _*)
       case a => log.info(s"Ignored '${a}' '${a.getClass}'")
     }
 
@@ -358,6 +367,41 @@ package object actors {
       map(_.map(_.flatMap(_.as[T].leftMap(e => JwtTokenPayloadParsingError(e).asInstanceOf[JwtError]))))
   }
 
+  def SnapshotFrameTokenSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                                (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[FrameToken, NotUsed]] = {
+    val chainByRefResult = Await.result({
+      (actorSystem.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainByRefResult]
+    }, 5 seconds)
+
+    chainByRefResult match {
+      case ChainFound(chainDefToken, actorRef) => {
+        val readJournal: CurrentEventsByPersistenceIdQuery =
+          if (inMem) PersistenceQuery(actorSystem).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
+          else PersistenceQuery(actorSystem).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[CurrentEventsByPersistenceIdQuery]
+
+        Xor.right(readJournal.currentEventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken]))
+      }
+      case ChainNotFound(chainRef) => Xor.left(ChainNotDefined(chainRef))
+    }
+  }
+
+  def SnapshotFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                           (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[Xor[JwtError, Frame], NotUsed]] = {
+    SnapshotFrameTokenSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
+      map(_.map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat.asInstanceOf[JwtError])))
+  }
+
+  def SnapshotJsonSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                          (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainCreationError, Source[Xor[JwtError, Json], NotUsed]] = {
+    SnapshotFrameSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).map(_.map(_.map(_.v)))
+  }
+
+  def SnapshotSource[T](chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
+                         (implicit actorSystem: ActorSystem, timeout: Timeout, decoder: Decoder[T]): Xor[ChainCreationError, Source[Xor[JwtError, T], NotUsed]] = {
+    SnapshotJsonSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
+      map(_.map(_.flatMap(_.as[T].leftMap(e => JwtTokenPayloadParsingError(e).asInstanceOf[JwtError]))))
+  }
+
   def derivedChain(chainDefToken: ChainDefToken, inMem: Boolean)(implicit actorSystem: ActorSystem, timeout: Timeout):
     Xor[ChainCreationError, RunnableGraph[NotUsed]] = {
     chainDefToken.payload.get match {
@@ -374,5 +418,40 @@ package object actors {
         )
       }
     }
+  }
+
+
+  object ChainNode {
+    sealed trait ChainNodeCommand
+    final case class NewChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))) extends ChainNodeCommand
+  }
+
+  def createNode(keyPair: KeyPair, knownKeys: Set[PublicKey]) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]): ActorRef = {
+
+    val system = ActorSystem("node", ConfigFactory.load("application.conf")) // TODO: Add config
+    import system.dispatcher
+    implicit val timeout = Timeout(5 seconds)
+
+    val node = actor(system, "node")(new Act {
+      val registry = actor("registry")(new ChainRegistryActor())
+      val b = actor("barney")(new Act {
+        whenStarting {
+          context.parent ! ("hello from " + self.path)
+        }
+      })
+      become {
+        case GetChains => pipe(registry ? GetChains) to sender()
+        case PrintState => registry ! PrintState
+
+        case NewChain(jwtAlgo, initValue) =>
+          val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue)
+          val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+          pipe(registry ? CreateChain(chainDefToken)) to sender()
+
+        case s: String => println(s"Echo $s")
+      }
+    })
+
+    node
   }
 }
