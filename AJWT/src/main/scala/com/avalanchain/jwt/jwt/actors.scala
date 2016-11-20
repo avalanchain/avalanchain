@@ -13,11 +13,12 @@ import akka.persistence.query.PersistenceQuery
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.scaladsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal}
 import akka.persistence.{PersistentActor, SnapshotOffer}
+import akka.stream.ActorMaterializer
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
 import cats.data.Xor
-import com.avalanchain.jwt.actors.ChainNode.{GetSink, NewChain}
+import com.avalanchain.jwt.actors.ChainNode.{NewChain}
 import com.avalanchain.jwt.actors.ChainRegistryActor._
 import com.avalanchain.jwt.actors.JwtError.{IncorrectJwtTokenFormat, JwtTokenPayloadParsingError}
 import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
@@ -118,8 +119,17 @@ package object actors {
     sealed trait Command
     final case class CreateChain(chainDefToken: ChainDefToken) extends Command
     final case class GetChainByRef(chainRef: ChainRef) extends Command
+
     final case class GetJsonSink(chainRef: ChainRef) extends Command
-    final case class GetJsonSource(chainRef: ChainRef) extends Command
+
+    final case class GetJsonSource(chainRef: ChainRef, from: Position, to: Position) extends Command
+    final case class GetFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position) extends Command
+    final case class GetFrameTokenSource(chainRef: ChainRef, fromPos: Position, toPos: Position) extends Command
+
+    final case class GetSnapshotJsonSource(chainRef: ChainRef, from: Position, to: Position) extends Command
+    final case class GetSnapshotFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position) extends Command
+    final case class GetSnapshotFrameTokenSource(chainRef: ChainRef, fromPos: Position, toPos: Position) extends Command
+
     object GetChains extends Command
     object GetState extends Command
     object PrintState extends Command
@@ -141,6 +151,8 @@ package object actors {
 
   class ChainRegistryActor() extends PersistentActor with ActorLogging {
     import ChainRegistryActor._
+
+    private implicit val materializer = ActorMaterializer()
 
     override def persistenceId = actorId
 
@@ -181,16 +193,44 @@ package object actors {
 
       case GetChainByRef(chainRef) => sender() ! tryGetChain(chainRef)
 
-      case GetJsonSink(chainRef) => tryGetChain(chainRef).map(c =>
+      case GetJsonSink(chainRef) => sender() ! tryGetChain(chainRef).map(c =>
         Sink.actorRefWithAck[Json](c._2, ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
 
-      case GetJsonSource(chainRef) => tryGetChain(chainRef).map(c =>
-        Sink.actorRefWithAck[Json](c._2, ChainPersistentActor.Init, ChainPersistentActor.Ack, ChainPersistentActor.Complete))
+      case GetFrameTokenSource(chainRef, fromPos, toPos) => sender() ! (tryGetChain(chainRef).map(_ => getTokenFrameSource(chainRef, fromPos, toPos)))
+      case GetFrameSource(chainRef, fromPos, toPos) => sender() ! (tryGetChain(chainRef).map(_ => getFrameSource(chainRef, fromPos, toPos)))
+      case GetJsonSource(chainRef, fromPos, toPos) => sender() ! (tryGetChain(chainRef).map(_ => getFrameSource(chainRef, fromPos, toPos).map(_.map(_.v))))
 
+      case GetSnapshotFrameTokenSource(chainRef, fromPos, toPos) => sender() ! (tryGetChain(chainRef).map(_ => getSnapshotTokenFrameSource(chainRef, fromPos, toPos)))
+      case GetSnapshotFrameSource(chainRef, fromPos, toPos) => sender() ! (tryGetChain(chainRef).map(_ => getSnapshotFrameSource(chainRef, fromPos, toPos)))
+      case GetSnapshotJsonSource(chainRef, fromPos, toPos) => sender() ! (tryGetChain(chainRef).map(_ => getSnapshotFrameSource(chainRef, fromPos, toPos).map(_.map(_.v))))
 
       case PrintState | "print" => println(s"State: $state")
       case GetChains | GetState | "state" => sender() ! collection.immutable.Map(state.toSeq: _*)
       case a => log.info(s"Ignored '${a}' '${a.getClass}'")
+    }
+
+    def getFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[Xor[JwtError, Frame], NotUsed] = {
+      getTokenFrameSource(chainRef, fromPos, toPos).map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat.asInstanceOf[JwtError]))
+    }
+
+    def getTokenFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[FrameToken, NotUsed] = {
+      val readJournal: EventsByPersistenceIdQuery =
+        if (false) PersistenceQuery(context.system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
+        else PersistenceQuery(context.system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[EventsByPersistenceIdQuery]
+
+      readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken])
+    }
+
+    def getSnapshotFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[Xor[JwtError, Frame], NotUsed] = {
+      getSnapshotTokenFrameSource(chainRef, fromPos, toPos).map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat.asInstanceOf[JwtError]))
+    }
+
+    def getSnapshotTokenFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[FrameToken, NotUsed] = {
+      val readJournal: EventsByPersistenceIdQuery =
+        if (false) PersistenceQuery(context.system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
+        else PersistenceQuery(context.system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[EventsByPersistenceIdQuery]
+
+      readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken])
     }
 
     protected def tryGetChain(chainRef: ChainRef): Xor[ChainRegistryError, (ChainDefToken, ActorRef)] = {
@@ -434,17 +474,17 @@ package object actors {
   object ChainNode {
     sealed trait ChainNodeRequest
     final case class NewChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))) extends ChainNodeRequest
-    final case class GetSink(chainRef: ChainRef) extends ChainNodeRequest
-    final case class GetFrameTokenSource(chainRef: ChainRef, fromPos: Position, toPos: Position) extends ChainNodeRequest
+    //final case class GetSink(chainRef: ChainRef) extends ChainNodeRequest
 
     //sealed trait ChainNodeResponse
     //final case class FrameTokenSink(sink: Sink[Json, NotUsed])
     //final case class FrameTokenSource(source: Source[FrameToken, NotUsed])
   }
 
-  def createNode(keyPair: KeyPair, knownKeys: Set[PublicKey]) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]): ActorRef = {
+  def createNode(keyPair: KeyPair, knownKeys: Set[PublicKey]) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]): (ActorRef, ActorMaterializer) = {
 
-    val system = ActorSystem("node", ConfigFactory.load("application.conf")) // TODO: Add config
+    val system = ActorSystem("node", ConfigFactory.load("application.conf"))
+    val materializer = ActorMaterializer()(system)
     import system.dispatcher
     implicit val timeout = Timeout(5 seconds)
 
@@ -464,13 +504,18 @@ package object actors {
           val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
           pipe(registry ? CreateChain(chainDefToken)) to sender()
         case gc: GetChainByRef => pipe(registry ? gc) to sender()
+        case gjs: GetJsonSink => pipe(registry ? gjs) to sender()
 
-        case GetSink(chainRef) =>
+        case gjs: GetFrameTokenSource => pipe(registry ? gjs) to sender()
+        case gjs: GetFrameSource => pipe(registry ? gjs) to sender()
+        case gjs: GetJsonSource => pipe(registry ? gjs) to sender()
 
         case s: String => println(s"Echo $s")
+
+        case c => println(s"Handler for $c not found")
       }
     })
 
-    node
+    (node, materializer)
   }
 }
