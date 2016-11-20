@@ -37,4 +37,6 @@ object Runner extends App {
   val chains2 = Await.result(node ? GetChains, 5 seconds).asInstanceOf[Map[ChainRef, ChainDefToken]]
   println(s"Chains: ${chains2}")
   chains2.foreach(c => println(s"Chain: $c"))
+
+  val sink = Await.result(node ? GetChains, 5 seconds).asInstanceOf[Map[ChainRef, ChainDefToken]]
 }
