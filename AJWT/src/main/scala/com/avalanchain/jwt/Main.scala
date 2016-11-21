@@ -109,7 +109,7 @@ trait CorsSupport {
 @Path("/users")
 @Api(value = "/users", produces = "application/json")
 class UsersService(getUsers: () => List[UserData], userExists: UserData => Boolean, addUser: UserData => Unit)(implicit executionContext: ExecutionContext)
-  extends Directives with CorsSupport with ACJsonSupport /* with CirceSupport */ {
+  extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
 
   import scala.concurrent.duration._
 
@@ -154,7 +154,7 @@ class UsersService(getUsers: () => List[UserData], userExists: UserData => Boole
 @Path("admin")
 @Api(value = "/admin", produces = "application/json")
 class AdminService()
-  extends Directives with CorsSupport with ACJsonSupport /* with CirceSupport */ {
+  extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
 
   val route = pathPrefix("admin") {
     path("newKeys") {
