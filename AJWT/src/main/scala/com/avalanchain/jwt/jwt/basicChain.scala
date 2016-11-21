@@ -14,7 +14,6 @@ import io.circe.generic.auto._
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtBase64}
 import pdi.jwt.exceptions.JwtLengthException
 import com.avalanchain.jwt.KeysDto.PubKey
-import com.avalanchain.jwt.actors._
 import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 
 import scala.collection.immutable.Map
@@ -173,9 +172,9 @@ package object basicChain {
         state = ChainState(Some(frameToken), FrameRef(frameToken), newPos)
       })
     }
-
-    def sink() =
-      PersistentFrameSink(chainRef)(actorRefFactory, 5 seconds)
+//
+//    def sink() =
+//      PersistentFrameSink(chainRef)(actorRefFactory, 5 seconds)
   }
   object Chain {
 

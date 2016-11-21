@@ -13,19 +13,27 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.avalanchain.jwt.jwt.{CurveContext, UserInfo}
 import CurveContext._
+import com.avalanchain.jwt.jwt.account.principals.UserData
 import com.avalanchain.jwt.utils.Config
 
 import scala.concurrent.ExecutionContext
 import scala.io.StdIn
 import com.github.swagger.akka._
 import com.github.swagger.akka.model.Info
+import de.heikoseeberger.akkahttpcirce.CirceSupport
 import kantan.csv.{RowDecoder, RowEncoder}
 import kantan.csv.ops._
 import spray.json.DefaultJsonProtocol
+//import spray.json.DefaultJsonProtocol
 import io.swagger.annotations._
 //import io.swagger.models.Path
 import javax.ws.rs._
 
+import io.circe.{Decoder, DecodingFailure, Encoder, Json}
+import io.circe.syntax._
+import io.circe.parser._
+import io.circe.generic.JsonCodec
+import io.circe.generic.auto._
 
 import scala.reflect.runtime.{universe=>ru}
 
@@ -51,20 +59,21 @@ object KeysDto {
     PubKey(x, y)
   }
 
-  implicit def toPrivKeyDto(key: PrivateKey) = {
+  def toPrivKeyDto(key: PrivateKey) = {
     val s = key.toString.substring(31).trim
     PrivKey(s)
   }
 
-  implicit def toKeysDto(keys: KeyPair) = {
+  def toKeysDto(keys: KeyPair) = {
     Keys(toPrivKeyDto(keys.getPrivate), toPubKeyDto(keys.getPublic))
   }
 }
 
 import KeysDto._
 
-trait UserInfoJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
+trait ACJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
   implicit val userInfoFormats = jsonFormat4(UserInfo)
+  implicit val userDataFormats = jsonFormat5(UserData)
   implicit val pubKeysFormats = jsonFormat2(PubKey)
   implicit val privKeysFormats = jsonFormat1(PrivKey)
   implicit val keysFormats = jsonFormat2(Keys)
@@ -99,8 +108,8 @@ trait CorsSupport {
 
 @Path("/users")
 @Api(value = "/users", produces = "application/json")
-class UsersService(getUsers: () => List[UserInfo], userExists: UserInfo => Boolean, addUser: UserInfo => Unit)(implicit executionContext: ExecutionContext)
-  extends Directives with CorsSupport with UserInfoJsonSupport {
+class UsersService(getUsers: () => List[UserData], userExists: UserData => Boolean, addUser: UserData => Unit)(implicit executionContext: ExecutionContext)
+  extends Directives with CorsSupport with ACJsonSupport /* with CirceSupport */ {
 
   import scala.concurrent.duration._
 
@@ -121,24 +130,12 @@ class UsersService(getUsers: () => List[UserInfo], userExists: UserInfo => Boole
   ))
   def add =
     post {
-      entity(as[UserInfo]) { user =>
+      entity(as[UserData]) { user =>
         val exists = userExists(user)
         if (exists) complete(StatusCodes.Conflict, None)
         else {
-
-          val encodedUser = encodeUser(CurveContext.savedKeys().getPrivate, user)
-
-          val post =
-            scalaj.http.Http("https://e-money.setl.io/deloitteuser").
-              postForm(Seq("data" -> encodedUser._2,
-                "cardkey" -> "042a92b740aa59f4f91c2160a956cb786239e4d12840f6ca8ff0261e75e3f9ca72fcab1d06f0901238712db53258ea3f9b1b9ef9e8908d71528fd1a1227aea26bb")).asString
-
-          println(s"SETL post result: ${post.body}")
-
-          if (!post.body.contains("""{"Status": "Fail",""")) {
-            addUser(user)
-            complete(StatusCodes.Created, Some(user))
-          } else complete(StatusCodes.BadRequest, None)
+          addUser(user)
+          complete(StatusCodes.Created, Some(user))
         }
       }
     }
@@ -149,7 +146,7 @@ class UsersService(getUsers: () => List[UserInfo], userExists: UserInfo => Boole
   ))
   def getall =
     get {
-      completeWith(instanceOf[List[UserInfo]])(_(getUsers()))
+      completeWith(instanceOf[List[UserData]])(_(getUsers()))
     }
 }
 
@@ -157,7 +154,7 @@ class UsersService(getUsers: () => List[UserInfo], userExists: UserInfo => Boole
 @Path("admin")
 @Api(value = "/admin", produces = "application/json")
 class AdminService()
-  extends Directives with CorsSupport with UserInfoJsonSupport {
+  extends Directives with CorsSupport with ACJsonSupport /* with CirceSupport */ {
 
   val route = pathPrefix("admin") {
     path("newKeys") {
@@ -211,34 +208,30 @@ class AdminService()
     }
 }
 
-object Main extends App with Config with CorsSupport with UserInfoJsonSupport {
+object Main extends App with Config with CorsSupport with CirceSupport {
   private implicit val system = ActorSystem()
   protected implicit val executor: ExecutionContext = system.dispatcher
   protected val log: LoggingAdapter = Logging(system, getClass)
   protected implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   import java.nio.file.{Paths, Files}
-  val rawDataFile = Paths.get(sys.env("HOME") + "/Documents/users.csv")
-  if (!Files.exists(rawDataFile)) {
-    Files.copy(getClass.getResourceAsStream("/public/users.csv"), rawDataFile)
-  }
 
   def userInfos() = {
-    val rawData: java.net.URL = rawDataFile.toUri.toURL
+    val userDatas = getClass.getResourceAsStream("/public/mock_users.csv")
 
-    implicit val userDecoder: RowDecoder[UserInfo] = RowDecoder.decoder(0, 1, 2, 3)(UserInfo.apply)
-    val reader = rawData.asCsvReader[UserInfo](',', true)
+    implicit val userDecoder: RowDecoder[UserData] = RowDecoder.decoder(0, 1, 2, 3, 4)(UserData.apply)
+    val reader = userDatas.asCsvReader[UserData](',', true)
 
     reader.map(_.get).toList
   }
 
-  def addUserInfo(user: UserInfo): Unit = {
+  def addUserInfo(user: UserData): Unit = {
     val infos = userInfos()
-    implicit val userEncoder: RowEncoder[UserInfo] = RowEncoder.caseEncoder(0, 1, 2, 3)(UserInfo.unapply)
-    new File(rawDataFile.toAbsolutePath().toString() + "2").delete()
-    val out = new java.io.File(rawDataFile.toAbsolutePath().toString())
-    val writer = out.asCsvWriter[UserInfo](',', List("first_name", "last_name", "email", "phone"))
-    writer.write(user :: infos).close()
+    implicit val userEncoder: RowEncoder[UserData] = RowEncoder.caseEncoder(0, 1, 2, 3, 4)(UserData.unapply)
+//    new File(rawDataFile.toAbsolutePath().toString() + "2").delete()
+//    val out = new java.io.File(rawDataFile.toAbsolutePath().toString())
+//    val writer = out.asCsvWriter[UserInfo](',', List("username", "firstname", "lastname", "email", "ip_address"))
+//    writer.write(user :: infos).close()
   }
 
   class SwaggerDocService(system: ActorSystem) extends SwaggerHttpService with HasActorSystem {

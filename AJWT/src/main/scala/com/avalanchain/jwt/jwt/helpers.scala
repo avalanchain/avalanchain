@@ -46,7 +46,7 @@ import scala.util.Try
 /**
   * Created by Yuriy on 10/11/2016.
   */
-package object actors {
+package object helpers {
 
 //  object ChainPersistentActorSubscriber {
 //    object GetState

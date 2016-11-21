@@ -50,16 +50,25 @@ libraryDependencies ++= {
     "com.github.dnvriend" %% "akka-persistence-journal-writer"          % "0.0.2",
 
     "org.scalatest"     %% "scalatest"                                  % "2.2.5" % "test",
-    "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.7.2",
+    "io.swagger"        % "swagger-core"                                % "1.5.10",
+    "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.7.3",
 
     "org.bouncycastle"  % "bcpkix-jdk15on"                              % "1.55",
     "com.pauldijou"     %% "jwt-circe"                                  % "0.9.0",
     "io.circe"          %% "circe-core"                                 % circeVersion,
     "io.circe"          %% "circe-generic"                              % circeVersion,
     "io.circe"          %% "circe-parser"                               % circeVersion,
+    "io.circe"          %% "circe-java8"                                % circeVersion,
+
+    "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.8.2",
+    "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.8.2",
+
+    "de.heikoseeberger" %% "akka-http-circe"                            % "1.10.1",
 
     "com.nrinaudo"      %% "kantan.csv-cats"                            % "0.1.15",
-    "org.scalaj"        %% "scalaj-http"                                % "2.3.0"
+    "org.scalaj"        %% "scalaj-http"                                % "2.3.0",
+
+    "com.yahoofinance-api" % "YahooFinanceAPI"                          % "3.2.0"
 
   )
 }

@@ -22,7 +22,7 @@ import com.typesafe.config.ConfigFactory
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 import akka.persistence.inmemory.query.InMemoryReadJournalProvider
-import com.avalanchain.jwt.actors
+import com.avalanchain.jwt.helpers
 import com.avalanchain.jwt.jwt.CurveContext._
 import com.avalanchain.jwt.KeysDto._
 import com.avalanchain.jwt.jwt.script.ScriptFunction

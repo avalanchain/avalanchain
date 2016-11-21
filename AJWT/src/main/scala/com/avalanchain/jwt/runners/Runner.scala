@@ -22,6 +22,7 @@ import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 
+
 /**
   * Created by Yuriy on 18/11/2016.
   */
