@@ -1,6 +1,7 @@
 
 import java.security.PrivateKey
 import java.util.UUID
+import javax.script.{Invocable, ScriptEngineManager}
 
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
@@ -24,6 +25,9 @@ import akka.persistence.inmemory.query.InMemoryReadJournalProvider
 import com.avalanchain.jwt.actors
 import com.avalanchain.jwt.jwt.CurveContext._
 import com.avalanchain.jwt.KeysDto._
+import com.avalanchain.jwt.jwt.script.ScriptFunction
+import io.circe.Json
+import com.avalanchain.jwt.utils.Pipe._
 
 import scala.concurrent.Future
 
@@ -144,14 +148,24 @@ val result3 = time {
   (0 until 10000).foreach(i => invocable.invokeFunction("jp2", s"""{ "val":  $i}"""))
 }
 
-engine.eval("var f = function(j){return j.val + 11};")
+engine.eval("var f = (function(j){return { val: j.val + 11 }});")
 engine.eval("function jw(f, json) { var j = JSON.parse(json); var r = f(j); return JSON.stringify(r); }; function jex(json) { return jw(f, json); }");
+val ret = invocable.invokeFunction("jex", """{ "val":  10}""")
+val ret = invocable.invokeFunction("jex", Json.fromString("""{ "val":  10}""").asString.get)
+
+ret.asInstanceOf[String] |> println
+ret.getClass |> println
+
 val result4 = time {
-  (0 until 10000).foreach(i => invocable.invokeFunction("jex", s"""{ "val":  $i}"""))
+  (0 until 10000).foreach(i => invocable.invokeFunction("jex", s"""{ "val":  $i}""") |> println)
 }
 
 engine.eval("""function jex(json) { var f = function(j){return { val: j.val + 11 }}; function jw(f, json) { var j = JSON.parse(json); var r = f(j); return JSON.stringify(r); }; return jw(f, json); }""");
 invocable.invokeFunction("jex", s"""{ "val":  10}""")
 
-val sf = ScriptFunction("function(j){return j.val + 11}")
-sf(s"""{ "val":  10}""")
+val sf = ScriptFunction("function(j){return { v: j.val + 11 }}")
+sf(Json.fromString(s"""{ "val":  10}""")).asString.get
+
+val a = Json.fromString(s"""{ val:  10}""").noSpaces
+
+val sf1 = ScriptFunction("function(j){return j}")
