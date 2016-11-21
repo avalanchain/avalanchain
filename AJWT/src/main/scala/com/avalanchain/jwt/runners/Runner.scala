@@ -2,17 +2,17 @@ package com.avalanchain.jwt.runners
 
 import akka.NotUsed
 import com.avalanchain.jwt._
-import com.avalanchain.jwt.actors.ChainRegistryActor._
 
 import scala.concurrent.{Await, Future}
 import akka.pattern.{ask, pipe}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import cats.data.Xor
-import com.avalanchain.jwt.actors.ChainNode.NewChain
-import com.avalanchain.jwt.actors.JwtError
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.CurveContext
+import com.avalanchain.jwt.jwt.actors.ChainNode
+import com.avalanchain.jwt.jwt.actors.ChainNode.NewChain
+import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +28,7 @@ import io.circe.generic.auto._
 object Runner extends App {
   implicit val timeout = Timeout(5 seconds)
 
-  val (node, materializer) = actors.createNode(CurveContext.currentKeys, Set.empty)
+  val (node, materializer) = ChainNode.createNode(CurveContext.currentKeys, Set.empty)
   node ! "test"
 
   val chains = Await.result(node ? GetChains, 5 seconds).asInstanceOf[Map[ChainRef, ChainDefToken]]
