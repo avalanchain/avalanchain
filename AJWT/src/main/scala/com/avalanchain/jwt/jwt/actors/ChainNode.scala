@@ -9,8 +9,12 @@ import akka.actor.ActorDSL._
 import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.pattern.{ask, pipe}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import com.avalanchain.jwt.basicChain.{ChainDef, JwtAlgo, TypedJwtToken}
+import cats.data.Xor
+import com.avalanchain.jwt.basicChain.{Frame, _}
+import com.avalanchain.jwt.jwt.CurveContext
+import com.avalanchain.jwt.jwt.actors.ChainNode.NewChain
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
 import com.typesafe.config.ConfigFactory
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
@@ -28,52 +32,68 @@ import scala.util.Try
 /**
   * Created by Yuriy Habarov on 21/11/2016.
   */
-object ChainNode {
+class ChainNode(keyPair: KeyPair, knownKeys: Set[PublicKey])(implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]) {
 
+  val system = ActorSystem("node", ConfigFactory.load("application.conf"))
+  val materializer = ActorMaterializer()(system)
+
+  implicit val timeout = Timeout(5 seconds)
+
+  val node = actor(system, "node")(new Act {
+    val registry = actor("registry")(new ChainRegistryActor())
+    val tc = actor("testChild")(new Act {
+      whenStarting {
+        context.parent ! ("hello from " + self.path)
+      }
+    })
+    become {
+      case GetChains => pipe(registry ? GetChains) to sender()
+      case PrintState => registry ! PrintState
+
+      case NewChain(jwtAlgo, initValue) =>
+        val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue)
+        val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+        pipe(registry ? CreateChain(chainDefToken)) to sender()
+      case gc: GetChainByRef => pipe(registry ? gc) to sender()
+      case gjs: GetJsonSink => pipe(registry ? gjs) to sender()
+
+      case gjs: GetFrameTokenSource => pipe(registry ? gjs) to sender()
+      case gjs: GetFrameSource => pipe(registry ? gjs) to sender()
+      case gjs: GetJsonSource => pipe(registry ? gjs) to sender()
+
+      case s: String => println(s"Echo $s")
+
+      case c => println(s"Handler for $c not found")
+    }
+  })
+}
+object ChainNode {
   sealed trait ChainNodeRequest
 
   final case class NewChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))) extends ChainNodeRequest
 
   //final case class GetSink(chainRef: ChainRef) extends ChainNodeRequest
+}
 
-  //sealed trait ChainNodeResponse
-  //final case class FrameTokenSink(sink: Sink[Json, NotUsed])
-  //final case class FrameTokenSource(source: Source[FrameToken, NotUsed])
+class ChainNodeFacade(var chainNode: ChainNode, atMost: FiniteDuration = 5 seconds) {
+  implicit val timeout = Timeout(atMost)
 
-  def createNode(keyPair: KeyPair, knownKeys: Set[PublicKey])(implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]): (ActorRef, ActorMaterializer) = {
+  def nodeActorRef = chainNode.node
+  val materializer = chainNode.materializer
 
-    val system = ActorSystem("node", ConfigFactory.load("application.conf"))
-    val materializer = ActorMaterializer()(system)
-    implicit val timeout = Timeout(5 seconds)
+  def chains() = Await.result(nodeActorRef ? GetChains, atMost).asInstanceOf[Map[ChainRef, ChainDefToken]]
 
-    val node = actor(system, "node")(new Act {
-      val registry = actor("registry")(new ChainRegistryActor())
-      val tc = actor("testChild")(new Act {
-        whenStarting {
-          context.parent ! ("hello from " + self.path)
-        }
-      })
-      become {
-        case GetChains => pipe(registry ? GetChains) to sender()
-        case PrintState => registry ! PrintState
+  def newChain() = Await.result(nodeActorRef ? NewChain(JwtAlgo.HS512), atMost).asInstanceOf[ChainCreationResult]
 
-        case NewChain(jwtAlgo, initValue) =>
-          val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue)
-          val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
-          pipe(registry ? CreateChain(chainDefToken)) to sender()
-        case gc: GetChainByRef => pipe(registry ? gc) to sender()
-        case gjs: GetJsonSink => pipe(registry ? gjs) to sender()
+  def sink(chainRef: ChainRef) = Await.result(nodeActorRef ? GetJsonSink(chainRef), atMost).asInstanceOf[Xor[ChainRegistryError, Sink[Json, NotUsed]]]
 
-        case gjs: GetFrameTokenSource => pipe(registry ? gjs) to sender()
-        case gjs: GetFrameSource => pipe(registry ? gjs) to sender()
-        case gjs: GetJsonSource => pipe(registry ? gjs) to sender()
+  def source(chainRef: ChainRef, from: Position, to: Position) =
+    Await.result(nodeActorRef ? GetJsonSource(chainRef, from, to), atMost).asInstanceOf[Xor[ChainRegistryError, Source[Xor[JwtError, Json], NotUsed]]]
 
-        case s: String => println(s"Echo $s")
+  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
+    Await.result(nodeActorRef ? GetFrameSource(chainRef, from, to), atMost).asInstanceOf[Xor[ChainRegistryError, Source[Xor[JwtError, Frame], NotUsed]]]
 
-        case c => println(s"Handler for $c not found")
-      }
-    })
+  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
+    Await.result(nodeActorRef ? GetFrameTokenSource(chainRef, from, to), 5 seconds).asInstanceOf[Xor[ChainRegistryError, Source[FrameToken, NotUsed]]]
 
-    (node, materializer)
-  }
 }

@@ -23,7 +23,7 @@ import scala.collection.Set
   * Created by Yuriy Habarov on 21/11/2016.
   */
 class DemoNode(keyPair: KeyPair, knownKeys: Set[PublicKey])(implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]) {
-  val (node, materializer) = ChainNode.createNode(keyPair, knownKeys)
+  val chainNode = new ChainNode(keyPair, knownKeys)
 
   def tickSource = Source(0 to Int.MaxValue)
     .throttle(1, 1 second, 1, ThrottleMode.shaping)

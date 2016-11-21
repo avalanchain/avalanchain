@@ -29,7 +29,8 @@ import io.circe.generic.auto._
 object Runner extends App {
   implicit val timeout = Timeout(5 seconds)
 
-  val (node, materializer) = ChainNode.createNode(CurveContext.currentKeys, Set.empty)
+  var chainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
+  val node = chainNode.node
   node ! "test"
 
   val chains = Await.result(node ? GetChains, 5 seconds).asInstanceOf[Map[ChainRef, ChainDefToken]]
@@ -57,20 +58,22 @@ object Runner extends App {
   val sourceFT = Await.result(node ? GetFrameTokenSource(chainRef, 0, 1000), 5 seconds).asInstanceOf[Xor[ChainRegistryError, Source[FrameToken, NotUsed]]]
   println(s"Source created: $sourceFT")
 
+  implicit val materializer = chainNode.materializer
+
   Future {
-    source.toOption.get.to(Sink.foreach(e => println(s"Record from source: $e"))).run()(materializer)
+    source.toOption.get.to(Sink.foreach(e => println(s"Record from source: $e"))).run()
   }
 
   Future {
-    sourceF.toOption.get.to(Sink.foreach(e => println(s"Record from sourceF: $e"))).run()(materializer)
+    sourceF.toOption.get.to(Sink.foreach(e => println(s"Record from sourceF: $e"))).run()
   }
 
   Future {
-    sourceFT.toOption.get.to(Sink.foreach(e => println(s"Record from sourceFT: $e"))).run()(materializer)
+    sourceFT.toOption.get.to(Sink.foreach(e => println(s"Record from sourceFT: $e"))).run()
   }
 
   Future {
-    Source(0 until 10).map(e => s"""{ \"v\": $e }""").map(Json.fromString(_)).to(sink.toOption.get).run()(materializer)
+    Source(0 until 10).map(e => s"""{ \"v\": $e }""").map(Json.fromString(_)).to(sink.toOption.get).run()
   }
 
 }

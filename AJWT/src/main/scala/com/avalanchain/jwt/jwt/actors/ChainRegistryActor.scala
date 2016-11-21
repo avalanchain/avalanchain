@@ -40,9 +40,9 @@ object ChainRegistryActor {
   object GetState extends Command
   object PrintState extends Command
 
-  sealed trait ChainCreationResult { val chainDefToken: ChainDefToken; val ref: ActorRef }
-  final case class ChainCreated(chainDefToken: ChainDefToken, ref: ActorRef) extends ChainCreationResult
-  final case class ChainAlreadyExists(chainDefToken: ChainDefToken, ref: ActorRef) extends ChainCreationResult
+  sealed trait ChainCreationResult { val chainDefToken: ChainDefToken }
+  final case class ChainCreated(chainDefToken: ChainDefToken) extends ChainCreationResult
+  final case class ChainAlreadyExists(chainDefToken: ChainDefToken) extends ChainCreationResult
   //final case class ChainCreationFailed(chainDefToken: ChainDefToken, ref: ActorRef) extends ChainCreationResult
 
   sealed trait ChainRegistryError
@@ -94,7 +94,7 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
     }
     persist(chainDefToken) (cdf => {
       updateState(cdf)
-      sender() ! ChainCreated(cdf, actorRef)
+      sender() ! ChainCreated(cdf)//, actorRef)
     })
   }
 
@@ -102,7 +102,7 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
     case CreateChain(chainDefToken) => {
       val pid: String = chainDefToken.sig
       context.child(pid) match {
-        case Some(actorRef) => sender() ! ChainAlreadyExists(chainDefToken, actorRef)
+        case Some(actorRef) => sender() ! ChainAlreadyExists(chainDefToken) //, actorRef)
         case None => {
           val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), pid)
           save(chainDefToken, actorRef)

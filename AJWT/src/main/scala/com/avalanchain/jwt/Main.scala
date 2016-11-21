@@ -2,6 +2,7 @@ package com.avalanchain.jwt
 
 import java.io.File
 import java.security.{KeyPair, PrivateKey, PublicKey}
+import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
@@ -13,7 +14,9 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.avalanchain.jwt.jwt.{CurveContext, UserInfo}
 import CurveContext._
-import com.avalanchain.jwt.jwt.account.principals.UserData
+import com.avalanchain.jwt.basicChain.{ChainDefToken, ChainRef}
+import com.avalanchain.jwt.jwt.account.principals.{User, UserData}
+import com.avalanchain.jwt.jwt.actors.{ChainNode, ChainNodeFacade}
 import com.avalanchain.jwt.utils.Config
 
 import scala.concurrent.ExecutionContext
@@ -24,6 +27,8 @@ import de.heikoseeberger.akkahttpcirce.CirceSupport
 import kantan.csv.{RowDecoder, RowEncoder}
 import kantan.csv.ops._
 import spray.json.DefaultJsonProtocol
+
+import scala.collection.Map
 //import spray.json.DefaultJsonProtocol
 import io.swagger.annotations._
 //import io.swagger.models.Path
@@ -108,7 +113,7 @@ trait CorsSupport {
 
 @Path("/users")
 @Api(value = "/users", produces = "application/json")
-class UsersService(getUsers: () => List[UserData], userExists: UserData => Boolean, addUser: UserData => Unit)(implicit executionContext: ExecutionContext)
+class UsersService(getUsers: () => List[User], userExists: UserData => Boolean, addUser: UserData => User)(implicit executionContext: ExecutionContext)
   extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
 
   import scala.concurrent.duration._
@@ -122,10 +127,10 @@ class UsersService(getUsers: () => List[UserData], userExists: UserData => Boole
   @ApiOperation(value = "Add User", notes = "", nickname = "addUser", httpMethod = "POST")
   @ApiImplicitParams(Array(
     new ApiImplicitParam(name = "body", value = "\"User\" to add", required = true,
-      dataType = "com.deloitte.id.jwtexport.jwt.UserInfo", paramType = "body")
+      dataType = "com.avalanchain.jwt.jwt.account.principals.UserData", paramType = "body")
   ))
   @ApiResponses(Array(
-    new ApiResponse(code = 201, message = "User added", response = classOf[UserInfo]),
+    new ApiResponse(code = 201, message = "User added", response = classOf[User]),
     new ApiResponse(code = 409, message = "Internal server error")
   ))
   def add =
@@ -134,19 +139,19 @@ class UsersService(getUsers: () => List[UserData], userExists: UserData => Boole
         val exists = userExists(user)
         if (exists) complete(StatusCodes.Conflict, None)
         else {
-          addUser(user)
-          complete(StatusCodes.Created, Some(user))
+          val newUser = addUser(user)
+          complete(StatusCodes.Created, Some(newUser))
         }
       }
     }
 
-  @ApiOperation(httpMethod = "GET", response = classOf[List[UserInfo]], value = "Returns the list of registered Users")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[User]], value = "Returns the list of registered Users")
   @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "Users registered", response = classOf[UserInfo])
+    new ApiResponse(code = 200, message = "Users registered", response = classOf[List[User]])
   ))
   def getall =
     get {
-      completeWith(instanceOf[List[UserData]])(_(getUsers()))
+      completeWith(instanceOf[List[User]])(_(getUsers()))
     }
 }
 
@@ -160,12 +165,12 @@ class AdminService()
     path("newKeys") {
       newKeys
     } ~
-    path("getKeys") {
-      getKeys
-    } ~
-    path("key") {
-      key
-    }
+      path("getKeys") {
+        getKeys
+      } ~
+      path("key") {
+        key
+      }
   }
 
   @Path("newKeys")
@@ -208,6 +213,39 @@ class AdminService()
     }
 }
 
+@Path("chains")
+@Api(value = "/chains", produces = "application/json")
+class ChainService(chainNode: ChainNode)
+  extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
+  import scala.concurrent.duration._
+
+  implicit val timeout = Timeout(2.seconds)
+  val cnf = new ChainNodeFacade(chainNode)
+
+  val route = pathPrefix("chains") {
+    allchains ~ newchain
+  }
+
+  @ApiOperation(value = "Create New Chain", notes = "", nickname = "newchain", httpMethod = "POST")
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "Chain created", response = classOf[ChainDefToken]),
+    new ApiResponse(code = 409, message = "Internal server error")
+  ))
+  def newchain =
+    post {
+      complete(StatusCodes.Created, cnf.newChain().chainDefToken)
+    }
+
+  @ApiOperation(httpMethod = "GET", response = classOf[List[ChainDefToken]], value = "Returns the list of active chains")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "Active Chains", response = classOf[List[ChainDefToken]])
+  ))
+  def allchains =
+    get {
+      completeWith(instanceOf[List[ChainDefToken]])(_(cnf.chains().values.toList))
+    }
+}
+
 object Main extends App with Config with CorsSupport with CirceSupport {
   private implicit val system = ActorSystem()
   protected implicit val executor: ExecutionContext = system.dispatcher
@@ -216,28 +254,31 @@ object Main extends App with Config with CorsSupport with CirceSupport {
 
   import java.nio.file.{Paths, Files}
 
+  val chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
+
   def userInfos() = {
     val userDatas = getClass.getResourceAsStream("/public/mock_users.csv")
 
     implicit val userDecoder: RowDecoder[UserData] = RowDecoder.decoder(0, 1, 2, 3, 4)(UserData.apply)
     val reader = userDatas.asCsvReader[UserData](',', true)
 
-    reader.map(_.get).toList
+    reader.map(_.get).map(User(UUID.randomUUID(), _)).toList
   }
 
-  def addUserInfo(user: UserData): Unit = {
+  def addUserInfo(user: UserData): User = {
     val infos = userInfos()
     implicit val userEncoder: RowEncoder[UserData] = RowEncoder.caseEncoder(0, 1, 2, 3, 4)(UserData.unapply)
 //    new File(rawDataFile.toAbsolutePath().toString() + "2").delete()
 //    val out = new java.io.File(rawDataFile.toAbsolutePath().toString())
 //    val writer = out.asCsvWriter[UserInfo](',', List("username", "firstname", "lastname", "email", "ip_address"))
 //    writer.write(user :: infos).close()
+    User(UUID.randomUUID(), user)
   }
 
   class SwaggerDocService(system: ActorSystem) extends SwaggerHttpService with HasActorSystem {
     override implicit val actorSystem: ActorSystem = system
     override implicit val materializer: ActorMaterializer = ActorMaterializer()
-    override val apiTypes = Seq(ru.typeOf[UsersService], ru.typeOf[AdminService])
+    override val apiTypes = Seq(ru.typeOf[UsersService], ru.typeOf[AdminService], ru.typeOf[ChainService])
     override val host = s"$httpInterface:$httpPort" //the url of your api, not swagger's json endpoint
     override val basePath = "/v1"    //the basePath for the API you are exposing
     override val apiDocsPath = "api-docs" //where you want the swagger-json endpoint exposed
@@ -250,8 +291,9 @@ object Main extends App with Config with CorsSupport with CirceSupport {
     } ~
     pathPrefix("v1") {
       path("")(getFromResource("public/index.html")) ~
-      corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), addUserInfo(_)).route) ~
-      corsHandler(new AdminService().route)
+      corsHandler(new ChainService(chainNode).route) ~
+      corsHandler(new AdminService().route) ~
+      corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), addUserInfo(_)).route)
     } ~
     corsHandler(pathSingleSlash(getFromResource("html/build/index.html"))) ~
     corsHandler(getFromResourceDirectory("html/build")) ~
