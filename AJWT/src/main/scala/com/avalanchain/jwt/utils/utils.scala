@@ -1,7 +1,7 @@
 package com.avalanchain.jwt
 
 /**
-  * Created by Yuriy on 10/11/2016.
+  * Created by Yuriy on 10/05/2016.
   */
 package object utils {
   def time[R](block: => R): R = {

@@ -30,12 +30,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
 /**
-  * Created by Yuriy Habarov on 21/11/2016.
+  * Created by Yuriy Habarov on 21/05/2016.
   */
 class ChainNode(keyPair: KeyPair, knownKeys: Set[PublicKey])(implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]) {
 
   val system = ActorSystem("node", ConfigFactory.load("application.conf"))
   val materializer = ActorMaterializer()(system)
+  val publicKey = keyPair.getPublic
 
   implicit val timeout = Timeout(5 seconds)
 

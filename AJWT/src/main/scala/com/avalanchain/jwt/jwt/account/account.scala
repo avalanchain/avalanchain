@@ -10,7 +10,7 @@ import io.swagger.annotations.ApiModel
 import scala.util.matching.Regex
 
 /**
-  * Created by Yuriy on 10/10/2016.
+  * Created by Yuriy on 10/04/2016.
   */
 package object account {
   type AccountId = UUID

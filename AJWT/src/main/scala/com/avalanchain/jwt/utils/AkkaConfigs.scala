@@ -1,7 +1,7 @@
 package com.avalanchain.jwt.utils
 
 /**
-  * Created by Yuriy on 09/11/2016.
+  * Created by Yuriy on 09/05/2016.
   */
 object AkkaConfigs {
   val PersLevelDb =

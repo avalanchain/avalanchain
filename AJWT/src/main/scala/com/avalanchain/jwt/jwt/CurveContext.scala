@@ -20,7 +20,7 @@ trait CurveContext {
 }
 
 /**
-  * Created by Yuriy Habarov on 26/10/2016.
+  * Created by Yuriy Habarov on 26/04/2016.
   */
 object CurveContext extends CurveContext {
   Security.addProvider(new BouncyCastleProvider())

@@ -21,7 +21,7 @@ import scala.util.{Success, Try}
 import scala.concurrent.duration._
 
 /**
-  * Created by Yuriy Habarov on 08/11/2016.
+  * Created by Yuriy Habarov on 08/05/2016.
   */
 package object basicChain {
   type Id = UUID

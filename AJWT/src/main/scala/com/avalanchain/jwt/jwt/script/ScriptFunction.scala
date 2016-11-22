@@ -5,7 +5,7 @@ import com.avalanchain.jwt.utils.Pipe._
 import io.circe.Json
 
 /**
-  * Created by Yuriy Habarov on 16/11/2016.
+  * Created by Yuriy Habarov on 16/05/2016.
   */
 class ScriptFunction(script: Func) {
   import javax.script.ScriptEngineManager

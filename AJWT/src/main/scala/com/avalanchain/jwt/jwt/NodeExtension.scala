@@ -3,7 +3,7 @@ package com.avalanchain.jwt.jwt
 import akka.actor.{Actor, ActorSystem, ExtendedActorSystem, Extension, ExtensionId, ExtensionIdProvider}
 
 /**
-  * Created by Yuriy on 14/10/2016.
+  * Created by Yuriy on 14/04/2016.
   */
 class NodeExtensionImpl extends Extension {
   //Since this Extension is a shared instance

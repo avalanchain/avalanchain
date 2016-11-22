@@ -3,6 +3,7 @@ package com.avalanchain.jwt
 import java.io.File
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import java.util.UUID
+import java.util.concurrent.ThreadLocalRandom
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
@@ -14,9 +15,12 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.avalanchain.jwt.jwt.{CurveContext, UserInfo}
 import CurveContext._
+import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.avalanchain.jwt.basicChain.{ChainDefToken, ChainRef}
 import com.avalanchain.jwt.jwt.account.principals.{User, UserData}
 import com.avalanchain.jwt.jwt.actors.{ChainNode, ChainNodeFacade}
+import com.avalanchain.jwt.jwt.demo.DemoNode
 import com.avalanchain.jwt.utils.Config
 
 import scala.concurrent.ExecutionContext
@@ -26,7 +30,6 @@ import com.github.swagger.akka.model.Info
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import kantan.csv.{RowDecoder, RowEncoder}
 import kantan.csv.ops._
-import spray.json.DefaultJsonProtocol
 
 import scala.collection.Map
 //import spray.json.DefaultJsonProtocol
@@ -76,13 +79,13 @@ object KeysDto {
 
 import KeysDto._
 
-trait ACJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
-  implicit val userInfoFormats = jsonFormat4(UserInfo)
-  implicit val userDataFormats = jsonFormat5(UserData)
-  implicit val pubKeysFormats = jsonFormat2(PubKey)
-  implicit val privKeysFormats = jsonFormat1(PrivKey)
-  implicit val keysFormats = jsonFormat2(Keys)
-}
+//trait ACJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
+//  implicit val userInfoFormats = jsonFormat4(UserInfo)
+//  implicit val userDataFormats = jsonFormat5(UserData)
+//  implicit val pubKeysFormats = jsonFormat2(PubKey)
+//  implicit val privKeysFormats = jsonFormat1(PrivKey)
+//  implicit val keysFormats = jsonFormat2(Keys)
+//}
 
 //see https://groups.google.com/forum/#!topic/akka-user/5RCZIJt7jHo
 trait CorsSupport {
@@ -255,6 +258,7 @@ object Main extends App with Config with CorsSupport with CirceSupport {
   import java.nio.file.{Paths, Files}
 
   val chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
+  val demoNode: DemoNode = new DemoNode(chainNode)
 
   def userInfos() = {
     val userDatas = getClass.getResourceAsStream("/public/mock_users.csv")
@@ -278,11 +282,60 @@ object Main extends App with Config with CorsSupport with CirceSupport {
   class SwaggerDocService(system: ActorSystem) extends SwaggerHttpService with HasActorSystem {
     override implicit val actorSystem: ActorSystem = system
     override implicit val materializer: ActorMaterializer = ActorMaterializer()
-    override val apiTypes = Seq(ru.typeOf[UsersService], ru.typeOf[AdminService], ru.typeOf[ChainService])
+    override val apiTypes = Seq(ru.typeOf[ChainService], ru.typeOf[AdminService], ru.typeOf[UsersService])
     override val host = s"$httpInterface:$httpPort" //the url of your api, not swagger's json endpoint
     override val basePath = "/v1"    //the basePath for the API you are exposing
     override val apiDocsPath = "api-docs" //where you want the swagger-json endpoint exposed
     override val info = Info(version = "1.0") //provides license and other description details
+  }
+
+  val greeterWebSocketService =
+    Flow[Message].collect {
+      case tm: TextMessage =>
+        println(s"Received: $tm")
+        TextMessage(Source.single("Hello ") ++ tm.textStream)
+      // ignore binary messages
+    }
+
+  //#websocket-routing
+  val wsRoute: Route = {
+    path("greeter") {
+      get {
+        handleWebSocketMessages(greeterWebSocketService)
+        //complete(HttpEntity(model.ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+      }
+    } ~
+    path("randomNums") {
+      val src =
+        Source.fromIterator(() => Iterator.continually(ThreadLocalRandom.current.nextInt()))
+          .filter(i => i > 0 && i % 2 == 0).map(i => TextMessage(i.toString))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } //~
+//      path("yahoo") {
+//        val src = YahooFinSource().map(i => TextMessage(i.toString))
+//
+//        extractUpgradeToWebSocket { upgrade =>
+//          complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+//        }
+//      } ~
+//      path("cluster") {
+//        val system = ClusterService.firstNode
+//        val monitor = ClusterService.startMonitor(system)
+//        val src = Source.fromPublisher[String](ActorPublisher(monitor)).map(i => TextMessage(i))
+//
+//        extractUpgradeToWebSocket { upgrade =>
+//          complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+//        }
+//      } ~
+//      path("newnode") {
+//        get {
+//          ClusterService.deployNode(0)
+//          complete("Node added")
+//        }
+//      }
   }
 
   val routes =
@@ -294,6 +347,9 @@ object Main extends App with Config with CorsSupport with CirceSupport {
       corsHandler(new ChainService(chainNode).route) ~
       corsHandler(new AdminService().route) ~
       corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), addUserInfo(_)).route)
+    } ~
+    pathPrefix("ws") {
+      wsRoute
     } ~
     corsHandler(pathSingleSlash(getFromResource("html/build/index.html"))) ~
     corsHandler(getFromResourceDirectory("html/build")) ~

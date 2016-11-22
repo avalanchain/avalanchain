@@ -24,7 +24,7 @@ import io.circe.generic.auto._
 
 
 /**
-  * Created by Yuriy on 18/11/2016.
+  * Created by Yuriy on 18/05/2016.
   */
 object Runner extends App {
   implicit val timeout = Timeout(5 seconds)

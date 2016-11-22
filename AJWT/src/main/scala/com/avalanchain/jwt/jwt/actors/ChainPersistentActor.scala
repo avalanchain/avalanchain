@@ -12,7 +12,7 @@ import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 
 /**
-  * Created by Yuriy Habarov on 21/11/2016.
+  * Created by Yuriy Habarov on 21/05/2016.
   */
 object ChainPersistentActor {
   trait Command
