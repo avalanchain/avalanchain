@@ -54,17 +54,14 @@ import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.HttpResponse
 
 object KeysDto {
-
   case class PubKey(X: String, Y: String)
-
   case class PrivKey(S: String)
-
   case class Keys(priv: PrivKey, pub: PubKey)
 
   implicit def toPubKeyDto(key: PublicKey) = {
-    val pk = key.toString
-    val x = pk.substring(29, 93).trim
-    val y = pk.substring(109).trim
+    val pkstr = new String(key.toString.toCharArray.map(_.toByte).filter(b => b != 10 && b != 13).map(_.toChar))
+    val pattern = """.*X: ([0-9a-f]+) +Y: ([0-9a-f]+).*""".r
+    val pattern(x, y) = pkstr
     PubKey(x, y)
   }
 
@@ -217,40 +214,40 @@ class AdminService()
     }
 }
 
-@Path("chains")
-@Api(value = "/chains", produces = "application/json")
-class ChainService(chainNode: ChainNode)
-  extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
-  import scala.concurrent.duration._
-
-  implicit val timeout = Timeout(2.seconds)
-  val cnf = new ChainNodeFacade(chainNode)
-
-  //val a = List[ChainDefToken]().asJson
-
-  val route = pathPrefix("chains") {
-    allchains ~ newchain
-  }
-
-  @ApiOperation(value = "Create New Chain", notes = "", nickname = "newchain", httpMethod = "POST")
-  @ApiResponses(Array(
-    new ApiResponse(code = 201, message = "Chain created", response = classOf[ChainDefToken]),
-    new ApiResponse(code = 409, message = "Internal server error")
-  ))
-  def newchain =
-    post {
-      complete(StatusCodes.Created, cnf.newChain().chainDefToken)
-    }
-
-  @ApiOperation(httpMethod = "GET", response = classOf[List[ChainDefToken]], value = "Returns the list of active chains")
-  @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "Active Chains", response = classOf[List[ChainDefToken]])
-  ))
-  def allchains =
-    get {
-      completeWith(instanceOf[List[ChainDefToken]])(_(cnf.chains().values.toList))
-    }
-}
+//@Path("chains")
+//@Api(value = "/chains", produces = "application/json")
+//class ChainService(chainNode: ChainNode)
+//  extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
+//  import scala.concurrent.duration._
+//
+//  implicit val timeout = Timeout(2.seconds)
+//  val cnf = new ChainNodeFacade(chainNode)
+//
+//  //val a = List[ChainDefToken]().asJson
+//
+//  val route = pathPrefix("chains") {
+//    allchains ~ newchain
+//  }
+//
+//  @ApiOperation(value = "Create New Chain", notes = "", nickname = "newchain", httpMethod = "POST")
+//  @ApiResponses(Array(
+//    new ApiResponse(code = 201, message = "Chain created", response = classOf[ChainDefToken]),
+//    new ApiResponse(code = 409, message = "Internal server error")
+//  ))
+//  def newchain =
+//    post {
+//      complete(StatusCodes.Created, cnf.newChain().chainDefToken)
+//    }
+//
+//  @ApiOperation(httpMethod = "GET", response = classOf[List[ChainDefToken]], value = "Returns the list of active chains")
+//  @ApiResponses(Array(
+//    new ApiResponse(code = 200, message = "Active Chains", response = classOf[List[ChainDefToken]])
+//  ))
+//  def allchains =
+//    get {
+//      completeWith(instanceOf[List[ChainDefToken]])(_(cnf.chains().values.toList))
+//    }
+//}
 
 object Main extends App with Config with CorsSupport with CirceSupport {
   private implicit val system = ActorSystem()
@@ -285,7 +282,7 @@ object Main extends App with Config with CorsSupport with CirceSupport {
   class SwaggerDocService(system: ActorSystem) extends SwaggerHttpService with HasActorSystem {
     override implicit val actorSystem: ActorSystem = system
     override implicit val materializer: ActorMaterializer = ActorMaterializer()
-    override val apiTypes = Seq(ru.typeOf[ChainService], ru.typeOf[AdminService], ru.typeOf[UsersService])
+    override val apiTypes = Seq(/*ru.typeOf[ChainService], */ru.typeOf[AdminService], ru.typeOf[UsersService])
     override val host = s"$httpInterface:$httpPort" //the url of your api, not swagger's json endpoint
     override val basePath = "/v1"    //the basePath for the API you are exposing
     override val apiDocsPath = "api-docs" //where you want the swagger-json endpoint exposed

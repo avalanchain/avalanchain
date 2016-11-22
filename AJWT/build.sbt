@@ -62,8 +62,8 @@ libraryDependencies ++= {
     "io.circe"          %% "circe-parser"                               % circeVersion,
     "io.circe"          %% "circe-java8"                                % circeVersion,
 
-    "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.8.2",
-    "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.8.2",
+//    "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.8.2",
+//    "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.8.2",
 
     "de.heikoseeberger" %% "akka-http-circe"                            % "1.11.0-M4",
 

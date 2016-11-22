@@ -15,7 +15,6 @@ import akka.persistence.journal.writer.JournalWriter
 import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
-import com.avalanchain.jwt.actors.{ChainPersistentActor, PersistentSink}
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.utils._
 import com.typesafe.config.ConfigFactory
@@ -25,6 +24,7 @@ import akka.persistence.inmemory.query.InMemoryReadJournalProvider
 import com.avalanchain.jwt.helpers
 import com.avalanchain.jwt.jwt.CurveContext._
 import com.avalanchain.jwt.KeysDto._
+import com.avalanchain.jwt.jwt.actors.ChainPersistentActor
 import com.avalanchain.jwt.jwt.script.ScriptFunction
 import io.circe.Json
 import com.avalanchain.jwt.utils.Pipe._

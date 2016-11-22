@@ -107,16 +107,6 @@ package object basicChain {
     def apply[T <: ChainDef](chainDef: TypedJwtToken[T]): ChainRef = new ChainRef(chainDef.sig)
   }
 
-  //sealed trait Shackle extends JwtPayload.Sym { val cr: ChainRef; val pos: Long }
-  //object Shackle {
-  //  case class ShackleRef(sig: String)
-  //
-  //  case class Seed(cr: ChainRef, puk: PubKey) extends Shackle { override val pos: Position = -1 }
-  //  case class Frame(cr: ChainRef, pos: Position, pref: ShackleRef, v: Json) extends Shackle {
-  //    if (pos < 0) throw new RuntimeException(s"Frame pos cannot be negative, but found $pos")
-  //  }
-  //}
-
   case class FrameRef(sig: String) // ChainRef for first frame and previous Frame signatures for others
   object FrameRef {
     def apply(frameRef: FrameToken): FrameRef = new FrameRef(frameRef.sig)
