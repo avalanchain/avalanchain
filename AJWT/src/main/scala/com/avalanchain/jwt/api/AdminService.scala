@@ -5,7 +5,7 @@ import javax.ws.rs.Path
 
 import akka.http.scaladsl.server.Directives
 import com.avalanchain.jwt.jwt.CurveContext
-import com.avalanchain.jwt.basicChain.KeysDto._
+import com.avalanchain.jwt.KeysDto._
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 import io.circe.generic.auto._
@@ -33,7 +33,7 @@ class AdminService()
     }
 
     @Path("newKeys")
-    @ApiOperation(notes = "Copy key from screen", httpMethod = "GET", value = "Returns a newly generated key pair")
+    @ApiOperation(notes = "Copy key from screen", httpMethod = "GET", response = classOf[Keys], value = "Returns a newly generated key pair")
     @ApiResponses(Array(
       new ApiResponse(code = 200, message = "New keys generated", response = classOf[Keys])
     ))

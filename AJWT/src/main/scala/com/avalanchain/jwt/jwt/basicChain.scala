@@ -15,7 +15,7 @@ import pdi.jwt.{Jwt, JwtAlgorithm, JwtBase64}
 import pdi.jwt.exceptions.JwtLengthException
 import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 import cats.implicits._
-import com.avalanchain.jwt.basicChain.KeysDto.PubKey
+import com.avalanchain.jwt.KeysDto.PubKey
 
 import scala.collection.immutable.Map
 import scala.util.{Success, Try}
@@ -28,29 +28,6 @@ package object basicChain {
   type Id = UUID
   type Position = Long
   type JsonStr = String
-
-  object KeysDto {
-    case class PubKey(X: String, Y: String)
-    case class PrivKey(S: String)
-    case class Keys(priv: PrivKey, pub: PubKey)
-
-    implicit def toPubKeyDto(key: PublicKey) = {
-      val pkstr = new String(key.toString.toCharArray.map(_.toByte).filter(b => b != 10 && b != 13).map(_.toChar))
-      val pattern = """.*X: ([0-9a-f]+) +Y: ([0-9a-f]+).*""".r
-      val pattern(x, y) = pkstr
-      PubKey(x, y)
-    }
-
-    def toPrivKeyDto(key: PrivateKey) = {
-      val s = key.toString.substring(31).trim
-      PrivKey(s)
-    }
-
-    def toKeysDto(keys: KeyPair) = {
-      Keys(toPrivKeyDto(keys.getPrivate), toPubKeyDto(keys.getPublic))
-    }
-  }
-
 
   sealed trait JwtPayload
   object JwtPayload {
