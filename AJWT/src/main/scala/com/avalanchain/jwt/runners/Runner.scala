@@ -7,7 +7,7 @@ import scala.concurrent.{Await, Future}
 import akka.pattern.{ask, pipe}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import cats.data.Xor
+import cats.implicits._
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode
@@ -46,16 +46,16 @@ object Runner extends App {
 
   val chainRef = ChainRef(newChain.chainDefToken)
 
-  val sink = Await.result(node ? GetJsonSink(chainRef), 5 seconds).asInstanceOf[Xor[ChainRegistryError, Sink[Json, NotUsed]]]
+  val sink = Await.result(node ? GetJsonSink(chainRef), 5 seconds).asInstanceOf[Either[ChainRegistryError, Sink[Json, NotUsed]]]
   println(s"Sink created: $sink")
 
-  val source = Await.result(node ? GetJsonSource(chainRef, 0, 1000), 5 seconds).asInstanceOf[Xor[ChainRegistryError, Source[Xor[JwtError, Json], NotUsed]]]
+  val source = Await.result(node ? GetJsonSource(chainRef, 0, 1000), 5 seconds).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
   println(s"Source created: $source")
 
-  val sourceF = Await.result(node ? GetFrameSource(chainRef, 0, 1000), 5 seconds).asInstanceOf[Xor[ChainRegistryError, Source[Xor[JwtError, Frame], NotUsed]]]
+  val sourceF = Await.result(node ? GetFrameSource(chainRef, 0, 1000), 5 seconds).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
   println(s"Source created: $sourceF")
 
-  val sourceFT = Await.result(node ? GetFrameTokenSource(chainRef, 0, 1000), 5 seconds).asInstanceOf[Xor[ChainRegistryError, Source[FrameToken, NotUsed]]]
+  val sourceFT = Await.result(node ? GetFrameTokenSource(chainRef, 0, 1000), 5 seconds).asInstanceOf[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
   println(s"Source created: $sourceFT")
 
   implicit val materializer = chainNode.materializer

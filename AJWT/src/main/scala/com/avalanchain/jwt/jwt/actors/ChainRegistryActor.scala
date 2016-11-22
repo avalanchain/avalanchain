@@ -9,7 +9,7 @@ import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.scaladsl.EventsByPersistenceIdQuery
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import cats.data.Xor
+import cats.implicits._
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor.JwtError.IncorrectJwtTokenFormat
 import io.circe.DecodingFailure
 //import com.avalanchain.jwt.actors.ChainRegistryActor.{ChainNotFound, GetSnapshotJsonSource, _}
@@ -62,7 +62,7 @@ object ChainRegistryActor {
     final case class JwtTokenPayloadParsingError(e: DecodingFailure) extends JwtError
   }
 
-  type GetChainResult = Xor[ChainCreationError, (ChainDefToken, ActorRef)]
+  type GetChainResult = Either[ChainCreationError, (ChainDefToken, ActorRef)]
 
   def props() = Props(new ChainRegistryActor())
   val actorId = "chainregistry"
@@ -128,8 +128,8 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
     case a => log.info(s"Ignored '${a}' '${a.getClass}'")
   }
 
-  def getFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[Xor[JwtError, Frame], NotUsed] = {
-    getTokenFrameSource(chainRef, fromPos, toPos).map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat))
+  def getFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[Either[JwtError, Frame], NotUsed] = {
+    getTokenFrameSource(chainRef, fromPos, toPos).map(x => Either.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat))
   }
 
   def getTokenFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[FrameToken, NotUsed] = {
@@ -140,8 +140,8 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
     readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken])
   }
 
-  def getSnapshotFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[Xor[JwtError, Frame], NotUsed] = {
-    getSnapshotTokenFrameSource(chainRef, fromPos, toPos).map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat))
+  def getSnapshotFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[Either[JwtError, Frame], NotUsed] = {
+    getSnapshotTokenFrameSource(chainRef, fromPos, toPos).map(x => Either.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat))
   }
 
   def getSnapshotTokenFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[FrameToken, NotUsed] = {
@@ -152,15 +152,15 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
     readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken])
   }
 
-  protected def tryGetChain(chainRef: ChainRef): Xor[ChainRegistryError, (ChainDefToken, ActorRef)] = {
+  protected def tryGetChain(chainRef: ChainRef): Either[ChainRegistryError, (ChainDefToken, ActorRef)] = {
     state.get(chainRef) match {
-      case None => Xor.left(ChainNotFound(chainRef))
+      case None => Either.left(ChainNotFound(chainRef))
       case Some(chainDefToken) => {
         context.child(chainRef.sig) match {
-          case Some(actorRef) => Xor.right(chainDefToken, actorRef)
+          case Some(actorRef) => Either.right(chainDefToken, actorRef)
           case None => {
             val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), chainRef.sig)
-            Xor.right(chainDefToken, actorRef)
+            Either.right(chainDefToken, actorRef)
           }
         }
       }

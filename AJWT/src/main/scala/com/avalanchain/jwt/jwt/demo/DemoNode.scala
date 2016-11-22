@@ -15,6 +15,8 @@ import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 
+import cats.implicits._
+
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContextExecutor, Future}

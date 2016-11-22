@@ -6,7 +6,7 @@ version := "0.0.1"
 
 scalaVersion := "2.11.8"
 
-val circeVersion = "0.5.1"
+val circeVersion = "0.6.1"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
@@ -53,6 +53,8 @@ libraryDependencies ++= {
     "io.swagger"        % "swagger-core"                                % "1.5.10",
     "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.7.3",
 
+    "org.typelevel"     %% "cats"                                       % "0.8.1",
+
     "org.bouncycastle"  % "bcpkix-jdk15on"                              % "1.55",
     "com.pauldijou"     %% "jwt-circe"                                  % "0.9.0",
     "io.circe"          %% "circe-core"                                 % circeVersion,
@@ -63,7 +65,7 @@ libraryDependencies ++= {
     "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.8.2",
     "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.8.2",
 
-    "de.heikoseeberger" %% "akka-http-circe"                            % "1.10.1",
+    "de.heikoseeberger" %% "akka-http-circe"                            % "1.11.0-M4",
 
     "com.nrinaudo"      %% "kantan.csv-cats"                            % "0.1.15",
     "org.scalaj"        %% "scalaj-http"                                % "2.3.0",

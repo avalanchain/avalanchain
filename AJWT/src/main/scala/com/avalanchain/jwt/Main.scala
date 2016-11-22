@@ -27,12 +27,14 @@ import scala.concurrent.ExecutionContext
 import scala.io.StdIn
 import com.github.swagger.akka._
 import com.github.swagger.akka.model.Info
-import de.heikoseeberger.akkahttpcirce.CirceSupport
+import de.heikoseeberger.akkahttpcirce._
 import kantan.csv.{RowDecoder, RowEncoder}
 import kantan.csv.ops._
 
+import cats.implicits._
+
 import scala.collection.Map
-//import spray.json.DefaultJsonProtocol
+import spray.json.DefaultJsonProtocol
 import io.swagger.annotations._
 //import io.swagger.models.Path
 import javax.ws.rs._
@@ -40,7 +42,6 @@ import javax.ws.rs._
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._
 import io.circe.parser._
-import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 
 import scala.reflect.runtime.{universe=>ru}
@@ -79,13 +80,13 @@ object KeysDto {
 
 import KeysDto._
 
-//trait ACJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
-//  implicit val userInfoFormats = jsonFormat4(UserInfo)
-//  implicit val userDataFormats = jsonFormat5(UserData)
-//  implicit val pubKeysFormats = jsonFormat2(PubKey)
-//  implicit val privKeysFormats = jsonFormat1(PrivKey)
-//  implicit val keysFormats = jsonFormat2(Keys)
-//}
+trait ACJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
+  implicit val userInfoFormats = jsonFormat4(UserInfo)
+  implicit val userDataFormats = jsonFormat5(UserData)
+  implicit val pubKeysFormats = jsonFormat2(PubKey)
+  implicit val privKeysFormats = jsonFormat1(PrivKey)
+  implicit val keysFormats = jsonFormat2(Keys)
+}
 
 //see https://groups.google.com/forum/#!topic/akka-user/5RCZIJt7jHo
 trait CorsSupport {
@@ -225,6 +226,8 @@ class ChainService(chainNode: ChainNode)
   implicit val timeout = Timeout(2.seconds)
   val cnf = new ChainNodeFacade(chainNode)
 
+  //val a = List[ChainDefToken]().asJson
+
   val route = pathPrefix("chains") {
     allchains ~ newchain
   }
@@ -257,8 +260,8 @@ object Main extends App with Config with CorsSupport with CirceSupport {
 
   import java.nio.file.{Paths, Files}
 
-  val chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
-  val demoNode: DemoNode = new DemoNode(chainNode)
+//  def chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
+//  val demoNode: DemoNode = new DemoNode(chainNode)
 
   def userInfos() = {
     val userDatas = getClass.getResourceAsStream("/public/mock_users.csv")
@@ -344,7 +347,7 @@ object Main extends App with Config with CorsSupport with CirceSupport {
     } ~
     pathPrefix("v1") {
       path("")(getFromResource("public/index.html")) ~
-      corsHandler(new ChainService(chainNode).route) ~
+//      corsHandler(new ChainService(chainNode).route) ~
       corsHandler(new AdminService().route) ~
       corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), addUserInfo(_)).route)
     } ~

@@ -17,7 +17,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.scaladsl.{Flow, RunnableGraph, Sink, Source}
-import cats.data.Xor
+import cats.implicits._
 import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
 import com.avalanchain.jwt.basicChain.ChainDerivationFunction._
 import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
@@ -166,42 +166,42 @@ package object helpers {
 //  }
 
   def PersistentFrameTokenSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainRegistryError, Source[FrameToken, NotUsed]] = {
+                         (implicit actorSystem: ActorSystem, timeout: Timeout): Either[ChainRegistryError, Source[FrameToken, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorSystem.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainResult]
     }, 5 seconds)
 
     chainByRefResult match {
-      case Xor.Right((chainDefToken, actorRef)) => {
+      case Right((chainDefToken, actorRef)) => {
         val readJournal: EventsByPersistenceIdQuery =
           if (inMem) PersistenceQuery(actorSystem).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
           else PersistenceQuery(actorSystem).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[EventsByPersistenceIdQuery]
 
-        Xor.right(readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken]))
+        Either.right(readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken]))
       }
-      case Xor.Left(e: ChainRegistryError) => Xor.Left(e)
+      case Left(e: ChainRegistryError) => Left(e)
     }
   }
 
   def PersistentFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                        (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainRegistryError, Source[Xor[JwtError, Frame], NotUsed]] = {
+                        (implicit actorSystem: ActorSystem, timeout: Timeout): Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]] = {
     PersistentFrameTokenSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
-      map(_.map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat)))
+      map(_.map(x => Either.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat)))
   }
 
   def PersistentJsonSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                         (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainRegistryError, Source[Xor[JwtError, Json], NotUsed]] = {
+                         (implicit actorSystem: ActorSystem, timeout: Timeout): Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]] = {
     PersistentFrameSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).map(_.map(_.map(_.v)))
   }
 
   def PersistentSource[T](chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                         (implicit actorSystem: ActorSystem, timeout: Timeout, decoder: Decoder[T]): Xor[ChainRegistryError, Source[Xor[JwtError, T], NotUsed]] = {
+                         (implicit actorSystem: ActorSystem, timeout: Timeout, decoder: Decoder[T]): Either[ChainRegistryError, Source[Either[JwtError, T], NotUsed]] = {
     PersistentJsonSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
       map(_.map(_.flatMap(_.as[T].leftMap(e => JwtTokenPayloadParsingError(e)))))
   }
 
   def SnapshotFrameTokenSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                                (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainRegistryError, Source[FrameToken, NotUsed]] = {
+                                (implicit actorSystem: ActorSystem, timeout: Timeout): Either[ChainRegistryError, Source[FrameToken, NotUsed]] = {
     val chainByRefResult = Await.result({
       (actorSystem.actorSelection(ChainRegistryActor.actorId) ? GetChainByRef(chainRef)).mapTo[GetChainResult]
     }, 5 seconds)
@@ -216,18 +216,18 @@ package object helpers {
   }
 
   def SnapshotFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                           (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainRegistryError, Source[Xor[JwtError, Frame], NotUsed]] = {
+                           (implicit actorSystem: ActorSystem, timeout: Timeout): Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]] = {
     SnapshotFrameTokenSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
-      map(_.map(x => Xor.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat.asInstanceOf[JwtError])))
+      map(_.map(x => Either.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat.asInstanceOf[JwtError])))
   }
 
   def SnapshotJsonSource(chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                          (implicit actorSystem: ActorSystem, timeout: Timeout): Xor[ChainRegistryError, Source[Xor[JwtError, Json], NotUsed]] = {
+                          (implicit actorSystem: ActorSystem, timeout: Timeout): Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]] = {
     SnapshotFrameSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).map(_.map(_.map(_.v)))
   }
 
   def SnapshotSource[T](chainRef: ChainRef, fromPos: Position, toPos: Position, inMem: Boolean)
-                         (implicit actorSystem: ActorSystem, timeout: Timeout, decoder: Decoder[T]): Xor[ChainRegistryError, Source[Xor[JwtError, T], NotUsed]] = {
+                         (implicit actorSystem: ActorSystem, timeout: Timeout, decoder: Decoder[T]): Either[ChainRegistryError, Source[Either[JwtError, T], NotUsed]] = {
     SnapshotJsonSource(chainRef, fromPos, toPos, inMem)(actorSystem, timeout).
       map(_.map(_.flatMap(_.as[T].leftMap(e => JwtTokenPayloadParsingError(e).asInstanceOf[JwtError]))))
   }

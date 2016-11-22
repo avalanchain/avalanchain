@@ -10,6 +10,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.{ECParameterSpec, ECPrivateKeySpec, ECPublicKeySpec}
 import org.bouncycastle.math.ec.custom.djb.Curve25519
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
+import cats.implicits._
 
 import scala.util.Try
 

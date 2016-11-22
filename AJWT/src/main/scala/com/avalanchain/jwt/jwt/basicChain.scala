@@ -16,6 +16,8 @@ import pdi.jwt.exceptions.JwtLengthException
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 
+import cats.implicits._
+
 import scala.collection.immutable.Map
 import scala.util.{Success, Try}
 import scala.concurrent.duration._
@@ -90,7 +92,7 @@ package object basicChain {
   }
 
   case class TypedJwtToken[T <: JwtPayload](token: String)(implicit decoder: Decoder[T]) extends JwtToken {
-    val payload = decode[T](payloadJson).toOption
+    val payload = decode[T](payloadJson).right.toOption
   }
   object TypedJwtToken {
     def apply[T <: JwtPayload.Sym](payload: T, secret: String)(implicit encoder: Encoder[T], decoder: Decoder[T]): TypedJwtToken[T] =

@@ -11,7 +11,7 @@ import akka.stream.ActorMaterializer
 import akka.pattern.{ask, pipe}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import cats.data.Xor
+import cats.implicits._
 import com.avalanchain.jwt.basicChain.{Frame, _}
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.NewChain
@@ -86,15 +86,15 @@ class ChainNodeFacade(var chainNode: ChainNode, atMost: FiniteDuration = 5 secon
 
   def newChain() = Await.result(nodeActorRef ? NewChain(JwtAlgo.HS512), atMost).asInstanceOf[ChainCreationResult]
 
-  def sink(chainRef: ChainRef) = Await.result(nodeActorRef ? GetJsonSink(chainRef), atMost).asInstanceOf[Xor[ChainRegistryError, Sink[Json, NotUsed]]]
+  def sink(chainRef: ChainRef) = Await.result(nodeActorRef ? GetJsonSink(chainRef), atMost).asInstanceOf[Either[ChainRegistryError, Sink[Json, NotUsed]]]
 
   def source(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetJsonSource(chainRef, from, to), atMost).asInstanceOf[Xor[ChainRegistryError, Source[Xor[JwtError, Json], NotUsed]]]
+    Await.result(nodeActorRef ? GetJsonSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
 
   def sourceF(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetFrameSource(chainRef, from, to), atMost).asInstanceOf[Xor[ChainRegistryError, Source[Xor[JwtError, Frame], NotUsed]]]
+    Await.result(nodeActorRef ? GetFrameSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
 
   def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetFrameTokenSource(chainRef, from, to), 5 seconds).asInstanceOf[Xor[ChainRegistryError, Source[FrameToken, NotUsed]]]
+    Await.result(nodeActorRef ? GetFrameTokenSource(chainRef, from, to), 5 seconds).asInstanceOf[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
 
 }
