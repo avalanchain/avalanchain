@@ -14,7 +14,7 @@ import scala.reflect.runtime.{universe => ru}
 class SwaggerDocService(system: ActorSystem, httpInterface: String, httpPort: Int) extends SwaggerHttpService with HasActorSystem {
   override implicit val actorSystem: ActorSystem = system
   override implicit val materializer: ActorMaterializer = ActorMaterializer()
-  override val apiTypes = Seq(ru.typeOf[ChainService], ru.typeOf[AdminService], ru.typeOf[UsersService])
+  override val apiTypes = Seq(ru.typeOf[ChainService] /*,  ru.typeOf[AdminService]*/, ru.typeOf[UsersService])
   override val host = s"$httpInterface:$httpPort" //the url of your api, not swagger's json endpoint
   override val basePath = "/v1"    //the basePath for the API you are exposing
   override val apiDocsPath = "api-docs" //where you want the swagger-json endpoint exposed

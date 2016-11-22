@@ -50,6 +50,7 @@ libraryDependencies ++= {
     "com.github.dnvriend" %% "akka-persistence-journal-writer"          % "0.0.2",
 
     "org.scalatest"     %% "scalatest"                                  % "2.2.5" % "test",
+    "ch.qos.logback"    % "logback-classic"                             % "1.1.3",
     "io.swagger"        % "swagger-core"                                % "1.5.10",
     "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.7.3",
 
@@ -62,8 +63,8 @@ libraryDependencies ++= {
     "io.circe"          %% "circe-parser"                               % circeVersion,
     "io.circe"          %% "circe-java8"                                % circeVersion,
 
-//    "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.8.2",
-//    "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.8.2",
+    "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.8.4",
+    "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.8.4",
 
     "de.heikoseeberger" %% "akka-http-circe"                            % "1.11.0-M4",
 
