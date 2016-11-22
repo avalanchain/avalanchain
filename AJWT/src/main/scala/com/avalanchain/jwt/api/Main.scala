@@ -8,6 +8,7 @@ import akka.actor.ActorSystem
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
 import com.avalanchain.jwt.basicChain.ChainDef
+import com.avalanchain.jwt.jwt.demo.YahooFinSource
 //import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{StatusCodes, _}
@@ -111,14 +112,14 @@ class Main() extends Config with CorsSupport with CirceSupport {
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
-    } //~
-//      path("yahoo") {
-//        val src = YahooFinSource().map(i => TextMessage(i.toString))
-//
-//        extractUpgradeToWebSocket { upgrade =>
-//          complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
-//        }
-//      } ~
+    } ~
+      path("yahoo") {
+        val src = YahooFinSource().map(i => TextMessage(i.toString))
+
+        extractUpgradeToWebSocket { upgrade =>
+          complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+        }
+      } //~
 //      path("cluster") {
 //        val system = ClusterService.firstNode
 //        val monitor = ClusterService.startMonitor(system)
