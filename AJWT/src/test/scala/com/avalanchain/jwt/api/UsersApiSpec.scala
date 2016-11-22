@@ -1,6 +1,7 @@
 package com.avalanchain.jwt.api
 
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import com.avalanchain.jwt.api.back.UsersApi
 import org.scalatest.{Matchers, WordSpec}
 
 class UsersApiSpec extends WordSpec with Matchers with ScalatestRouteTest with UsersApi {

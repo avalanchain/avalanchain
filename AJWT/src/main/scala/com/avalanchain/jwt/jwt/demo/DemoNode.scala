@@ -4,7 +4,7 @@ import java.security.{KeyPair, PublicKey}
 
 import akka.stream.ThrottleMode
 import akka.stream.scaladsl.Source
-import com.avalanchain.jwt.KeysDto.PubKey
+import com.avalanchain.jwt.basicChain.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.actors.{ChainNode, ChainNodeFacade}
 import com.avalanchain.jwt.jwt.demo.DemoNode.Tick

@@ -6,17 +6,16 @@ import java.util.UUID
 import akka.NotUsed
 import akka.actor.ActorRefFactory
 import akka.stream.scaladsl.Source
-import io.circe.{Decoder, Encoder, Json}
+import io.circe._
 import io.circe.syntax._
 import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtBase64}
 import pdi.jwt.exceptions.JwtLengthException
-import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
-
 import cats.implicits._
+import com.avalanchain.jwt.basicChain.KeysDto.PubKey
 
 import scala.collection.immutable.Map
 import scala.util.{Success, Try}
@@ -29,6 +28,29 @@ package object basicChain {
   type Id = UUID
   type Position = Long
   type JsonStr = String
+
+  object KeysDto {
+    case class PubKey(X: String, Y: String)
+    case class PrivKey(S: String)
+    case class Keys(priv: PrivKey, pub: PubKey)
+
+    implicit def toPubKeyDto(key: PublicKey) = {
+      val pkstr = new String(key.toString.toCharArray.map(_.toByte).filter(b => b != 10 && b != 13).map(_.toChar))
+      val pattern = """.*X: ([0-9a-f]+) +Y: ([0-9a-f]+).*""".r
+      val pattern(x, y) = pkstr
+      PubKey(x, y)
+    }
+
+    def toPrivKeyDto(key: PrivateKey) = {
+      val s = key.toString.substring(31).trim
+      PrivKey(s)
+    }
+
+    def toKeysDto(keys: KeyPair) = {
+      Keys(toPrivKeyDto(keys.getPrivate), toPubKeyDto(keys.getPublic))
+    }
+  }
+
 
   sealed trait JwtPayload
   object JwtPayload {
@@ -59,9 +81,14 @@ package object basicChain {
 
   sealed trait ChainDef extends JwtPayload.Asym { val algo: JwtAlgo; val id: Id; val pub: PubKey }
   object ChainDef {
-    final case class New(algo: JwtAlgo, id: Id, pub: PubKey, init: Option[Json]) extends ChainDef
+    final case class New(algo: JwtAlgo, id: Id, pub: PubKey, init: Option[JsonStr]) extends ChainDef
     final case class Fork(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, pos: Position) extends ChainDef
     final case class Derived(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
+  }
+  object ChainDefCodecs {
+    import io.circe.Decoder, io.circe.generic.semiauto._
+    implicit val encoder: Encoder[ChainDef] = deriveEncoder
+    implicit val decoder: Decoder[ChainDef] = deriveDecoder
   }
 
   sealed trait JwtToken {
@@ -91,7 +118,7 @@ package object basicChain {
     }
   }
 
-  case class TypedJwtToken[T <: JwtPayload](token: String)(implicit decoder: Decoder[T]) extends JwtToken {
+  final case class TypedJwtToken[T <: JwtPayload](token: String)(implicit decoder: Decoder[T]) extends JwtToken {
     val payload = decode[T](payloadJson).right.toOption
   }
   object TypedJwtToken {
@@ -220,7 +247,7 @@ package object basicChain {
     }
 
     def newChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))): Chain =
-      addChainDef(ChainDef.New(jwtAlgo, UUID.randomUUID(), publicKey, initValue))
+      addChainDef(ChainDef.New(jwtAlgo, UUID.randomUUID(), publicKey, initValue.map(_.noSpaces)))
 
     def nestedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain =
       addChainDef(ChainDef.Fork(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, pos))

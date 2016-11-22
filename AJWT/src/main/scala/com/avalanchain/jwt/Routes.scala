@@ -1,6 +1,6 @@
 package com.avalanchain.jwt
 
-import com.avalanchain.jwt.api.UsersApi
+import com.avalanchain.jwt.api.back.UsersApi
 ;
 
 trait Routes extends UsersApi {

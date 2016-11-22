@@ -1,4 +1,4 @@
-package com.avalanchain.jwt.api
+package com.avalanchain.jwt.api.back
 
 import akka.http.scaladsl.server.Directives
 import com.avalanchain.jwt.utils.BearerTokenGenerator

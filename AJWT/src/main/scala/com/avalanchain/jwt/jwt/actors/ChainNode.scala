@@ -52,7 +52,7 @@ class ChainNode(keyPair: KeyPair, knownKeys: Set[PublicKey])(implicit encoder: E
       case PrintState => registry ! PrintState
 
       case NewChain(jwtAlgo, initValue) =>
-        val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue)
+        val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.noSpaces))
         val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
         pipe(registry ? CreateChain(chainDefToken)) to sender()
       case gc: GetChainByRef => pipe(registry ? gc) to sender()
