@@ -106,6 +106,7 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
         case None => {
           val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), pid)
           save(chainDefToken, actorRef)
+          sender() ! ChainCreated(chainDefToken)
         }
       }
     }
@@ -134,7 +135,7 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
 
   def getTokenFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[FrameToken, NotUsed] = {
     val readJournal: EventsByPersistenceIdQuery =
-      if (false) PersistenceQuery(context.system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
+      if (true) PersistenceQuery(context.system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
       else PersistenceQuery(context.system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[EventsByPersistenceIdQuery]
 
     readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken])
@@ -146,7 +147,7 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
 
   def getSnapshotTokenFrameSource(chainRef: ChainRef, fromPos: Position, toPos: Position): Source[FrameToken, NotUsed] = {
     val readJournal: EventsByPersistenceIdQuery =
-      if (false) PersistenceQuery(context.system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
+      if (true) PersistenceQuery(context.system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
       else PersistenceQuery(context.system).readJournalFor[LeveldbReadJournal](LeveldbReadJournal.Identifier).asInstanceOf[EventsByPersistenceIdQuery]
 
     readJournal.eventsByPersistenceId(chainRef.sig, fromPos, toPos).map(_.event.asInstanceOf[FrameToken])

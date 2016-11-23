@@ -44,14 +44,6 @@ import io.circe.generic.auto._
 
 import com.avalanchain.jwt.KeysDto._
 
-//trait ACJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
-//  implicit val userInfoFormats = jsonFormat4(UserInfo)
-//  implicit val userDataFormats = jsonFormat5(UserData)
-//  implicit val pubKeysFormats = jsonFormat2(PubKey)
-//  implicit val privKeysFormats = jsonFormat1(PrivKey)
-//  implicit val keysFormats = jsonFormat2(Keys)
-//}
-
 class Main() extends Config with CorsSupport with CirceSupport {
 
   import com.avalanchain.jwt.basicChain.ChainDefCodecs._
@@ -61,12 +53,7 @@ class Main() extends Config with CorsSupport with CirceSupport {
   protected val log: LoggingAdapter = Logging(system, getClass)
   protected implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-//  import io.circe._, io.circe.generic.semiauto._
-//
-//  implicit val encoder: Encoder[ChainDef] = deriveEncoder
-//  implicit val decoder: Decoder[ChainDef] = deriveDecoder
-
-  def chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
+  val chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
   val demoNode: DemoNode = new DemoNode(chainNode)
 
   def userInfos() = {
@@ -113,13 +100,20 @@ class Main() extends Config with CorsSupport with CirceSupport {
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
     } ~
-      path("yahoo") {
-        val src = YahooFinSource().map(i => TextMessage(i.toString))
+    path("yahoo") {
+      val src = YahooFinSource().map(i => TextMessage(i.toString))
 
-        extractUpgradeToWebSocket { upgrade =>
-          complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
-        }
-      } //~
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+//    } ~
+//    path("tick") {
+//      val src = demoNode.tickerSource(0, 2000).right.toOption.get.map(i => TextMessage(i.toString))
+//
+//      extractUpgradeToWebSocket { upgrade =>
+//        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+//      }
+    } //~
 //      path("cluster") {
 //        val system = ClusterService.firstNode
 //        val monitor = ClusterService.startMonitor(system)

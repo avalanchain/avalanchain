@@ -26,7 +26,7 @@ import scala.concurrent.duration._
   */
 package object basicChain {
   type Id = UUID
-  type Position = Long
+  type Position = Int
   type JsonStr = String
 
   sealed trait JwtPayload
