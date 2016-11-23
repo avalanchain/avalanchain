@@ -42,7 +42,7 @@ import akka.http.scaladsl.server.directives.DebuggingDirectives
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.auto._
 
-import com.avalanchain.jwt.basicChain.KeysDto._
+import com.avalanchain.jwt.KeysDto._
 
 //trait ACJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
 //  implicit val userInfoFormats = jsonFormat4(UserInfo)
