@@ -1,0 +1,73 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="admin as vm">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="text-center m-t-lg">
+                <h1>
+                    {{admin.info}}
+                </h1>
+                <br />
+                <div class="ibox-content m-b-sm border-bottom">
+                    <div class="text-center p-lg">
+                        <h2>If you don't find users</h2>
+                        <span>create new user by selecting </span>
+                        <button ng-click="openModal()" class="btn btn-danger  dim " type="button"><i class="fa fa-plus"></i> <span class="bold">Create User</span></button>
+                        button
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Users</h5>
+                    <button type="button" ng-click="createUser()" class="btn btn-primary btn-xs pull-right">Create User</button>
+                    <!--<div ibox-tools></div>-->
+                </div>
+                <div class="ibox-content">
+                    <table class="table table-hover no-margins">
+                        <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Value</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr data-ng-repeat="user in users">
+                            <td>{{user.Name}}</td>
+                            <td><i class="fa fa-clock-o"></i> 11:20pm</td>
+                            <td>
+                                <span ng-repeat="role in user.Roles" class="label label-primary">{{role}}</span>
+                                <!--<small>{{user.name}}</small>-->
+                            </td>
+                            <td class="text-navy">
+                                <button type="button" ng-click="editUser(user.Id)" class="btn btn-primary btn-xs">EditUser</button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="ibox">
+                <div class="ibox-title">
+                    <h5>Roles</h5>
+                    <div ibox-tools></div>
+                </div>
+                <div class="ibox-content">
+                    <ul class="todo-list m-t small-list">
+                        <li ng-repeat="role in roles">
+                            <!--<checkbox ng-model="main.checkOne"></checkbox>-->
+                            <span class="m-l-xs">{{role.Name}}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

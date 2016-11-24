@@ -1,0 +1,18 @@
+<div class="row wrapper border-bottom white-bg page-heading">
+    <div class="col-lg-12">
+      <h2>{{steps[0].ncyBreadcrumb.label}}</h2>
+      <!-- {{steps[0].ncyBreadcrumb.text}} -->
+        <ol class="breadcrumb">
+            <!-- <li>
+              <a ui-sref="index.admin">Admin</a>
+            </li> -->
+            <li ng-repeat="step in steps | limitTo:(steps.length-1)">
+                <a href="#{{step.ncyBreadcrumbLink}}">{{step.ncyBreadcrumbLabel}}</a>
+            </li>
+            <li ng-repeat="step in steps | limitTo:-1" class="active">
+                <span >{{step.ncyBreadcrumbLabel}}</span>
+            </li>
+        </ol>
+    </div>
+
+</div>

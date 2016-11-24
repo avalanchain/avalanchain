@@ -1,0 +1,57 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="clusters as vm">
+  <div class="row">
+      <div class="col-lg-12">
+          <div class="row">
+              <div class="col-md-3" ng-repeat="cluster in vm.clusters track by $index">
+                  <div class="ibox">
+                      <div class="ibox-content product-box">
+                          <div class="product-imitation" style="padding: 45px 0; cursor:pointer;" ng-click="vm.showCluster(cluster)">
+                              <i class="fa fa-database img-circle fa-5x"></i>
+                          </div>
+                          <div class="product-desc">
+                              <span class="product-price" style="background-color:#1ab394;">
+                                  Active
+                              </span>
+                              <small class="text-muted">Cluster: {{$index+1}}
+                              </small>
+                              <a ng-click="vm.showCluster(cluster)" class="product-name">Name:
+                                  {{cluster.name}}</a>
+
+                              <div class="small m-t-xs">
+                                  <b>ID:
+                                  </b>
+                                  {{cluster.id}}
+                              </div>
+                              <div class="m-t text-righ" ng-click="vm.showCluster(cluster)">
+
+                                  <a ng-click="vm.showCluster(cluster)" class="btn btn-xs btn-outline btn-primary">Info
+                                      <i class="fa fa-long-arrow-right"></i>
+                                  </a>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  </div>
+  <div class="row" ng-hide="vm.clusters.length > 0">
+        <div class="col-lg-12">
+            <div class="text-center m-t-lg">
+                <h1>
+                    {{clasters.info}}
+                </h1>
+                <br/>
+                <div class="ibox-content m-b-sm border-bottom">
+                    <div class="text-center p-lg">
+                        <h2>If you don't find cluster</h2>
+                        <span>create new cluster by selecting </span>
+                        <button class="btn btn-danger  dim " type="button"><i class="fa fa-plus"></i> <span class="bold">Add cluster</span></button>
+                        button
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

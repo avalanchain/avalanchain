@@ -144,8 +144,8 @@ class Main() extends Config with CorsSupport with CirceSupport {
     pathPrefix("ws") {
       wsRoute
     } ~
-    corsHandler(pathSingleSlash(getFromResource("html/build/index.html"))) ~
-    corsHandler(getFromResourceDirectory("html/build")) ~
+    corsHandler(pathSingleSlash(getFromResource("html/index.html"))) ~
+    corsHandler(getFromResourceDirectory("html/")) ~
     corsHandler(new SwaggerDocService(system, httpInterface, httpPort).routes)
 
   val bindingFuture = Http().bindAndHandle(

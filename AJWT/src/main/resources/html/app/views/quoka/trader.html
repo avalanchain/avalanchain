@@ -1,0 +1,175 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="QuokaTrader as trader">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="row">
+
+                <div class="col-lg-12" ng-repeat="user in users | limitTo: 4">
+                    <div class="ibox float-e-margins">
+                        <div class="ibox-title">
+                            <button type="button" class="btn btn-default btn-xs pull-right" ng-hide="user.isEdit" ng-click="edit(user)">edit</button>
+                            <button type="button" class="btn btn-default btn-xs pull-right" ng-show="user.isEdit" ng-click="save(user)">save</button>
+                            <button type="button" class="btn btn-default btn-xs pull-right" ng-show="user.isEdit" ng-click="cancel(user)">cancel</button>
+                            <h5>{{user.Name}}</h5>
+                        </div>
+                        <div class="ibox-content">
+                            <h3 class="no-margins">{{user.from}}: {{user.amount1 | number}} | {{user.to}}: {{user.amount2 | number}} </h3>
+                            <h3>Quoka(total): {{user.quoka | number}}</h3>
+
+                            <h4 class="{{user.status}}">
+                                <i class="{{user.navigation}}"></i>{{" "+ user.Ask+" |"}} <!--<i class="{{user.navigation}}"></i>-->{{" "+user.Bid}}
+                            </h4>
+                            <div class="row" ng-hide="user.isEdit">
+                                <div class="col-md-6">Sell when:<label >{{user.max | number:4}}</label>
+                                </div>
+                                <div class="col-md-6">Buy when:<label >{{user.min | number:4}}</label>
+                                </div>
+                            </div>
+                            <div class="row" ng-show="user.isEdit">
+                                <div class="col-md-6">
+                                    Sell when:<input type="text" ng-model="user.max" placeholder="max value" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    Buy when:<input type="text" ng-model="user.min" placeholder="min value" class="form-control">
+                                </div>
+
+                            </div>
+                            <!--<div class="stat-percent font-bold text-navy">20% <i class="fa fa-level-down"></i></div>-->
+                            <small>trade bot</small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="row">
+                <div class="col-md-3">
+
+                    <div class="profile-image">
+                        <img src="/assets/img/quoka.PNG" style="border: 6px solid #676A6C;" class="img-circle circle-border m-b-md" alt="profile">
+                    </div>
+                    <div class="profile-info">
+                        <div class="">
+                            <div>
+                                <h2>
+                                    Quoka
+                                </h2>
+                                <h4>{{quoka}}(USD)</h4>
+                                <!--<small>
+                                    There are many variations of passages of Lorem Ipsum available, but the majority
+                                    have suffered alteration in some form Ipsum available.
+                                </small>-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <table class="table small m-b-xs">
+                        <tbody>
+                        <tr>
+                            <td>
+                                <strong>45%</strong> USD
+                            </td>
+                            <td>
+                                <strong>17%</strong> EUR
+                            </td>
+                            <td>
+                                <strong>4%</strong> AUD
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>12%</strong> JPY
+                            </td>
+                            <td>
+                                <strong>6%</strong> GBP
+                            </td>
+                            <td>
+                                <strong>3%</strong> CHF
+                            </td>
+                        </tr>
+                        <tr>
+
+                            <td>
+                                <strong>0.5%</strong> SGD, ZAR each
+                            </td>
+                            <td>
+                                <strong>12%</strong> Rest
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="ibox float-e-margins">
+                        <div class="ibox-title">
+                            <h5>Transactions </h5>
+
+                            <div ibox-tools></div>
+                        </div>
+                        <div class="ibox-content">
+                            <div class="row m-t-sm">
+                                <div class="col-lg-12">
+                                    <div class="panel blank-panel ui-tab">
+                                        <div class="project-list">
+                                            <!--<tab heading="Last activity" active="tab.active" class="dsads">-->
+                                            <table class="table table-striped">
+                                                <thead>
+                                                <tr>
+                                                    <th>From</th>
+                                                    <th>Amount</th>
+                                                    <th>Pair</th>
+                                                    <th>To</th>
+                                                    <th>Amount</th>
+                                                    <th>Quoka</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr ng-repeat="transaction in transactions | pagination:(transactionPage-1)*10 | limitTo:10">
+                                                        <td class="project-title">
+                                                            <span class="label label-primary"><i class="fa fa-check"></i> {{transaction.from}}</span>
+                                                        </td>
+                                                        <td class="project-title">
+                                                            <small>{{transaction.amountFrom | number}}</small>
+                                                        </td>
+
+                                                        <td class="project-title">
+                                                            {{transaction.name}}
+                                                        </td>
+
+                                                        <td class="project-title">
+                                                            <span class="label label-info"><i class="fa fa-check"></i> {{transaction.to}}</span>
+                                                        </td>
+                                                        <td class="project-title">
+                                                            <small>{{transaction.amountTo | number}}</small>
+                                                        </td>
+                                                        <td class="project-title">
+                                                            <p class="small">
+                                                                {{transaction.quokas | number}}
+                                                            </p>
+                                                        </td>
+
+                                                    </tr>
+
+                                                </tbody>
+                                            </table>
+                                            <!--</tab>-->
+                                            <uib-pagination total-items="transactions.length" ng-model="transactionPage" max-size="maxSize" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+    </div>
+
+
+
+</div>

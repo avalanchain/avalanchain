@@ -1,0 +1,356 @@
+﻿<div class="wrapper wrapper-content" ng-controller="QuokaDashboard as dashboard">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Quoka</h5>
+                </div>
+                <div class="ibox-content">
+                    <div>
+                        <c3chart bindto-id="pie-plot1-chart">
+                            <chart-column ng-repeat="curr in currlist" column-id="{{curr.id}}"
+                                          column-values="{{curr.value}}" column-color="{{curr.color}}"
+                                          column-type="pie" />
+                            <chart-pie expand="true" />
+                        </c3chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="row">
+                <div class="col-md-4">
+
+                    <div class="profile-image">
+                        <img src="/assets/img/quoka.PNG" style="border: 6px solid #1c84c6;" class="img-circle circle-border m-b-md" alt="profile">
+                    </div>
+                    <div class="profile-info">
+                        <div class="">
+                            <div>
+                                <h2>
+                                    Quoka
+                                </h2>
+                                <h4 style="color:#1c84c6;">{{quoka}}(USD)</h4>
+                                <!--<small>
+                                    There are many variations of passages of Lorem Ipsum available, but the majority
+                                    have suffered alteration in some form Ipsum available.
+                                </small>-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <table class="table small m-b-xs">
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <strong>45%</strong> USD
+                                </td>
+                                <td>
+                                    <strong>17%</strong> EUR
+                                </td>
+                                <td>
+                                    <strong>4%</strong> AUD
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>12%</strong> JPY
+                                </td>
+                                <td>
+                                    <strong>6%</strong> GBP
+                                </td>
+                                <td>
+                                    <strong>3%</strong> CHF
+                                </td>
+                            </tr>
+                            <tr>
+
+                                <td>
+                                    <strong>0.5%</strong> SGD, ZAR each
+                                </td>
+                                <td>
+                                    <strong>12%</strong> Rest
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="ibox float-e-margins">
+                        <div class="ibox-title">
+                            <h5>Quoka Live</h5>
+
+                            <div ibox-tools></div>
+                        </div>
+                        <div class="ibox-content">
+
+                            <div class="flot-chart">
+                                <div flot class="flot-chart-content" dataset="flotLineAreaData" options="flotLineAreaOptions"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!--<div class="col-lg-4">
+            <div class="widget navy-bg p-lg text-center">
+                <div class="m-b-md">
+                    <i class="fa fa-money fa-4x"></i>
+
+                    <h1 class="m-xs">1={{quoka}}</h1>
+
+                    <h3 class="font-bold no-margins">
+                        Quoka
+                    </h3>
+                    <small>USD</small>
+                </div>
+            </div>
+
+        </div>-->
+    </div>
+<div class="row">
+    <div class="col-lg-3 col-md-6" ng-repeat="currency in datayahoo">
+        <div class="ibox">
+            <div class="ibox-title">
+                <span class="label label-success pull-right">{{currency.Rate}}</span>
+                <h5>{{currency.Name}}</h5>
+            </div>
+            <div class="ibox-content">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <!--<h5 class="m-b-md">{{currency.Name}}</h5>-->
+                        <h2 class="{{currency.status}}" style="font-size: 15px;">
+                            <i class="{{currency.navigation}}"></i>{{" "+ currency.Ask+" |"}} <!--<i class="{{currency.navigation}}"></i>-->{{" "+currency.Bid}}
+                        </h2>
+                        <small>{{currency.Date + " | " + currency.Time}}</small>
+                    </div>
+                    <div class="col-lg-4">
+                        <button type="button" class="btn btn-info btn-xs" ng-click="openModal(currency,'BUY') ">BUY</button>
+                        <button type="button" class="btn btn-success btn-xs" ng-click="openModal(currency,'SELL')" >SELL</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="ibox float-e-margins">
+            <div class="ibox-title">
+                <h5>Orders</h5>
+
+                <div class="pull-right">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-xs btn-white active">Today</button>
+                        <button type="button" class="btn btn-xs btn-white">Monthly</button>
+                        <button type="button" class="btn btn-xs btn-white">Annual</button>
+                    </div>
+                </div>
+            </div>
+            <div class="ibox-content">
+                <div class="row">
+                    <div class="col-lg-9">
+                        <div class="flot-chart">
+                            <div flot class="flot-chart-content" dataset="dashboard.flotData" options="dashboard.flotOptions"></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-3">
+                        <ul class="stat-list">
+                            <li>
+                                <h2 class="no-margins">2,346</h2>
+                                <small>Total orders in period</small>
+                                <div class="stat-percent">48% <i class="fa fa-level-up text-navy"></i>
+                                </div>
+                                <div class="progress progress-mini">
+                                    <div style="width: 48%;" class="progress-bar"></div>
+                                </div>
+                            </li>
+                            <li>
+                                <h2 class="no-margins ">4,422</h2>
+                                <small>Orders in last month</small>
+                                <div class="stat-percent">60% <i class="fa fa-level-down text-navy"></i>
+                                </div>
+                                <div class="progress progress-mini">
+                                    <div style="width: 60%;" class="progress-bar"></div>
+                                </div>
+                            </li>
+                            <li>
+                                <h2 class="no-margins ">9,180</h2>
+                                <small>Monthly income from orders</small>
+                                <div class="stat-percent">22% <i class="fa fa-bolt text-navy"></i>
+                                </div>
+                                <div class="progress progress-mini">
+                                    <div style="width: 22%;" class="progress-bar"></div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-lg-12">
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>User project list</h5>
+                        <div ibox-tools></div>
+                    </div>
+                    <div class="ibox-content">
+                        <table class="table table-hover no-margins">
+                            <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>User</th>
+                                <th>Value</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>
+                                    <small>Pending...</small>
+                                </td>
+                                <td><i class="fa fa-clock-o"></i> 11:20pm</td>
+                                <td>Samantha</td>
+                                <td class="text-navy"><i class="fa fa-level-up"></i> 24%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="label label-warning">Canceled</span></td>
+                                <td><i class="fa fa-clock-o"></i> 10:40am</td>
+                                <td>Monica</td>
+                                <td class="text-navy"><i class="fa fa-level-up"></i> 66%</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <small>Pending...</small>
+                                </td>
+                                <td><i class="fa fa-clock-o"></i> 01:30pm</td>
+                                <td>John</td>
+                                <td class="text-navy"><i class="fa fa-level-up"></i> 54%</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <small>Pending...</small>
+                                </td>
+                                <td><i class="fa fa-clock-o"></i> 02:20pm</td>
+                                <td>Agnes</td>
+                                <td class="text-navy"><i class="fa fa-level-up"></i> 12%</td>
+                            </tr>
+                            <tr>
+                                <td><span class="label label-primary">Completed</span></td>
+                                <td><i class="fa fa-clock-o"></i> 04:10am</td>
+                                <td>Amelia</td>
+                                <td class="text-navy"><i class="fa fa-level-up"></i> 66%</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <small>Pending...</small>
+                                </td>
+                                <td><i class="fa fa-clock-o"></i> 12:08am</td>
+                                <td>Damian</td>
+                                <td class="text-navy"><i class="fa fa-level-up"></i> 23%</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>Transactions worldwide</h5>
+                        <div ibox-tools></div>
+                    </div>
+                    <div class="ibox-content">
+
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <table class="table table-hover margin bottom">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 1%" class="text-center">No.</th>
+                                        <th>Transaction</th>
+                                        <th class="text-center">Date</th>
+                                        <th class="text-center">Amount</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr>
+                                        <td class="text-center">1</td>
+                                        <td>
+                                            Security doors
+                                        </td>
+                                        <td class="text-center small">16 Jun 2014</td>
+                                        <td class="text-center"><span class="label label-primary">$483.00</span></td>
+
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">2</td>
+                                        <td>
+                                            Wardrobes
+                                        </td>
+                                        <td class="text-center small">10 Jun 2014</td>
+                                        <td class="text-center"><span class="label label-primary">$327.00</span></td>
+
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">3</td>
+                                        <td>
+                                            Set of tools
+                                        </td>
+                                        <td class="text-center small">12 Jun 2014</td>
+                                        <td class="text-center"><span class="label label-warning">$125.00</span></td>
+
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">4</td>
+                                        <td> Panoramic pictures</td>
+                                        <td class="text-center small">22 Jun 2013</td>
+                                        <td class="text-center"><span class="label label-primary">$344.00</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">5</td>
+                                        <td>Phones</td>
+                                        <td class="text-center small">24 Jun 2013</td>
+                                        <td class="text-center"><span class="label label-primary">$235.00</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">6</td>
+                                        <td>Monitors</td>
+                                        <td class="text-center small">26 Jun 2013</td>
+                                        <td class="text-center"><span class="label label-primary">$100.00</span></td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-lg-6">
+                                <div vector-map style="height: 300px;" my-map-data="dashboard.data"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+</div>
+</div>

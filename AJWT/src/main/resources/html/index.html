@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html ng-app="avalanchain">
+
+    <head>
+
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- Page title set in pageTitle directive -->
+        <title page-title></title>
+        <link rel="shortcut icon" href="/assets/img/favicon.ico">
+        <!-- Font awesome -->
+        <link href="/assets/font-awesome/css/font-awesome.css" rel="stylesheet">
+
+        <!-- Bootstrap and Fonts -->
+        <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+        <link href="/assets/js/plugins/toastr/toastr.min.css" rel="stylesheet"/>
+        <!-- <link href="/assets/css/plugins/chosen/bootstrap-chosen.css" rel="stylesheet" /> -->
+        <!-- Main avalanchain CSS files -->
+        <link href="/assets/css/animate.css" rel="stylesheet">
+        <link id="loadBefore" href="/assets/css/style.css" rel="stylesheet">
+        <link href="/assets/css/main.css" rel="stylesheet">
+
+    </head>
+
+    <!-- ControllerAs syntax -->
+    <!-- Main controller with serveral data used in avalanchain theme on diferent view -->
+    <body ng-controller="MainCtrl as main">
+
+        <!-- Main view  -->
+        <div ui-view></div>
+        <div ng-controller="shell as vm">
+            <div data-ng-show="vm.isBusy" class="page-splash dissolve-animation">
+                <!-- <div data-cc-spinner="vm.spinnerOptions"></div> -->
+                <div class="sk-spinner sk-spinner-wave">
+                    <div class="sk-rect1"></div>
+                    <div class="sk-rect2"></div>
+                    <div class="sk-rect3"></div>
+                    <div class="sk-rect4"></div>
+                    <div class="sk-rect5"></div>
+                </div>
+
+            </div>
+
+        </div>
+        <!-- jQuery and Bootstrap -->
+        <script src="/assets/js/jquery/jquery-2.1.1.min.js"></script>
+        <script src="/assets/js/plugins/jquery-ui/jquery-ui.js"></script>
+        <script src="/assets/js/bootstrap/bootstrap.min.js"></script>
+
+        <!-- MetsiMenu -->
+        <script src="/assets/js/plugins/metisMenu/jquery.metisMenu.js"></script>
+
+        <!-- SlimScroll -->
+        <script src="/assets/js/plugins/slimscroll/jquery.slimscroll.min.js"></script>
+
+        <!-- Peace JS -->
+        <script src="/assets/js/plugins/pace/pace.min.js"></script>
+        <script src="/assets/js/plugins/toastr/toastr.min.js"></script>
+        <script src="/assets/js/plugins/iCheck/icheck.min.js"></script>
+
+        <script src="/assets/js/plugins/qrcode/qrcode.js"></script>
+        <script src="/assets/js/plugins/qrcode/qrcode_UTF8.js"></script>
+        <script src="/assets/js/plugins/spinjs/spin.min.js"></script>
+        <script src="/assets/js/plugins/jsrsasign/jsrsasign-latest-all-min.js"></script>
+        <!-- <script src="/assets/js/plugins/chosen/chosen.jquery.js" />
+    <script src="/assets/js/plugins/chosen/chosen.js" /> -->
+
+        <script src="/assets/js/plugins/mnemonic/mnemonic.js"></script>
+
+        <!-- Custom and plugin javascript -->
+        <script src="/app/avalanchain.js"></script>
+
+        <!-- Main Angular scripts-->
+        <script src="/assets/js/angular/angular.min.js"></script>
+        <!-- <script src="/assets/js/plugins/adal/adal.js"></script>
+    <script src="/assets/js/plugins/adal/adal-angular.js"></script> -->
+        <script src="/assets/js/angular/angular-animate.js"></script>
+        <script src="/assets/js/plugins/oclazyload/dist/ocLazyLoad.min.js"></script>
+        <script src="/assets/js/ui-router/angular-ui-router.min.js"></script>
+        <script src="/assets/js/angular/angular-breadcrumb.min.js"></script>
+        <script src="/assets/js/bootstrap/ui-bootstrap-tpls-1.1.2.min.js"></script>
+        <script src="/assets/js/angular/angular-qrcode.js"></script>
+        <script src="/assets/js/angular/scrollglue.js"></script>
+        <script src="/assets/js/angular/angular-bootstrap-simple-chat.js"></script>
+        <script src="/assets/js/plugins/angular-spinner/angular-spinner.js"></script>
+        <!-- Anglar App Script -->
+        <script src="/app/app.js"></script>
+        <script src="/app/config.js"></script>
+        <script src="/app/directives.js"></script>
+        <script src="/app/controllers.js"></script>
+        <script src="/app/services/common.js"></script>
+        <script src="/app/services/logger.js"></script>
+        <script src="/app/services/spinner.js"></script>
+        <script src="/app/services/filters.js"></script>
+        <script src="/app/services/datasevice.js"></script>
+        <script src="/app/services/jwtservice.js"></script>
+        <script src="/app/services/dataprovider.js"></script>
+        <script src="/app/services/shell.js"></script>
+
+        <script src="/app/views/dashboard/dashboard.js"></script>
+        <script src="/app/views/dashboard/dashboard_2.js"></script>
+        <script src="/app/views/nodes/nodes.js"></script>
+        <script src="/app/views/nodes/node.js"></script>
+        <script src="/app/views/streams/streams.js"></script>
+        <script src="/app/views/clusters/clusters.js"></script>
+        <script src="/app/views/clusters/cluster.js"></script>
+        <script src="/app/views/doctor/doctor.js"></script>
+        <script src="/app/views/accounts/accounts.js"></script>
+        <script src="/app/views/accounts/account.js"></script>
+        <script src="/app/views/accounts/wallet.js"></script>
+        <script src="/app/views/trader/trader.js"></script>
+        <script src="/app/views/transactions/transactions.js"></script>
+        <script src="/app/views/admin/admin.js"></script>
+        <script src="/app/views/quoka/dashboard.js"></script>
+        <script src="/app/views/quoka/trader.js"></script>
+        <script src="/app/views/chat/chat.js"></script>
+    </body>
+</html>
