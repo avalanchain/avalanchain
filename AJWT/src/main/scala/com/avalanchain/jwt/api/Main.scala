@@ -106,13 +106,13 @@ class Main() extends Config with CorsSupport with CirceSupport {
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
-//    } ~
-//    path("tick") {
-//      val src = demoNode.tickerSource(0, 2000).right.toOption.get.map(i => TextMessage(i.toString))
-//
-//      extractUpgradeToWebSocket { upgrade =>
-//        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
-//      }
+    } ~
+    path("tick") {
+      val src = demoNode.tickerSource(0, 2000).right.toOption.get.map(i => TextMessage(i.toString))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
     } //~
 //      path("cluster") {
 //        val system = ClusterService.firstNode

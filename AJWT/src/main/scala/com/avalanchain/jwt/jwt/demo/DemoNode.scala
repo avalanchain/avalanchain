@@ -29,19 +29,22 @@ class DemoNode(chainNode: ChainNode)(implicit encoder: Encoder[ChainDef], decode
   private val cnf = new ChainNodeFacade(chainNode)
   private implicit val materializer = cnf.materializer
 
-  private val tickerChainRef = ChainRef(cnf.newChain().chainDefToken)
-//  private val tickerSink = cnf.sink(tickerChainRef).toOption.get // TODO: Handle errors
-//  //private val Future {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  val tickerChainRef = ChainRef(cnf.newChain().chainDefToken)
+  def tickerSink() = cnf.sink(tickerChainRef).toOption.get // TODO: Handle errors
+//  private val ticker = Future {
+//    val tickerSink = cnf.sink(tickerChainRef).toOption.get // TODO: Handle errors
 //    Source(0 to Int.MaxValue)
 //      .throttle(1, 1 second, 1, ThrottleMode.shaping)
 //      .map(Tick(_, chainNode.publicKey).asJson)
 //      .to(tickerSink)
 //      .run()
-//  //}
-//
-//  //private val yahoo = YahooFinSource()
-//
-//  def tickerSource(from: Position = 0, to: Position = Int.MaxValue) = cnf.source(tickerChainRef, from, to)
+//  }
+
+  //private val yahoo = YahooFinSource()
+
+  def tickerSource(from: Position = 0, to: Position = Int.MaxValue) = cnf.source(tickerChainRef, from, to)
   //def yahooSource =
 }
 object DemoNode {
