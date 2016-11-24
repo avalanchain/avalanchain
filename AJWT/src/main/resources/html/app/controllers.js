@@ -15,18 +15,23 @@ function MainCtrl() {
 
 };
 
-function modalCtrl($scope, $uibModalInstance, dataservice, $rootScope) {
-    //var m = new Mnemonic(96);
-    //$scope.password = m.toWords().join(' ');;
-    //$scope.hexPass = m.toHex();
-    //$scope.guid = dataservice.createGuid();
+function modalCtrl($scope, $uibModalInstance, dataservice, $rootScope, common) {
     $scope.modal = $rootScope.modal;
     $scope.ok = function () {
-        $uibModalInstance.close();
-        $scope.modal.ok();
+        //common.spinnerTogle(true);
+        $scope.modal.ok().then(function (status) {
+            if (status === 200)
+                $uibModalInstance.close();
+        });;
     };
 
     $scope.cancel = function () {
+        $scope.modal.cancel();
+        $uibModalInstance.dismiss('cancel');
+    };
+
+    $scope.delete = function () {
+        $scope.modal.delete();
         $uibModalInstance.dismiss('cancel');
     };
 };

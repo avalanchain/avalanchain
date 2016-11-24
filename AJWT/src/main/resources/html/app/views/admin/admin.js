@@ -7,20 +7,31 @@
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
+        //TODO: pagination add to service
+        $scope.maxSize = 5;
+        $scope.totalItems = [];
+        $scope.currentPage = 1;
+        $scope.userPage = 1;
 
-        $scope.openModal = function () {
+        $scope.createUser = function () {
             var m = new Mnemonic(96);
             $rootScope.modal = {};
-            $rootScope.modal.password = m.toWords().join(' ');;
+            $rootScope.modal.password = m.toWords().join(' ');
             $rootScope.modal.hexPass = m.toHex();
             $rootScope.modal.guid = dataservice.getId();
             $rootScope.modal.ok =function () {
-                dataservice.newAccount().then(function (data) {
+                return dataservice.newUser().then(function (data) {
                     $rootScope.$emit('updateAccounts');
+                    return 200;
                 });
             };
+            $rootScope.modal.canel =function () {
+                // dataservice.newUser().then(function (data) {
+                //     $rootScope.$emit('updateAccounts');
+                // });
+            };
             var modalInstance = $uibModal.open({
-                templateUrl: '/app/views/accounts/create_account.html',
+                templateUrl: '/app/views/admin/create_user.html',
                 controller: modalCtrl
             });
         };
@@ -33,7 +44,7 @@
         }
         function getData(vm) {
             dataservice.getUsers().then(function(data) {
-                vm.users = data;
+                vm.users = data.data;
                 // vm.nodes = vm.data.nodes;
             });
 

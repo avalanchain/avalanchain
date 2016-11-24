@@ -5,7 +5,7 @@
     angular.module('avalanchain').factory(serviceId, ['common', '$http', '$templateCache', dataProvider]);
 
     function dataProvider(common, $http, $templateCache) {
-        var request = function ($scope, url, method, successCallback, dataValue, errorCallback) {
+        var request = function ($scope, url, method, dataValue,successCallback, errorCallback) {
             var httpParams = method == "GET"
                 ? { method: method, url: url, params: dataValue /*, cache: $templateCache */, headers: { 'Content-Type': 'application/json' } }
                 : { method: method, url: url, data: dataValue, cache: $templateCache, headers: { 'Content-Type': 'application/json' } };
@@ -26,11 +26,11 @@
         };
         return {
             request: request,
-            get: function ($scope, url, successCallback, data, errorCallback) {
-                return request($scope, url, "GET", successCallback, data, errorCallback);
+            get: function ($scope, url, data, successCallback, errorCallback) {
+                return request($scope, url, "GET", data, successCallback, errorCallback);
             },
-            post: function ($scope, url, successCallback, data, errorCallback) {
-                return request($scope, url, "POST", successCallback, data, errorCallback);
+            post: function ($scope, url, data, successCallback, errorCallback) {
+                return request($scope, url, "POST", data, successCallback, errorCallback);
             }
         };
     }

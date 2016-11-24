@@ -2,9 +2,9 @@
 (function() {
     'use strict';
     var controllerId = 'account';
-    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$filter', '$uibModal', '$rootScope', '$stateParams', '$interval', account]);
+    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$filter', '$uibModal', '$rootScope', '$stateParams', '$interval', '$state' ,account]);
 
-    function account(common, dataservice, $scope, $filter, $uibModal, $rootScope, $stateParams, $interval) {
+    function account(common, dataservice, $scope, $filter, $uibModal, $rootScope, $stateParams, $interval, $state) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -17,6 +17,9 @@
                 return acc.ref.address === accountId;
             })[0];
             $scope.getTransactions();
+            if(!$scope.current){
+                $state.go('index.accounts');
+            }
         });
 
         $scope.transactions = [];

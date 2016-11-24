@@ -27,8 +27,8 @@
         $breadcrumbProvider.setOptions({
             templateUrl: '/app/views/common/breadcrumb.html'
         });
-        // $urlRouterProvider.otherwise("/login");
-        $urlRouterProvider.otherwise("/accounts");
+        $urlRouterProvider.otherwise("/login");
+        // $urlRouterProvider.otherwise("/accounts");
         $ocLazyLoadProvider.config({
             // Set to true if you want to see what and when is dynamically loaded
             debug: false
@@ -60,6 +60,14 @@
             files: ['/assets/js/plugins/footable/angular-footable.js']
         }
 
+        var clipboard = {
+            files: ['/assets/js/plugins/ngclipboard/clipboard.min.js']
+        };
+        var clipboardng = {
+            name: 'ngclipboard',
+            files: ['/assets/js/plugins/ngclipboard/ngclipboard.min.js']
+        };
+
 
         $stateProvider
 
@@ -83,7 +91,7 @@
                             insertBefore: '#loadBefore',
                             name: 'localytics.directives',
                             files: ['/assets/css/plugins/chosen/bootstrap-chosen.css', '/assets/js/plugins/chosen/chosen.jquery.js', '/assets/js/plugins/chosen/chosen.js']
-                        },footable, footable_angular]);
+                        },footable, footable_angular, clipboard, clipboardng]);
                     }
                 }
             })
@@ -233,7 +241,7 @@
             })
             .state('index.chains', {
                 url: "/chains",
-                templateUrl: "/app/views/streams/streams.html",
+                templateUrl: "/app/views/chains/chains.html",
                 data: {
                     pageTitle: 'Chains'
                 },
@@ -253,7 +261,7 @@
                     pageTitle: 'admin'
                 },
                 ncyBreadcrumb: {
-                    label: 'Settings'
+                    label: 'Admin'
                 }
             })
             .state('user', {

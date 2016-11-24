@@ -1,12 +1,12 @@
-﻿
-(function() {
+﻿(function () {
     'use strict';
     var serviceId = 'dataservice';
     angular.module('avalanchain').factory(serviceId, ['$http', '$q', 'common', 'dataProvider', '$filter', '$timeout', dataservice]);
 
     function dataservice($http, $q, common, dataProvider, $filter, $timeout) {
-        var getLogFn = common.logger.getLogFn;
-        var log = getLogFn('dataservice');
+        var logger = common.logger.getLogFn('dataservice');
+        var logError = common.logger.getLogFn('dataservice', 'error');
+        var logWarning = common.logger.getLogFn('dataservice', 'warn');
         var data = {};
         var service = {
             getData: getData,
@@ -22,9 +22,10 @@
             clearAllProcesses: clearAllProcesses,
             getQuoka: getQuoka,
             commondata: commondata,
-            getId : getId,
-            getChat : getChat,
-            getUsers : getUsers
+            getId: getId,
+            getChat: getChat,
+            getUsers: getUsers,
+            newUser:newUser
         };
 
         return service;
@@ -46,7 +47,7 @@
             });
             var names = ['you', 'server'];
             var sides = ['right', 'left'];
-            var testMessages = ['Server is on', 'cluster created', 'admin subscribed to the server: '+ chat.users[1].id];
+            var testMessages = ['Server is on', 'cluster created', 'admin subscribed to the server: ' + chat.users[1].id];
 
             for (var i = 0; i < 3; i++) {
                 chat.messages.push({
@@ -92,10 +93,9 @@
 
         function getUsers() {
             var sc = {};
-            return dataProvider.get(sc, '/v1/users' , sc,
+            return dataProvider.get(sc, '/v1/users', {},
                 function success(data, status) {
-                    logger('Role Changed');
-                    var st = status;
+                    logger('GET ' + data.length + ' USERS');
                     return data;
                 },
                 function fail(data, status) {
@@ -110,13 +110,13 @@
 
         function sendPayment(payment) {
             return $http.post('/api/transaction/submit', payment)
-                .success(function(data, status, headers, config) {
-                    log("Transaction submited!"); //'" + JSON.stringify(data) + "'
+                .success(function (data, status, headers, config) {
+                    logger("Transaction submited!"); //'" + JSON.stringify(data) + "'
                     return data;
                 })
-                .error(function(data, status, headers, config) {
+                .error(function (data, status, headers, config) {
                     var err = status + ", " + data;
-                    log("Request failed: " + err);
+                    logError("Request failed: " + err);
                     //$scope.result = "Request failed: " + err;
                     return "error";
                 });
@@ -134,7 +134,7 @@
             var account = '';
             for (var i = 1; i <= 1000; i++) {
                 var type = (i % 2) == 0 ? types[0] : types[1];
-                var node = i <= (1000/2) ? 0 : 1;
+                var node = i <= (1000 / 2) ? 0 : 1;
                 var action, value, typename = '';
                 if (type === "users") {
                     account = data.accounts[Math.floor(Math.random() * data.accounts.length)].ref.address;
@@ -183,7 +183,7 @@
             for (var i = 1; i <= 2; i++) {
                 nodes.push({
                     id: getId(),
-                    name:'ND-'+ i,
+                    name: 'ND-' + i,
                     publicKey: getId(),
                     cluster: data.clusters[0].id
                 })
@@ -196,7 +196,7 @@
             for (var i = 1; i <= 1; i++) {
                 clusters.push({
                     id: getId(),
-                    name:'CL-'+ i,
+                    name: 'CL-' + i,
                     publicKey: getId(),
                 })
             }
@@ -210,15 +210,15 @@
             var data = encodeURIComponent("select * from yahoo.finance.xchange where pair in (symbol)");
             data = data.replace("symbol", symbol);
             /*
-            http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20('aapl')&format=json&diagnostics=true&env=http://datatables.org/alltables.env
-            */
+             http://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.quotes%20where%20symbol%20in%20('aapl')&format=json&diagnostics=true&env=http://datatables.org/alltables.env
+             */
             var str1 = url.concat("?q=", data);
             str1 = str1.concat("&format=json&env=store://datatables.org/alltableswithkeys"); //http://datatables.org/alltables.env
 
             var sc = {};
 
 
-            return dataProvider.get(sc, str1, function(data, status) {
+            return dataProvider.get(sc, str1, function (data, status) {
                 //$scope.GetAllProgresses = data;
             });
 
@@ -245,7 +245,7 @@
         }
 
         function newAccount() {
-          log("Account created!");
+            logger("Account created!");
             // return $http.post('/api/account/new')
             //     .success(function(data, status, headers, config) {
             //         log("Account created!");
@@ -256,6 +256,17 @@
             //         log("Request failed: " + err);
             //         return "error";
             //     });
+        }
+
+        function newUser() {
+            var defer = $q.defer();
+            var status = 200;
+
+            $timeout(function () {
+                defer.resolve(status);
+            }, 200)
+            logger("User created!");
+            return defer.promise;
         }
 
         function getQuoka(datayahoo) {
@@ -288,14 +299,15 @@
             //}
 
             return {
-                currencies: function() {
+                currencies: function () {
                     return curr;
                 },
-                percentage: function() {
+                percentage: function () {
                     return percentage;
                 }
             };
         }
+
         //  var data = {};
 
         function getData() {
@@ -307,12 +319,13 @@
             data.transactions = data.transactions ? data.transactions : getTransactions();
             data.chat = data.chat ? data.chat : getChat();
 
-            $timeout(function() {
+            $timeout(function () {
                 defer.resolve(data);
             }, 200)
 
             return defer.promise;
         }
+
         function getId() {
             return common.createGuid().replace(/-/gi, '')
         }

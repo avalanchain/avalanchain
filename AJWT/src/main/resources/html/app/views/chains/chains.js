@@ -1,10 +1,10 @@
 ﻿
 (function() {
     'use strict';
-    var controllerId = 'streams';
-    angular.module('avalanchain').controller(controllerId, ['common', '$uibModal', 'dataservice', 'jwtservice', streams]);
+    var controllerId = 'chains';
+    angular.module('avalanchain').controller(controllerId, ['common', '$uibModal', 'dataservice', 'jwtservice', chains]);
 
-    function streams(common, $uibModal, dataservice, jwtservice) {
+    function chains(common, $uibModal, dataservice, jwtservice) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
