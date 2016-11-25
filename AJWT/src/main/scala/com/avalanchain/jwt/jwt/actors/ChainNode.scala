@@ -14,6 +14,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import cats.implicits._
 import com.avalanchain.jwt.basicChain.{Frame, _}
+import com.avalanchain.jwt.basicChain.ChainDefCodecs._
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.{GetNetworkMonitor, NewChain}
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
@@ -33,7 +34,7 @@ import scala.util.Try
 /**
   * Created by Yuriy Habarov on 21/05/2016.
   */
-class ChainNode(val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey])(implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef])
+class ChainNode(val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey])
   extends ActorNode {
 
   val publicKey = keyPair.getPublic
