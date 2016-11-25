@@ -4,11 +4,14 @@ import java.security.{KeyPair, PrivateKey, PublicKey}
 import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSelection, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
+import akka.stream.actor.ActorPublisher
 import com.avalanchain.jwt.basicChain.ChainDef
-import com.avalanchain.jwt.jwt.demo.YahooFinSource
+import com.avalanchain.jwt.jwt.actors.network.NodeStatus
+import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
+import com.avalanchain.jwt.utils.CirceEncoders
 //import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{StatusCodes, _}
@@ -40,21 +43,25 @@ import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.directives.DebuggingDirectives
 import io.circe.{Decoder, Encoder}
+import io.circe.syntax._
 import io.circe.generic.auto._
 
 import com.avalanchain.jwt.KeysDto._
 
-class Main() extends Config with CorsSupport with CirceSupport {
+class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encoder[NodeStatus])*/ extends Config with CorsSupport with CirceSupport with CirceEncoders {
 
   import com.avalanchain.jwt.basicChain.ChainDefCodecs._
+  import StockTick._
 
-  private implicit val system = ActorSystem()
+  val chainNode = new ChainNode(port, CurveContext.currentKeys, Set.empty)
+  val chainNodeFacade = ChainNodeFacade(chainNode)
+//  val chainNodeMonitor = ActorSelection(chainNode.node, "monitor")
+  val demoNode: DemoNode = new DemoNode(chainNode)
+
+  private implicit val system = chainNode.system
   protected implicit val executor: ExecutionContext = system.dispatcher
   protected val log: LoggingAdapter = Logging(system, getClass)
-  protected implicit val materializer: ActorMaterializer = ActorMaterializer()
-
-  val chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
-  val demoNode: DemoNode = new DemoNode(chainNode)
+  protected implicit val materializer = chainNode.materializer
 
   def userInfos() = {
     val userDatas = getClass.getResourceAsStream("/public/mock_users.csv")
@@ -100,8 +107,15 @@ class Main() extends Config with CorsSupport with CirceSupport {
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
     } ~
+    path("nodes") {
+      val src = chainNodeFacade.monitorSource().map(i => TextMessage(i.asJson.noSpaces))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
     path("yahoo") {
-      val src = YahooFinSource().map(i => TextMessage(i.toString))
+      val src = YahooFinSource().map(i => TextMessage(i.asJson.noSpaces))
 
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
@@ -131,12 +145,15 @@ class Main() extends Config with CorsSupport with CirceSupport {
 //      }
   }
 
+  val httpPort = port + 1000
+
   val routes =
     pathPrefix("swagger") {
       getFromResourceDirectory("swagger") ~ pathSingleSlash(get(redirect("index.html", StatusCodes.PermanentRedirect)))
     } ~
     pathPrefix("v1") {
       path("")(getFromResource("public/index.html")) ~
+      corsHandler(new NodeService(chainNode).route) ~
       corsHandler(new ChainService(chainNode).route) ~
       corsHandler(new AdminService().route) ~
       corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), u => addUserInfo(u)).route)
@@ -158,4 +175,8 @@ class Main() extends Config with CorsSupport with CirceSupport {
     .onComplete(_ => system.terminate()) // and shutdown when done
 }
 
-object Main extends Main with App with CirceSupport
+object Main extends Main(2551) with App
+
+object Main2 extends Main(2552) with App
+
+object Main3 extends Main(2553) with App

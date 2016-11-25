@@ -64,8 +64,8 @@ package object basicChain {
   }
   object ChainDefCodecs {
     import io.circe.Decoder, io.circe.generic.semiauto._
-    implicit val encoder: Encoder[ChainDef] = deriveEncoder
-    implicit val decoder: Decoder[ChainDef] = deriveDecoder
+    implicit val encoderChainDef: Encoder[ChainDef] = deriveEncoder
+    implicit val decoderChainDef: Decoder[ChainDef] = deriveDecoder
   }
 
   sealed trait JwtToken {
@@ -146,6 +146,10 @@ package object basicChain {
   }
   type FrameSigner = String => Frame => FrameToken
   case class ChainState(frame: Option[FrameToken], lastRef: FrameRef, pos: Position)
+
+
+  type NodeId = String
+
 
   class Chain(val chainDefToken: ChainDefToken, val keyPair: KeyPair,
               tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None)(implicit actorRefFactory: ActorRefFactory) {

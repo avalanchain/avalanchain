@@ -29,7 +29,7 @@ import io.circe.generic.auto._
 object Runner extends App {
   implicit val timeout = Timeout(5 seconds)
 
-  var chainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
+  var chainNode = new ChainNode(2551, CurveContext.currentKeys, Set.empty)
   val node = chainNode.node
   node ! "test"
 

@@ -1,0 +1,52 @@
+package com.avalanchain.jwt.api
+
+import javax.ws.rs.Path
+
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives
+import akka.util.Timeout
+import com.avalanchain.jwt.basicChain.{ChainDef, ChainDefToken}
+import com.avalanchain.jwt.jwt.actors.network.NodeStatus
+import com.avalanchain.jwt.jwt.actors.{ChainNode, ChainNodeFacade}
+import de.heikoseeberger.akkahttpcirce.CirceSupport
+import io.circe.syntax._
+import io.circe.{Decoder, Encoder, KeyEncoder}
+import io.circe.generic.auto._
+import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
+
+import scala.concurrent.Future
+
+/**
+  * Created by Yuriy on 22/11/2016.
+  */
+@Path("nodes")
+@Api(value = "/nodes", produces = "application/json")
+class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef])
+  extends Directives with CorsSupport with CirceSupport {
+  import scala.concurrent.duration._
+  import NodeStatus._
+
+  implicit val timeout = Timeout(2 seconds)
+
+  implicit val fooKeyEncoder = new KeyEncoder[NodeStatus.Address] {
+    override def apply(addr: NodeStatus.Address): String = addr.asJson.noSpaces
+  }
+
+  val cnf = new ChainNodeFacade(chainNode)
+
+  val route = pathPrefix("nodes") {
+    getNodes
+  }
+
+  @ApiOperation(httpMethod = "GET", response = classOf[List[ChainDefToken]], value = "Returns the list of known nodes")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "Known Nodes", response = classOf[Map[NodeStatus.Address, NodeStatus]])
+  ))
+  def getNodes =
+    get {
+      //completeWith(instanceOf[Future[Map[NodeStatus.Address, NodeStatus]]])(_(cnf.nodesSnapshot()))
+      complete {
+        cnf.nodesSnapshot()
+      }
+    }
+}

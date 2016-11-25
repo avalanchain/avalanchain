@@ -18,7 +18,7 @@ import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 @Path("chains")
 @Api(value = "/chains", produces = "application/json")
 class ChainService(chainNode: ChainNode)(implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef])
-  extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
+  extends Directives with CorsSupport with CirceSupport {
   import scala.concurrent.duration._
 
   implicit val timeout = Timeout(2 seconds)

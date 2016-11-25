@@ -3,7 +3,8 @@ package com.avalanchain.jwt.jwt.demo
 /**
   * Created by Yuriy Habarov on 26/04/2016.
   */
-import java.time.LocalDate
+import java.time.{LocalDate, OffsetDateTime}
+import java.time.format.DateTimeFormatter
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -16,16 +17,26 @@ import akka.stream.{Materializer, SourceShape, ThrottleMode}
 import akka.stream.scaladsl.{GraphDSL, Source}
 import akka.util.ByteString
 import com.avalanchain.jwt.basicChain.{JwtPayload, TypedJwtToken}
+import com.avalanchain.jwt.utils.CirceEncoders
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import yahoofinance.YahooFinance
+import io.circe.{Decoder, DecodingFailure, Encoder, Json}
+import io.circe.syntax._
+import io.circe.parser._
+import io.circe.generic.JsonCodec
+import io.circe.generic.auto._
 
 import collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class StockTick(symbol: String, price: BigDecimal, dt: DateTime) extends JwtPayload.Sym
+case class StockTick(symbol: String, price: BigDecimal, dt: OffsetDateTime) extends JwtPayload.Sym
+//object StockTickCodecs extends CirceEncoders {
+//  implicit val encoderStockTick: Encoder[StockTick] = io.circe.generic.semiauto.deriveEncoder[StockTick]
+//  implicit val decoderStockTick: Decoder[StockTick] = io.circe.generic.semiauto.deriveDecoder[StockTick]
+//}
 
 trait StockPriceClient {
   type Response[T] = Future[Either[(StatusCode, String), T]]
@@ -45,10 +56,12 @@ class YahooStockPriceClient() extends StockPriceClient
   private val defaultStocks = Array("EURUSD","USDEUR", "USDJPY", "USDGBP", "USDAUD", "USDCHF", "USDSEK", "USDNOK",
     "USDRUB", "USDTRY", "USDBRL", "USDCAD", "USDCNY", "USDHKD", "USDINR", "USDKRW", "USDMXN", "USDNZD", "USDSGD", "USDZAR")
 
+  val dateTimeFormat = DateTimeFormatter.ISO_DATE_TIME
+
   def stocks(symbols: Array[String] = defaultStocks) =
     YahooFinance
       .getFx(symbols.map(_ + "=X"))
-      .map(kv => StockTick(kv._2.getSymbol, new BigDecimal(kv._2.getPrice), DateTime.now()))
+      .map(kv => StockTick(kv._2.getSymbol.replace("=X", ""), new BigDecimal(kv._2.getPrice), OffsetDateTime.now()))
       .toList
 }
 

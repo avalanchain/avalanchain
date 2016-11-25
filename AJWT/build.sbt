@@ -13,6 +13,7 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 libraryDependencies ++= {
   val akkaVersion = "2.4.12"
   val akkaHttpVersion = "2.4.11"
+  val eventuateVersion = "0.8.1"
 
   Seq(
     "com.typesafe.akka" %% "akka-actor"                                 % akkaVersion,
@@ -71,7 +72,14 @@ libraryDependencies ++= {
     "com.nrinaudo"      %% "kantan.csv-cats"                            % "0.1.15",
     "org.scalaj"        %% "scalaj-http"                                % "2.3.0",
 
-    "com.yahoofinance-api" % "YahooFinanceAPI"                          % "3.2.0"
+    "com.yahoofinance-api" % "YahooFinanceAPI"                          % "3.2.0",
+
+    "com.rbmhtechnology" %% "eventuate-core"                            % eventuateVersion,
+    "com.rbmhtechnology" %% "eventuate-crdt"                            % eventuateVersion,
+    "com.rbmhtechnology" %% "eventuate-log-leveldb"                     % eventuateVersion,
+    "com.rbmhtechnology" %% "eventuate-log-cassandra"                   % eventuateVersion,
+    "com.rbmhtechnology" %% "eventuate-adapter-stream"                  % eventuateVersion
+
 
   )
 }

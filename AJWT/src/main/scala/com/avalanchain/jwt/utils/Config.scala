@@ -7,7 +7,7 @@ trait Config {
   private val httpConfig = config.getConfig("http")
 
   val httpInterface = httpConfig.getString("interface")
-  val httpPort = httpConfig.getInt("port")
+  //val httpPort = httpConfig.getInt("port")
 
 }
 
