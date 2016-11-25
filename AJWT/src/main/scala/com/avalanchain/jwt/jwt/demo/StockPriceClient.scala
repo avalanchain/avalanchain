@@ -32,20 +32,12 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class StockTick(symbol: String, price: BigDecimal, dt: OffsetDateTime) extends JwtPayload.Sym
-//object StockTickCodecs extends CirceEncoders {
-//  implicit val encoderStockTick: Encoder[StockTick] = io.circe.generic.semiauto.deriveEncoder[StockTick]
-//  implicit val decoderStockTick: Decoder[StockTick] = io.circe.generic.semiauto.deriveDecoder[StockTick]
-//}
+case class StockTick(symbol: String, bid: BigDecimal, ask: BigDecimal, dt: OffsetDateTime) extends JwtPayload.Sym
 
 trait StockPriceClient {
   type Response[T] = Future[Either[(StatusCode, String), T]]
 
   def stocks(symbols: Array[String]): List[StockTick]
-//  def history(symbol: String, begin: LocalDate, end: LocalDate)(implicit ec: ExecutionContext): Response[Source[csv.Row, Any]] =
-//    rawHistory(symbol, begin, end).map(_.right.map(_.via(csv.parseCsv())))
-//
-//  def rawHistory(symbol: String, begin: LocalDate, end: LocalDate): Response[Source[ByteString, Any]]
 }
 
 /**
@@ -56,12 +48,11 @@ class YahooStockPriceClient() extends StockPriceClient
   private val defaultStocks = Array("EURUSD","USDEUR", "USDJPY", "USDGBP", "USDAUD", "USDCHF", "USDSEK", "USDNOK",
     "USDRUB", "USDTRY", "USDBRL", "USDCAD", "USDCNY", "USDHKD", "USDINR", "USDKRW", "USDMXN", "USDNZD", "USDSGD", "USDZAR")
 
-  val dateTimeFormat = DateTimeFormatter.ISO_DATE_TIME
-
   def stocks(symbols: Array[String] = defaultStocks) =
     YahooFinance
       .getFx(symbols.map(_ + "=X"))
-      .map(kv => StockTick(kv._2.getSymbol.replace("=X", ""), new BigDecimal(kv._2.getPrice), OffsetDateTime.now()))
+      .map(kv => StockTick(kv._2.getSymbol.replace("=X", ""), new BigDecimal(kv._2.getPrice),
+        new BigDecimal(kv._2.getPrice.add(new java.math.BigDecimal("0.01"))), OffsetDateTime.now()))
       .toList
 }
 
