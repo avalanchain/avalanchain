@@ -69,7 +69,7 @@
                               </thead>
                                 <tbody>
                                 <tr style="cursor: pointer" ng-repeat="account in accounts | filter:{name : searchAccounts} | pagination:(currentPage-1)*10 | limitTo:10" >
-                                  <td class="project-title">
+                                  <td class="project-completion">
                                       {{($index-9)+(currentPage*10)}}
                                   </td>
                                     <td class="project-status">

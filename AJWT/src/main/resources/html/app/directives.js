@@ -246,6 +246,28 @@ function slimScroll($timeout) {
     };
 }
 
+/**
+ * customValid - Directive for custom validation example
+ */
+function loginValid(){
+    return {
+        require: 'ngModel',
+        link: function(scope, ele, attrs, c) {
+            scope.$watch(attrs.ngModel, function() {
+
+                var validText = "admin";
+
+                if(scope.username == validText) {
+                    c.$setValidity('cvalid', true);
+                } else {
+                    c.$setValidity('cvalid', false);
+                }
+
+            });
+        }
+    }
+}
+
 angular
     .module('avalanchain').directive('ccSpinner', ['$window', function($window) {
         var directive = {
@@ -318,4 +340,5 @@ angular
     .directive('chatSlimScroll', chatSlimScroll)
     .directive('fullScroll', fullScroll)
     .directive('slimScroll', slimScroll)
+    .directive('loginValid', loginValid)
     .directive('icheck', icheck);

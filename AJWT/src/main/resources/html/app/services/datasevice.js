@@ -1,9 +1,9 @@
 ﻿(function () {
     'use strict';
     var serviceId = 'dataservice';
-    angular.module('avalanchain').factory(serviceId, ['$http', '$q', 'common', 'dataProvider', '$filter', '$timeout', dataservice]);
+    angular.module('avalanchain').factory(serviceId, ['$http', '$q', 'common', 'dataProvider', '$filter', '$timeout', 'websocetservice', dataservice]);
 
-    function dataservice($http, $q, common, dataProvider, $filter, $timeout) {
+    function dataservice($http, $q, common, dataProvider, $filter, $timeout, websocetservice) {
         var logger = common.logger.getLogFn('dataservice');
         var logError = common.logger.getLogFn('dataservice', 'error');
         var logWarning = common.logger.getLogFn('dataservice', 'warn');
@@ -322,7 +322,7 @@
             $timeout(function () {
                 defer.resolve(data);
             }, 200)
-
+            var yh = websocetservice.collection;//getYahoo();
             return defer.promise;
         }
 

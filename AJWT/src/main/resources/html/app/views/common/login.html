@@ -1,4 +1,4 @@
-<div class="middle-box text-center loginscreen  animated fadeInDown">
+<div class="middle-box text-center loginscreen  animated fadeInDown" data-ng-controller="loginCtrl as vm">
     <div>
         <div>
             <h1 class="logo-name" style="font-size: 62px;font-weight: 100; letter-spacing: -4px;">Avalanchain</h1>
@@ -6,17 +6,30 @@
         <h3>Welcome to avalanchain</h3>
         <!--<p>Perfectly designed and precisely prepared web app.-->
         </p>
-        <p>Login in. User: admin password: adminadmin.</p>
-        <form class="m-t" role="form" action="#">
+        <p>Login(Demo User)</p>
+        <p>login: admin</p>
+        <p>password: adminadmin</p>
+        <form class="m-t" role="form" name="vm.login" novalidate ng-submit="vm.loginForm()">
           <!--<a ui-sref="index.admin" class="btn btn-info block full-width m-b">Admin</a>-->
           <!--<a ui-sref="user.main" class="btn btn-success block full-width m-b">User</a>-->
             <div class="form-group">
-                <input type="email" class="form-control" placeholder="Username" required=" admin">
+                <div class="m-t-xs" ng-show="vm.login.username.$error.cvalid && !vm.login.username.$error.required && !vm.login.password.$invalid">
+                <small class="text-danger" >Username or password are incorrect</small>
+                </div>
+                <input type="username" class="form-control" data-ng-model="username" ng-minlength="3" name="username" placeholder="Username" required="" login-valid>
+                <div class="m-t-xs" ng-show="vm.login.username.$invalid && vm.login.submitted">
+                    <small class="text-danger" ng-show="vm.login.username.$error.required">Please input a username</small>
+                    <small class="text-danger" ng-show="vm.login.username.$error.minlength">Your username is required to be at least 3 characters</small>
+                    <small class="text-danger" ng-show="vm.login.username.$error.maxlength">Your username cannot be longer than 20 characters</small>
+                </div>
             </div>
             <div class="form-group">
-                <input type="password" class="form-control" placeholder="Password" required="adminadmin">
+                <input type="password" class="form-control" data-ng-model="password" name="password" placeholder="Password" required="">
+                <div class="m-t-xs" ng-show="vm.login.password.$invalid && vm.login.submitted">
+                    <small class="text-danger" ng-show="vm.login.password.$error.required">Please input a password</small>
+                </div>
             </div>
-            <button type="submit" ui-sref="index.admin" class="btn btn-primary block full-width m-b">Login</button>
+            <button type="submit" class="btn btn-primary block full-width m-b">Login</button>
 
             <!--<a ui-sref="forgot_password"><small>Forgot password?</small></a>-->
             <!--<p class="text-muted text-center"><small>Do not have an account?</small></p>-->

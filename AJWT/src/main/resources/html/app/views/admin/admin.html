@@ -23,12 +23,12 @@
                         </thead>
                         <tbody>
                         <tr data-ng-repeat="user in vm.users | pagination:(userPage-1)*10 | limitTo:10">
-                            <td>{{user.userId}}</td>
+                            <td class="project-title">{{user.userId}}</td>
                             <td>{{user.data.firstName}}</td>
                             <td>{{user.data.lastName}}</td>
                             <td>{{user.data.userName}}</td>
-                            <td>{{user.data.emailAddress}}</td>
-                            <td>{{user.data.ipAddress}}</td>
+                            <td class="project-title">{{user.data.emailAddress}}</td>
+                            <td class="project-title">{{user.data.ipAddress}}</td>
                             <td>User</td>
 
 

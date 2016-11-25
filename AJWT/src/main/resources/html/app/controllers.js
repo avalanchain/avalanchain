@@ -15,6 +15,24 @@ function MainCtrl() {
 
 };
 
+function loginCtrl($scope, PermPermissionStore, $state) {
+
+    var vm = this;
+
+    vm.loginForm = function (user) {
+        if (vm.login.$valid) {
+            PermPermissionStore
+                .definePermission('isAuthorized', function () {
+                    return true;
+                });
+            $state.go('index.admin');
+        } else {
+            vm.login.submitted = true;
+        }
+    }
+
+};
+
 function modalCtrl($scope, $uibModalInstance, dataservice, $rootScope, common) {
     $scope.modal = $rootScope.modal;
     $scope.ok = function () {
@@ -22,7 +40,8 @@ function modalCtrl($scope, $uibModalInstance, dataservice, $rootScope, common) {
         $scope.modal.ok().then(function (status) {
             if (status === 200)
                 $uibModalInstance.close();
-        });;
+        });
+        ;
     };
 
     $scope.cancel = function () {
@@ -40,4 +59,5 @@ function modalCtrl($scope, $uibModalInstance, dataservice, $rootScope, common) {
 angular
     .module('avalanchain')
     .controller('MainCtrl', MainCtrl)
+    .controller('loginCtrl', loginCtrl)
     .controller('modalCtrl', MainCtrl);

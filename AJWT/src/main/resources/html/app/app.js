@@ -12,14 +12,25 @@
         'monospaced.qrcode',
         'ncy-angular-breadcrumb',
         'irontec.simpleChat',
-        'luegg.directives'
+        'luegg.directives',
+        'permission',
+        'permission.ui',
+        'ngWebSocket'
         // 'localytics.directives'
         // 'AdalAngular'
     ]);
 
 
-    app.run(['$templateCache', '$rootScope', '$state', '$stateParams', 'dataservice', function ($templateCache, $rootScope, $state, $stateParams, dataservice) {
+    app.run(['$templateCache', '$rootScope', '$state', '$stateParams', 'dataservice', 'PermPermissionStore', function ($templateCache, $rootScope, $state, $stateParams, dataservice, PermPermissionStore) {
        $rootScope.$state = $state;
+        PermPermissionStore
+            .definePermission('isAuthorized', function () {
+                return false;
+            });
+
+        // PermPermissionStore.defineRole('AUTH', ['listEvents', 'editEvents']);
+        // var role = PermRoleStore.getRoleDefinition('AUTH');
+
        dataservice.getData().then(function (data) {
          $rootScope.mdata = data;
          $rootScope.search = $rootScope.mdata.accounts;

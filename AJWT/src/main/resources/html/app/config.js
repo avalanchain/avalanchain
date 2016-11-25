@@ -28,6 +28,8 @@
             templateUrl: '/app/views/common/breadcrumb.html'
         });
         $urlRouterProvider.otherwise("/login");
+
+        //$urlRouterProvider.deferIntercept();
         // $urlRouterProvider.otherwise("/accounts");
         $ocLazyLoadProvider.config({
             // Set to true if you want to see what and when is dynamically loaded
@@ -75,16 +77,34 @@
                 abstract: true,
                 url: "/dashboards",
                 templateUrl: "/app/views/common/content.html",
+                data: {
+                    permissions: {
+                        only: 'isAuthorized',
+                        redirectTo: 'login'
+                    }
+                },
             })
             .state('quoka', {
                 abstract: true,
                 url: "/quoka",
                 templateUrl: "/app/views/common/content.html",
+                data: {
+                    permissions: {
+                        only: 'isAuthorized',
+                        redirectTo: 'login'
+                    }
+                },
             })
             .state('index', {
                 abstract: true,
                 // url: "/",
                 templateUrl: "/app/views/common/content.html",
+                data: {
+                    permissions: {
+                        only: 'isAuthorized',
+                        redirectTo: 'login'
+                    }
+                },
                 resolve: {
                     loadPlugin: function($ocLazyLoad) {
                         return $ocLazyLoad.load([{
