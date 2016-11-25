@@ -20,7 +20,7 @@ trait ActorNode {
   val system = ActorSystem(SystemName,
     ConfigFactory.parseString(s"akka.remote.netty.tcp.host = ${localhost}")
       .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port = $port"))
-      .withFallback(ConfigFactory.load("application.conf")))
+      .withFallback(ConfigFactory.load("node.conf")))
   implicit val materializer = ActorMaterializer()(system)
   implicit val timeout = Timeout(5 seconds)
 }

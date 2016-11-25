@@ -12,6 +12,7 @@ import com.avalanchain.jwt.basicChain.ChainDef
 import com.avalanchain.jwt.jwt.actors.network.NodeStatus
 import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
 import com.avalanchain.jwt.utils.CirceEncoders
+import com.typesafe.config.ConfigFactory
 //import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{StatusCodes, _}
@@ -58,10 +59,10 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
 //  val chainNodeMonitor = ActorSelection(chainNode.node, "monitor")
   val demoNode: DemoNode = new DemoNode(chainNode)
 
-  private implicit val system = chainNode.system
+  private implicit val system = ActorSystem("webapi", ConfigFactory.load("application.conf"))
   protected implicit val executor: ExecutionContext = system.dispatcher
   protected val log: LoggingAdapter = Logging(system, getClass)
-  protected implicit val materializer = chainNode.materializer
+  protected implicit val materializer = ActorMaterializer()
 
   def userInfos() = {
     val userDatas = getClass.getResourceAsStream("/public/mock_users.csv")
@@ -147,6 +148,8 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
 
   val httpPort = port + 1000
 
+  val localhost = "localhost"
+
   val routes =
     pathPrefix("swagger") {
       getFromResourceDirectory("swagger") ~ pathSingleSlash(get(redirect("index.html", StatusCodes.PermanentRedirect)))
@@ -163,12 +166,12 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
     } ~
     corsHandler(pathSingleSlash(getFromResource("html/index.html"))) ~
     corsHandler(getFromResourceDirectory("html/")) ~
-    corsHandler(new SwaggerDocService(system, httpInterface, httpPort).routes)
+    corsHandler(new SwaggerDocService(system, localhost, httpPort).routes)
 
   val bindingFuture = Http().bindAndHandle(
-    handler = DebuggingDirectives.logRequestResult("log")(routes), interface = httpInterface, port = httpPort)
+    handler = DebuggingDirectives.logRequestResult("log")(routes), interface = localhost, port = httpPort)
 
-  println(s"Server online at $httpInterface:$httpPort/\nPress RETURN to stop...")
+  println(s"Server online at ${localhost}:$httpPort/\nPress RETURN to stop...")
   StdIn.readLine() // let it run until user presses return
   bindingFuture
     .flatMap(_.unbind()) // trigger unbinding from the port
