@@ -33,7 +33,7 @@ class UsersService(getUsers: () => List[User], userExists: UserData => Boolean, 
     @ApiOperation(value = "Add User", notes = "", nickname = "addUser", httpMethod = "POST")
     @ApiImplicitParams(Array(
       new ApiImplicitParam(name = "body", value = "\"User\" to add", required = true,
-        /*dataType = "com.avalanchain.jwt.jwt.account.principals.UserData", */ paramType = "body")
+        dataType = "com.avalanchain.jwt.jwt.account.principals.UserData", paramType = "body")
     ))
     @ApiResponses(Array(
       new ApiResponse(code = 201, message = "User added", response = classOf[User]),

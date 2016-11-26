@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives
 import akka.util.Timeout
 import com.avalanchain.jwt.basicChain.{ChainDef, ChainDefToken}
-import com.avalanchain.jwt.jwt.actors.{ChainNode, ChainNodeFacade}
+import com.avalanchain.jwt.jwt.actors.ChainNode
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.generic.auto._
 import io.circe.{Decoder, Encoder}
@@ -22,7 +22,6 @@ class ChainService(chainNode: ChainNode)(implicit encoder: Encoder[ChainDef], de
   import scala.concurrent.duration._
 
   implicit val timeout = Timeout(2 seconds)
-  val cnf = new ChainNodeFacade(chainNode)
 
   //val a = List[ChainDefToken]().asJson
 
@@ -37,7 +36,9 @@ class ChainService(chainNode: ChainNode)(implicit encoder: Encoder[ChainDef], de
   ))
   def newchain =
     post {
-      complete(StatusCodes.Created, cnf.newChain().chainDefToken)
+      onSuccess(chainNode.newChain()) { node =>
+        complete(StatusCodes.Created, node.chainDefToken)
+      }
     }
 
   @ApiOperation(httpMethod = "GET", response = classOf[List[ChainDefToken]], value = "Returns the list of active chains")
@@ -46,6 +47,8 @@ class ChainService(chainNode: ChainNode)(implicit encoder: Encoder[ChainDef], de
   ))
   def allchains =
     get {
-      completeWith(instanceOf[List[ChainDefToken]])(_(cnf.chains().values.toList))
+      onSuccess(chainNode.chains()) { chains =>
+        completeWith(instanceOf[List[ChainDefToken]])(_ (chains.values.toList))
+      }
     }
 }

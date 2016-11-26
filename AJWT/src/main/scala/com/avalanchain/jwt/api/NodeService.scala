@@ -4,24 +4,27 @@ import javax.ws.rs.Path
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
 import akka.util.Timeout
 import com.avalanchain.jwt.basicChain.{ChainDef, ChainDefToken}
 import com.avalanchain.jwt.jwt.actors.network.NodeStatus
-import com.avalanchain.jwt.jwt.actors.{ChainNode, ChainNodeFacade}
+import com.avalanchain.jwt.jwt.actors.ChainNode
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder, KeyEncoder}
 import io.circe.generic.auto._
 import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
 /**
   * Created by Yuriy on 22/11/2016.
   */
 @Path("nodes")
 @Api(value = "/nodes", produces = "application/json")
-class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef])
+class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef], materializer: ActorMaterializer, executor: ExecutionContext)
   extends Directives with CorsSupport with CirceSupport {
   import scala.concurrent.duration._
   import NodeStatus._
@@ -31,8 +34,6 @@ class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], de
   implicit val fooKeyEncoder = new KeyEncoder[NodeStatus.Address] {
     override def apply(addr: NodeStatus.Address): String = addr.asJson.noSpaces
   }
-
-  val cnf = new ChainNodeFacade(chainNode)
 
   val route = pathPrefix("nodes") {
     getNodes
@@ -44,9 +45,12 @@ class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], de
   ))
   def getNodes =
     get {
-      //completeWith(instanceOf[Future[Map[NodeStatus.Address, NodeStatus]]])(_(cnf.nodesSnapshot()))
-      complete {
-        cnf.nodesSnapshot()
+      onSuccess(chainNode.nodesSnapshot()) {
+        m => completeWith(instanceOf[Map[NodeStatus.Address, NodeStatus]])(_(m))
       }
+//      onComplete(chainNode.nodesSnapshot()) {
+//        case Success(m) => completeWith(instanceOf[Map[NodeStatus.Address, NodeStatus]])(_(m))
+//        case Failure(e) => failWith(new RuntimeException("Oops."))
+//      }
     }
 }

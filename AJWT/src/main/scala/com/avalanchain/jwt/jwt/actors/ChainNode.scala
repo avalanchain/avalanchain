@@ -34,39 +34,41 @@ import scala.util.Try
 /**
   * Created by Yuriy Habarov on 21/05/2016.
   */
-class ChainNode(val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey])
-  extends ActorNode {
+class ChainNode(val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey]/*, atMost: FiniteDuration = 5 seconds*/) extends ActorNode {
 
   val publicKey = keyPair.getPublic
 
-  val node = actor(system, "node")(new Act {
-    private val registry = actor("registry")(new ChainRegistryActor())
-    val tc = actor("testChild")(new Act {
-      whenStarting {
-        context.parent ! ("hello from " + self.path)
-      }
-    })
-    become {
-      case GetNetworkMonitor => sender() ! actor("monitor" + (UUID.randomUUID().toString.replace("-", "")))(new NetworkMonitor())
-      case GetChains => pipe(registry ? GetChains) to sender()
-      case PrintState => registry ! PrintState
+  private val registry = actor("registry")(new ChainRegistryActor())
 
-      case NewChain(jwtAlgo, initValue) =>
-        val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.noSpaces))
-        val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
-        pipe(registry ? CreateChain(chainDefToken)) to sender()
-      case gc: GetChainByRef => pipe(registry ? gc) to sender()
-      case gjs: GetJsonSink => pipe(registry ? gjs) to sender()
+  def chains() = (registry ? GetChains).mapTo[Map[ChainRef, ChainDefToken]]
 
-      case gjs: GetFrameTokenSource => pipe(registry ? gjs) to sender()
-      case gjs: GetFrameSource => pipe(registry ? gjs) to sender()
-      case gjs: GetJsonSource => pipe(registry ? gjs) to sender()
+  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
+    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.noSpaces))
+    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+    (registry ? CreateChain(chainDefToken)).mapTo[ChainCreationResult]
+  }
 
-      case s: String => println(s"Echo $s")
+  def getChain(chainRef: ChainRef) = (registry ? GetChainByRef(chainRef)).mapTo[Either[ChainRegistryError, (ChainDefToken, ActorRef)]]
 
-      case c => println(s"Handler for $c not found")
-    }
-  })
+  def sink(chainRef: ChainRef) = (registry ? GetJsonSink(chainRef)).mapTo[Either[ChainRegistryError, Sink[Json, NotUsed]]]
+
+  def source(chainRef: ChainRef, from: Position, to: Position) =
+    (registry ? GetJsonSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
+
+  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
+    (registry ? GetFrameSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
+
+  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
+    (registry ? GetFrameTokenSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
+
+  def monitorSource() = {
+    val monitorRef = actor("monitor" + (UUID.randomUUID().toString.replace("-", "")))(new NetworkMonitor())
+    Source.fromPublisher[NodeStatus](ActorPublisher(monitorRef))
+  }
+
+  def nodesSnapshot(): Future[Map[NodeStatus.Address, NodeStatus]] = {
+    monitorSource().takeWithin(10 milliseconds).runFold(Map.empty[NodeStatus.Address, NodeStatus])((acc, s) => { acc + (s.address -> s) })
+  }
 }
 object ChainNode {
   sealed trait ChainNodeRequest
@@ -77,42 +79,42 @@ object ChainNode {
   //final case class GetSink(chainRef: ChainRef) extends ChainNodeRequest
 }
 
-class ChainNodeFacade(chainNode: ChainNode, atMost: FiniteDuration = 5 seconds) {
-  implicit val timeout = Timeout(atMost)
-
-  def nodeActorRef = chainNode.node
-  val materializer = chainNode.materializer
-
-  def chains() = Await.result(nodeActorRef ? GetChains, atMost).asInstanceOf[Map[ChainRef, ChainDefToken]]
-
-  def newChain() = Await.result(nodeActorRef ? NewChain(JwtAlgo.HS512), atMost).asInstanceOf[ChainCreationResult]
-
-  def sink(chainRef: ChainRef) = Await.result(nodeActorRef ? GetJsonSink(chainRef), atMost).asInstanceOf[Either[ChainRegistryError, Sink[Json, NotUsed]]]
-
-  def source(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetJsonSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
-
-  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetFrameSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
-
-  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetFrameTokenSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
-
-  def monitorSource() = {
-    val monitorRef = Await.result(nodeActorRef ? GetNetworkMonitor, atMost).asInstanceOf[ActorRef]
-    Source.fromPublisher[NodeStatus](ActorPublisher(monitorRef))
-  }
-
-  def nodesSnapshot() = {
-    //val statuses = monitorSource().runWith(Sink.fold(Map.empty[NodeStatus.Address, NodeStatus])((acc, s) => acc + (s.address -> s))(chainNode.materializer)
-    //Await.result(statuses, atMost).asInstanceOf[Map[NodeStatus.Address, NodeStatus]]
-    implicit val mat = ActorMaterializer()(chainNode.system)
-    val sink = Sink.fold(Map.empty[NodeStatus.Address, NodeStatus])((acc, s: NodeStatus) => acc + (s.address -> s))
-    val statuses = monitorSource().runWith(sink)
-    //Await.result(statuses, atMost)
-    statuses
-  }
-}
-object ChainNodeFacade {
-  def apply(chainNode: ChainNode, atMost: FiniteDuration = 5 seconds): ChainNodeFacade = new ChainNodeFacade(chainNode, atMost)
-}
+//class ChainNodeFacade(chainNode: ChainNode, atMost: FiniteDuration = 5 seconds) {
+//  implicit val timeout = Timeout(atMost)
+//
+//  def nodeActorRef = chainNode.node
+//  val materializer = chainNode.materializer
+//
+//  def chains() = Await.result(nodeActorRef ? GetChains, atMost).asInstanceOf[Map[ChainRef, ChainDefToken]]
+//
+//  def newChain() = Await.result(nodeActorRef ? NewChain(JwtAlgo.HS512), atMost).asInstanceOf[ChainCreationResult]
+//
+//  def sink(chainRef: ChainRef) = Await.result(nodeActorRef ? GetJsonSink(chainRef), atMost).asInstanceOf[Either[ChainRegistryError, Sink[Json, NotUsed]]]
+//
+//  def source(chainRef: ChainRef, from: Position, to: Position) =
+//    Await.result(nodeActorRef ? GetJsonSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
+//
+//  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
+//    Await.result(nodeActorRef ? GetFrameSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
+//
+//  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
+//    Await.result(nodeActorRef ? GetFrameTokenSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
+//
+//  def monitorSource() = {
+//    val monitorRef = Await.result(nodeActorRef ? GetNetworkMonitor, atMost).asInstanceOf[ActorRef]
+//    Source.fromPublisher[NodeStatus](ActorPublisher(monitorRef))
+//  }
+//
+//  def nodesSnapshot() = {
+//    //val statuses = monitorSource().runWith(Sink.fold(Map.empty[NodeStatus.Address, NodeStatus])((acc, s) => acc + (s.address -> s))(chainNode.materializer)
+//    //Await.result(statuses, atMost).asInstanceOf[Map[NodeStatus.Address, NodeStatus]]
+//    implicit val mat = ActorMaterializer()(chainNode.system)
+//    val sink = Sink.fold(Map.empty[NodeStatus.Address, NodeStatus])((acc, s: NodeStatus) => acc + (s.address -> s))
+//    val statuses = monitorSource().runWith(sink)
+//    //Await.result(statuses, atMost)
+//    statuses
+//  }
+//}
+//object ChainNodeFacade {
+//  def apply(chainNode: ChainNode, atMost: FiniteDuration = 5 seconds): ChainNodeFacade = new ChainNodeFacade(chainNode, atMost)
+//}

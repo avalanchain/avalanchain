@@ -20,7 +20,10 @@ import scala.collection.mutable
 
 sealed trait NodeStatus { val address: NodeStatus.Address }
 object NodeStatus {
-  final case class Address private (host: String, port: Int)
+  final case class Address private (host: String, port: Int, httpPort: Int)
+  object Address {
+    def apply(addr: akka.actor.Address): Address = new Address(addr.host.get, addr.port.get, addr.port.get + 1000)
+  }
 
   final case class NodeUp(address: Address) extends NodeStatus
   final case class NodeDown(address: Address) extends NodeStatus
@@ -67,12 +70,12 @@ class NetworkMonitor extends Actor with ActorLogging with ActorPublisher[NodeSta
 
   def handle(event: ClusterEvent.ClusterDomainEvent) {
     val (model: Option[NodeStatus]) = event match {
-      case e: ClusterEvent.MemberUp                       => Some(NodeUp(NodeStatus.Address(e.member.address.host.get, e.member.address.port.get)))
-      case e: ClusterEvent.UnreachableMember              => Some(NodeUnreachable(NodeStatus.Address(e.member.address.host.get, e.member.address.port.get)))
-      case e: ClusterEvent.MemberRemoved                  => Some(NodeRemoved(NodeStatus.Address(e.member.address.host.get, e.member.address.port.get)))
-      case e: ClusterEvent.MemberExited                   => Some(NodeExited(NodeStatus.Address(e.member.address.host.get, e.member.address.port.get)))
-      case e: ClusterEvent.MemberJoined                   => Some(NodeJoined(NodeStatus.Address(e.member.address.host.get, e.member.address.port.get)))
-      case e: ClusterEvent.MemberLeft                     => Some(NodeLeft(NodeStatus.Address(e.member.address.host.get, e.member.address.port.get)))
+      case e: ClusterEvent.MemberUp                       => Some(NodeUp(NodeStatus.Address(e.member.address)))
+      case e: ClusterEvent.UnreachableMember              => Some(NodeUnreachable(NodeStatus.Address(e.member.address)))
+      case e: ClusterEvent.MemberRemoved                  => Some(NodeRemoved(NodeStatus.Address(e.member.address)))
+      case e: ClusterEvent.MemberExited                   => Some(NodeExited(NodeStatus.Address(e.member.address)))
+      case e: ClusterEvent.MemberJoined                   => Some(NodeJoined(NodeStatus.Address(e.member.address)))
+      case e: ClusterEvent.MemberLeft                     => Some(NodeLeft(NodeStatus.Address(e.member.address)))
       case _                                              => None
     }
 

@@ -69,27 +69,3 @@ class ChainNode2(nodeId: NodeId, val port: Int, keyPair: KeyPair, knownKeys: Set
 //    nodesService.value("a").
 //  }
 }
-
-
-class ChainNodeFacade2(var chainNode: ChainNode, atMost: FiniteDuration = 5 seconds) {
-  implicit val timeout = Timeout(atMost)
-
-  def nodeActorRef = chainNode.node
-  val materializer = chainNode.materializer
-
-  def chains() = Await.result(nodeActorRef ? GetChains, atMost).asInstanceOf[Map[ChainRef, ChainDefToken]]
-
-  def newChain() = Await.result(nodeActorRef ? NewChain(JwtAlgo.HS512), atMost).asInstanceOf[ChainCreationResult]
-
-  def sink(chainRef: ChainRef) = Await.result(nodeActorRef ? GetJsonSink(chainRef), atMost).asInstanceOf[Either[ChainRegistryError, Sink[Json, NotUsed]]]
-
-  def source(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetJsonSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
-
-  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetFrameSource(chainRef, from, to), atMost).asInstanceOf[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
-
-  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
-    Await.result(nodeActorRef ? GetFrameTokenSource(chainRef, from, to), 5 seconds).asInstanceOf[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
-
-}

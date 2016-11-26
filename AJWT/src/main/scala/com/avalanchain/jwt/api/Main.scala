@@ -23,7 +23,7 @@ import akka.util.Timeout
 import com.avalanchain.jwt.basicChain.ChainDefToken
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.account.principals.{User, UserData}
-import com.avalanchain.jwt.jwt.actors.{ChainNode, ChainNodeFacade}
+import com.avalanchain.jwt.jwt.actors.ChainNode
 import com.avalanchain.jwt.jwt.demo.DemoNode
 import com.avalanchain.jwt.utils.Config
 import com.github.swagger.akka._
@@ -55,7 +55,6 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
   import StockTick._
 
   val chainNode = new ChainNode(port, CurveContext.currentKeys, Set.empty)
-  val chainNodeFacade = ChainNodeFacade(chainNode)
 //  val chainNodeMonitor = ActorSelection(chainNode.node, "monitor")
   val demoNode: DemoNode = new DemoNode(chainNode)
 
@@ -109,7 +108,7 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
       }
     } ~
     path("nodes") {
-      val src = chainNodeFacade.monitorSource().map(i => TextMessage(i.asJson.noSpaces))
+      val src = chainNode.monitorSource().map(i => TextMessage(i.asJson.noSpaces))
 
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
@@ -121,23 +120,14 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
-    } ~
-    path("tick") {
-      val src = demoNode.tickerSource(0, 2000).right.toOption.get.map(i => TextMessage(i.toString))
-
-      extractUpgradeToWebSocket { upgrade =>
-        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
-      }
     } //~
-//      path("cluster") {
-//        val system = ClusterService.firstNode
-//        val monitor = ClusterService.startMonitor(system)
-//        val src = Source.fromPublisher[String](ActorPublisher(monitor)).map(i => TextMessage(i))
+//    path("tick") {
+//      val src = demoNode.tickerSource(0, 2000).right.toOption.get.map(i => TextMessage(i.toString))
 //
-//        extractUpgradeToWebSocket { upgrade =>
-//          complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
-//        }
-//      } ~
+//      extractUpgradeToWebSocket { upgrade =>
+//        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+//      }
+//    } //~
 //      path("newnode") {
 //        get {
 //          ClusterService.deployNode(0)
