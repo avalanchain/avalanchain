@@ -2,7 +2,7 @@ package com.avalanchain.jwt.api
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import java.util.UUID
-import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.{ThreadLocalRandom}
 
 import akka.actor.{ActorSelection, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
@@ -13,6 +13,8 @@ import com.avalanchain.jwt.jwt.actors.network.NodeStatus
 import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
 import com.avalanchain.jwt.utils.CirceEncoders
 import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.{Awaitable, Future}
 //import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.model.{StatusCodes, _}
@@ -49,7 +51,7 @@ import io.circe.generic.auto._
 
 import com.avalanchain.jwt.KeysDto._
 
-class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encoder[NodeStatus])*/ extends Config with CorsSupport with CirceSupport with CirceEncoders {
+class Main(port: Int) extends Config with CorsSupport with CirceSupport with CirceEncoders {
 
   import com.avalanchain.jwt.basicChain.ChainDefCodecs._
   import StockTick._
@@ -62,6 +64,11 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
   protected implicit val executor: ExecutionContext = system.dispatcher
   protected val log: LoggingAdapter = Logging(system, getClass)
   protected implicit val materializer = ActorMaterializer()
+
+  var childNodes: List[Awaitable[Main]] = List.empty
+  def startChild(): Unit = {
+    childNodes = Future { new Main(0)}(ExecutionContext.global) :: childNodes
+  }
 
   def userInfos() = {
     val userDatas = getClass.getResourceAsStream("/public/mock_users.csv")
@@ -128,12 +135,6 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
 //        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
 //      }
 //    } //~
-//      path("newnode") {
-//        get {
-//          ClusterService.deployNode(0)
-//          complete("Node added")
-//        }
-//      }
   }
 
   val httpPort = port + 1000
@@ -148,7 +149,7 @@ class Main(port: Int)/*(implicit encoderST: Encoder[StockTick], encoderNS: Encod
       path("")(getFromResource("public/index.html")) ~
       corsHandler(new NodeService(chainNode).route) ~
       corsHandler(new ChainService(chainNode).route) ~
-      corsHandler(new AdminService().route) ~
+      corsHandler(new AdminService(startChild).route) ~
       corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), u => addUserInfo(u)).route)
     } ~
     pathPrefix("ws") {
@@ -173,3 +174,5 @@ object Main extends Main(2551) with App
 object Main2 extends Main(2552) with App
 
 object Main3 extends Main(2553) with App
+
+object MainRnd extends Main(0) with App
