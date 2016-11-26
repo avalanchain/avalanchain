@@ -37,7 +37,8 @@
       if (url && url.length > 1) {
         url = decodeURIComponent(url[1]);
       } else {
-        url = "http://localhost:3551/api-docs/swagger.json";
+        var host = window.location.origin;
+        url = host + "/api-docs/swagger.json";
       }
 
       hljs.configure({

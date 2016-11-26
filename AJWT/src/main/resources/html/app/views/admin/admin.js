@@ -13,7 +13,7 @@
         $scope.currentPage = 1;
         $scope.userPage = 1;
 
-        $scope.createUser = function () {
+        vm.createUser = function () {
             var m = new Mnemonic(96);
             $rootScope.modal = {};
             $rootScope.modal.password = m.toWords().join(' ');
@@ -21,7 +21,7 @@
             $rootScope.modal.guid = dataservice.getId();
             $rootScope.modal.ok =function () {
                 return dataservice.newUser().then(function (data) {
-                    $rootScope.$emit('updateAccounts');
+                    // $rootScope.$emit('updateAccounts');
                     return 200;
                 });
             };
@@ -32,6 +32,27 @@
             };
             var modalInstance = $uibModal.open({
                 templateUrl: '/app/views/admin/create_user.html',
+                controller: modalCtrl
+            });
+        };
+
+        vm.editUser = function (user) {
+            var m = new Mnemonic(96);
+            $rootScope.modal = {};
+            $rootScope.modal.user = user;
+            $rootScope.modal.ok =function () {
+                return dataservice.newUser().then(function (data) {
+                    // $rootScope.$emit('updateAccounts');
+                    return 200;
+                });
+            };
+            $rootScope.modal.canel =function () {
+                // dataservice.newUser().then(function (data) {
+                //     $rootScope.$emit('updateAccounts');
+                // });
+            };
+            var modalInstance = $uibModal.open({
+                templateUrl: '/app/views/admin/edit_user.html',
                 controller: modalCtrl
             });
         };

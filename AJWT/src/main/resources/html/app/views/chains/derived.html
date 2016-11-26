@@ -1,0 +1,47 @@
+<div class="modal-body">
+    <div class="row">
+        <div class="col-lg-12"> Derived</h3>
+
+            <p>fork new chain</p>
+
+            <form role="form">
+                <div class="form-group"><label>Parent</label> <input type="text" ng-model="modal.parent" disabled class="form-control"></div>
+                <div data-ng-show="modal.code.length>0" class="form-group"><label>Function</label>
+                    <ui-codemirror ng-model="modal.code" ui-codemirror-opts="modal.editorOptions">
+                </ui-codemirror>
+                </div>
+                <br>
+                <div>
+                    <button class="btn btn-sm btn-white pull-right m-t-n-xs" type="submit" ng-click="ok()"><strong>Derive</strong></button>
+                    <!--<label> <input icheck type="checkbox" ng-model="main.unCheck"> Remember me </label>-->
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+<!--var SpeechApp = angular.module('SpeechApp', []);-->
+
+<!--function VoiceCtrl($scope) {-->
+
+<!--$scope.said='...';-->
+
+<!--$scope.helloWorld = function() {-->
+<!--$scope.said = "Hello world!";-->
+<!--}-->
+
+<!--$scope.commands = {-->
+<!--'hello (world)': function() {-->
+<!--if (typeof console !== "undefined") console.log('hello world!')-->
+<!--$scope.$apply($scope.helloWorld);-->
+<!--},-->
+<!--'hey': function() {-->
+<!--if (typeof console !== "undefined") console.log('hey!')-->
+<!--$scope.$apply($scope.helloWorld);-->
+<!--}-->
+<!--};-->
+
+<!--annyang.debug();-->
+<!--annyang.init($scope.commands);-->
+<!--annyang.start();-->
+<!--}-->

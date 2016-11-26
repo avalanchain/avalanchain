@@ -4,7 +4,7 @@
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Users</h5>
-                    <button type="button" ng-click="createUser()" class="btn btn-primary btn-xs pull-right">Create User</button>
+                    <button type="button" ng-click="vm.createUser()" class="btn btn-primary btn-xs pull-right">Create User</button>
                     <!--<div ibox-tools></div>-->
                 </div>
                 <div class="ibox-content">
@@ -31,15 +31,13 @@
                             <td class="project-title">{{user.data.ipAddress}}</td>
                             <td>User</td>
 
-
-
                             <!--<td><i class="fa fa-clock-o"></i> 11:20pm</td>-->
                             <!--<td>-->
                                 <!--<span ng-repeat="role in user.Roles" class="label label-primary">{{role}}</span>-->
                                 <!--&lt;!&ndash;<small>{{user.name}}</small>&ndash;&gt;-->
                             <!--</td>-->
-                            <td class="text-navy">
-                                <button type="button" ng-click="editUser(user.Id)" class="btn btn-primary btn-xs">EditUser</button>
+                            <td class="project-title">
+                                <button ng-click="vm.editUser(user)" class="btn btn-white btn-sm"><i class="fa fa-pencil-square-o" aria-hidden="true"></i> EditUser</button>
                             </td>
                         </tr>
                         </tbody>

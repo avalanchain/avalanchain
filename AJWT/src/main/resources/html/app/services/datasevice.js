@@ -1,9 +1,9 @@
 ﻿(function () {
     'use strict';
     var serviceId = 'dataservice';
-    angular.module('avalanchain').factory(serviceId, ['$http', '$q', 'common', 'dataProvider', '$filter', '$timeout', 'websocetservice', dataservice]);
+    angular.module('avalanchain').factory(serviceId, ['$http', '$q', 'common', 'dataProvider', '$filter', '$timeout', 'websocketservice', dataservice]);
 
-    function dataservice($http, $q, common, dataProvider, $filter, $timeout, websocetservice) {
+    function dataservice($http, $q, common, dataProvider, $filter, $timeout, websocketservice) {
         var logger = common.logger.getLogFn('dataservice');
         var logError = common.logger.getLogFn('dataservice', 'error');
         var logWarning = common.logger.getLogFn('dataservice', 'warn');
@@ -25,7 +25,8 @@
             getId: getId,
             getChat: getChat,
             getUsers: getUsers,
-            newUser:newUser
+            newUser:newUser,
+            getYahoo: getYahoo
         };
 
         return service;
@@ -308,6 +309,18 @@
             };
         }
 
+        function getYahoo(vm) {
+            vm.newData = function(info) {
+                vm.messages = vm.messages || [];
+                if (vm.messages.length > 16) {
+                    vm.messages.pop();
+                }
+                vm.messages.unshift(info);
+            };
+
+            websocketservice.ylisteners.addListener(vm);
+        }
+
         //  var data = {};
 
         function getData() {
@@ -322,7 +335,7 @@
             $timeout(function () {
                 defer.resolve(data);
             }, 200)
-            var yh = websocetservice.collection;//getYahoo();
+            // var yh = websocetservice.collection;//getYahoo();
             return defer.promise;
         }
 

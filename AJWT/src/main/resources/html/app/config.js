@@ -70,6 +70,15 @@
             files: ['/assets/js/plugins/ngclipboard/ngclipboard.min.js']
         };
 
+        var codemirror ={
+            serie: true,
+                files: ['/assets/css/plugins/codemirror/codemirror.css','/assets/css/plugins/codemirror/ambiance.css','/assets/js/plugins/codemirror/codemirror.js','/assets/js/plugins/codemirror/mode/javascript/javascript.js']
+        };
+        var codemirrorui ={
+            name: 'ui.codemirror',
+                files: ['/assets/js/plugins/ui-codemirror/ui-codemirror.js']
+        };
+
 
         $stateProvider
 
@@ -265,11 +274,11 @@
                 data: {
                     pageTitle: 'Chains'
                 },
-                // resolve: {
-                //     loadPlugin: function($ocLazyLoad) {
-                //         return $ocLazyLoad.load([footable, footable_angular]);
-                //     }
-                // },
+                resolve: {
+                    loadPlugin: function($ocLazyLoad) {
+                        return $ocLazyLoad.load([codemirror, codemirrorui]);
+                    }
+                },
                 ncyBreadcrumb: {
                     label: 'Chains'
                 }

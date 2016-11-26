@@ -1,0 +1,22 @@
+<div class="modal-body">
+    <div class="row">
+        <div class="col-lg-12"><h3 class="m-t-none m-b">Edit User: {{ modal.user.data.userName }}</h3>
+
+            <form role="form">
+                <div class="form-group"><label>ID</label> <input type="text" ng-model="modal.user.userId" disabled class="form-control"></div>
+                <div class="form-group"><label>First Name</label> <input type="text" ng-model="modal.user.data.firstName" placeholder="enter first name" class="form-control"></div>
+                <div class="form-group"><label>Last Name</label> <input type="text" ng-model="modal.user.data.lastName" placeholder="enter last name" class="form-control"></div>
+                <div class="form-group"><label>User Name</label> <input type="text" ng-model="modal.user.data.userName" placeholder="enter user name" class="form-control"></div>
+                <div class="form-group"><label>Email</label> <input type="email" ng-model="modal.user.data.emailAddress" placeholder="enter email" class="form-control"></div>
+
+                <!--<div class="form-group"><label>Password(mnemonic)</label> <input type="text" ng-model="modal.password" class="form-control"></div>-->
+                <!--<div class="form-group"><label>Hex password(mnemonic)</label> <input type="text" ng-model="modal.hexPass" class="form-control"></div>-->
+                <div>
+                    <button class="btn btn-sm btn-white pull-right m-t-n-xs" type="submit" ng-click="ok()"><strong>Save</strong></button>
+                    <!--<label> <input icheck type="checkbox" ng-model="main.unCheck"> Remember me </label>-->
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>

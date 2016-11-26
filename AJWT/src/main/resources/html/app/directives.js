@@ -267,6 +267,22 @@ function loginValid(){
         }
     }
 }
+// function cmlCodemirrorRefresh($timeout){
+//     return {
+//         restrict: 'C',
+//         require: 'ngModel',
+//         link: function(scope, ele, attrs, c) {
+//             scope.$watch(attrs.ngModel, function() {
+//
+//                 $timeout(function() {
+//                     codeMirror.refresh();
+//                 });
+//
+//             });
+//         }
+//     }
+// }
+
 
 angular
     .module('avalanchain').directive('ccSpinner', ['$window', function($window) {

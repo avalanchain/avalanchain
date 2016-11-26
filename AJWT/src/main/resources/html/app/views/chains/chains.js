@@ -2,9 +2,9 @@
 (function() {
     'use strict';
     var controllerId = 'chains';
-    angular.module('avalanchain').controller(controllerId, ['common', '$uibModal', 'dataservice', 'jwtservice', chains]);
+    angular.module('avalanchain').controller(controllerId, ['common', '$uibModal', 'dataservice', 'jwtservice', '$rootScope', chains]);
 
-    function chains(common, $uibModal, dataservice, jwtservice) {
+    function chains(common, $uibModal, dataservice, jwtservice, $rootScope) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -14,19 +14,57 @@
         vm.totalItems = [];
         vm.page = 1;
 
-        // var jwS = jwtservice.generateJWS();
-        // var isValidjws = jwtservice.verifyJWS(jwS);
-        //
-        // var jwTDecode = jwtservice.generateJWT();
-        // var isValidjwt = jwtservice.verifyJWS(jwTDecode);
-        //
-        // var jwtencode = jwtservice.getJWT(jwTDecode);
 
-        // vm.showCluster = function(cluster) {
-        //     $state.go('index.cluster', {
-        //         clusterId: cluster.id
-        //     });
-        // }
+        vm.Fork = function (parent) {
+            var m = new Mnemonic(96);
+            $rootScope.modal = {};
+            $rootScope.modal.parent = parent;
+            $rootScope.modal.position = 0;
+            $rootScope.modal.ok =function () {
+                return dataservice.newUser().then(function (data) {
+                    // $rootScope.$emit('updateAccounts');
+                    return 200;
+                });
+            };
+            $rootScope.modal.canel =function () {
+                // dataservice.newUser().then(function (data) {
+                //     $rootScope.$emit('updateAccounts');
+                // });
+            };
+            var modalInstance = $uibModal.open({
+                templateUrl: '/app/views/chains/fork.html',
+                controller: modalCtrl
+            });
+        };
+        var code  = 'function Function(params) {\n\tvar said= \'...\';\n\tvar helloWorld = function() { \n\tvar said = "Hello world!";\n\t}\n}'
+        vm.editorOptions = {
+            lineNumbers: true,
+            matchBrackets: true,
+            styleActiveLine: true,
+            autofocus:true
+        };
+        vm.Derived = function (parent) {
+            var m = new Mnemonic(96);
+            $rootScope.modal = {};
+            $rootScope.modal.parent = parent;
+            $rootScope.modal.code = code;
+            $rootScope.modal.editorOptions =  vm.editorOptions;
+            $rootScope.modal.ok =function () {
+                return dataservice.newUser().then(function (data) {
+                    // $rootScope.$emit('updateAccounts');
+                    return 200;
+                });
+            };
+            $rootScope.modal.canel =function () {
+                // dataservice.newUser().then(function (data) {
+                //     $rootScope.$emit('updateAccounts');
+                // });
+            };
+            var modalInstance = $uibModal.open({
+                templateUrl: '/app/views/chains/derived.html',
+                controller: modalCtrl
+            });
+        };
         vm.test = function() {
             var tt = vm.encode;
               var tt = vm.decode;
