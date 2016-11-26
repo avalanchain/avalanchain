@@ -10,6 +10,8 @@ val circeVersion = "0.6.1"
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
+resolvers += "Eventuate Releases" at "https://dl.bintray.com/rbmhtechnology/maven"
+
 libraryDependencies ++= {
   val akkaVersion = "2.4.12"
   val akkaHttpVersion = "2.4.11"
