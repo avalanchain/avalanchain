@@ -24,7 +24,7 @@ import scala.util.{Failure, Success}
   */
 @Path("nodes")
 @Api(value = "/nodes", produces = "application/json")
-class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef], materializer: ActorMaterializer, executor: ExecutionContext)
+class NodeService(chainNode: ChainNode, processStarter: () => Unit) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef], materializer: ActorMaterializer, executor: ExecutionContext)
   extends Directives with CorsSupport with CirceSupport {
   import scala.concurrent.duration._
   import NodeStatus._
@@ -36,9 +36,15 @@ class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], de
   }
 
   val route = pathPrefix("nodes") {
-    getNodes
+    path("getNodes") {
+      getNodes
+    } ~
+    path("newNode") {
+      newNode
+    }
   }
 
+  @Path("getNodes")
   @ApiOperation(httpMethod = "GET", response = classOf[List[ChainDefToken]], value = "Returns the list of known nodes")
   @ApiResponses(Array(
     new ApiResponse(code = 200, message = "Known Nodes", response = classOf[Map[NodeStatus.Address, NodeStatus]])
@@ -52,5 +58,18 @@ class NodeService(chainNode: ChainNode) (implicit encoder: Encoder[ChainDef], de
 //        case Success(m) => completeWith(instanceOf[Map[NodeStatus.Address, NodeStatus]])(_(m))
 //        case Failure(e) => failWith(new RuntimeException("Oops."))
 //      }
+    }
+
+  @Path("newNode")
+  @ApiOperation(notes = "Spawns a new node on the same machine with random port", httpMethod = "POST", value = "Spawns a new node")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "Current Public Key", response = classOf[String])
+  ))
+  def newNode =
+    post {
+      complete {
+        processStarter()
+        "Node added"
+      }
     }
 }

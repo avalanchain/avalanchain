@@ -17,7 +17,7 @@ import io.circe.{Decoder, Encoder}
   */
 @Path("admin")
 @Api(value = "/admin", produces = "application/json")
-class AdminService(processStarter: () => Unit)
+class AdminService()
   extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
 
   val route = pathPrefix("admin") {
@@ -29,9 +29,6 @@ class AdminService(processStarter: () => Unit)
     } ~
     path("key") {
       key
-    } ~
-    path("newNode") {
-      newNode
     }
   }
 
@@ -71,19 +68,6 @@ class AdminService(processStarter: () => Unit)
       complete {
         val keys: KeyPair = CurveContext.savedKeys()
         toPubKeyDto(keys.getPublic)
-      }
-    }
-
-  @Path("newNode")
-  @ApiOperation(notes = "Spawns a new node on the same machine with random port", httpMethod = "GET", value = "Spawns a new node")
-  @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "Current Public Key", response = classOf[String])
-  ))
-  def newNode =
-    get {
-      complete {
-        processStarter()
-        "Node added"
       }
     }
 }

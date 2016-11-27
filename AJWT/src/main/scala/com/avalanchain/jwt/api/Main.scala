@@ -147,9 +147,9 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
     } ~
     pathPrefix("v1") {
       path("")(getFromResource("public/index.html")) ~
-      corsHandler(new NodeService(chainNode).route) ~
+      corsHandler(new NodeService(chainNode, startChild).route) ~
       corsHandler(new ChainService(chainNode).route) ~
-      corsHandler(new AdminService(startChild).route) ~
+      corsHandler(new AdminService().route) ~
       corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), u => addUserInfo(u)).route)
     } ~
     pathPrefix("ws") {

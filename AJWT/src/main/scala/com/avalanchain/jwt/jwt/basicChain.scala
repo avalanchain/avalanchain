@@ -47,7 +47,7 @@ package object basicChain {
     final case class Filter(f: Func1) extends ChainDerivationFunction
     final case class Fold(f: Func2, init: Json = Json.fromString("{}")) extends ChainDerivationFunction
     final case class GroupBy(f: Func1, max: Int) extends ChainDerivationFunction
-    //case class Reduce(f: Func2) extends ChainDerivationFunction
+    case class Reduce(f: Func2) extends ChainDerivationFunction
   }
 
   sealed trait JwtAlgo
@@ -106,12 +106,15 @@ package object basicChain {
   }
 
   type ChainDefToken = TypedJwtToken[ChainDef]
-  case class ChainRef(sig: String)
+  final case class ChainRef(sig: String)
   object ChainRef {
     def apply[T <: ChainDef](chainDef: TypedJwtToken[T]): ChainRef = new ChainRef(chainDef.sig)
   }
 
-  case class FrameRef(sig: String) // ChainRef for first frame and previous Frame signatures for others
+  final case class Cmd(v: Json) extends JwtPayload.Sym
+  type CmdToken = TypedJwtToken[Cmd]
+
+  final case class FrameRef(sig: String) // ChainRef for first frame and previous Frame signatures for others
   object FrameRef {
     def apply(frameRef: FrameToken): FrameRef = new FrameRef(frameRef.sig)
   }
@@ -151,8 +154,8 @@ package object basicChain {
   type NodeId = String
 
 
-  class Chain(val chainDefToken: ChainDefToken, val keyPair: KeyPair,
-              tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None)(implicit actorRefFactory: ActorRefFactory) {
+  class Chain3(val chainDefToken: ChainDefToken, val keyPair: KeyPair,
+               tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None)(implicit actorRefFactory: ActorRefFactory) {
     if (chainDefToken.payload.isEmpty) throw new RuntimeException(s"Inconsistent ChainDefToken: '$chainDefToken'")
     val chainRef = ChainRef(chainDefToken)
     def status = ChainStatus.Created
@@ -176,7 +179,7 @@ package object basicChain {
 //    def sink() =
 //      PersistentFrameSink(chainRef)(actorRefFactory, 5 seconds)
   }
-  object Chain {
+  object Chain3 {
 
   }
 
@@ -214,7 +217,7 @@ package object basicChain {
     private val privateKey = keyPair.getPrivate
     val publicKey = keyPair.getPublic
 
-    private var chains = new ConcurrentHashMap[ChainRef, Chain].asScala
+    private var chains = new ConcurrentHashMap[ChainRef, Chain3].asScala
     def Chains() = chains
 
     //TODO: nestedChain, addFrame
@@ -222,18 +225,18 @@ package object basicChain {
     private def addChainDef(chainDef: ChainDef) = {
       val chainDefToken = TypedJwtToken[ChainDef](chainDef, privateKey)
       val chainRef = ChainRef(chainDefToken)
-      val newChain = new Chain(chainDefToken, keyPair, new MapFrameTokenStorage())
+      val newChain = new Chain3(chainDefToken, keyPair, new MapFrameTokenStorage())
       chains += (chainRef -> newChain)
       newChain
     }
 
-    def newChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))): Chain =
+    def newChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))): Chain3 =
       addChainDef(ChainDef.New(jwtAlgo, UUID.randomUUID(), publicKey, initValue.map(_.noSpaces)))
 
-    def nestedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain =
+    def nestedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain3 =
       addChainDef(ChainDef.Fork(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, pos))
 
-    def derivedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, cdf: ChainDerivationFunction): Chain =
+    def derivedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, cdf: ChainDerivationFunction): Chain3 =
       addChainDef(ChainDef.Derived(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, cdf))
   }
 
