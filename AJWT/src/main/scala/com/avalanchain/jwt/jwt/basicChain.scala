@@ -148,7 +148,7 @@ package object basicChain {
     def getFrom(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed]
   }
   type FrameSigner = String => Frame => FrameToken
-  case class ChainState(frame: Option[FrameToken], lastRef: FrameRef, pos: Position)
+  case class ChainState(frame: Option[FrameToken], lastRef: FrameRef, pos: Position, lastValue: Json)
 
 
   type NodeId = String
@@ -163,7 +163,7 @@ package object basicChain {
 //    def pos: Position = state.pos
 //    def current: Option[FrameToken] = state.frame
 
-    private var state = currentState.getOrElse(ChainState(None, FrameRef(chainRef.sig), -1))
+    private var state = currentState.getOrElse(ChainState(None, FrameRef(chainRef.sig), -1, parse("{}").getOrElse(Json.Null)))
 
     def add(v: Json): Try[Unit] = {
       val newPos = state.pos + 1
@@ -172,7 +172,7 @@ package object basicChain {
         case ES512 => TypedJwtToken[FAsym](FAsym(chainRef, newPos, state.lastRef, v, keyPair.getPublic), keyPair.getPrivate).asInstanceOf[TypedJwtToken[Frame]]
       }
       tokenStorage.add(frameToken).map(_ => {
-        state = ChainState(Some(frameToken), FrameRef(frameToken), newPos)
+        state = ChainState(Some(frameToken), FrameRef(frameToken), newPos, v)
       })
     }
 //

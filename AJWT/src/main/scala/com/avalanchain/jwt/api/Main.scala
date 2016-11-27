@@ -2,17 +2,21 @@ package com.avalanchain.jwt.api
 
 import java.security.{KeyPair, PrivateKey, PublicKey}
 import java.util.UUID
-import java.util.concurrent.{ThreadLocalRandom}
+import java.util.concurrent.ThreadLocalRandom
 
 import akka.actor.{ActorSelection, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.actor.ActorPublisher
-import com.avalanchain.jwt.basicChain.ChainDef
+import com.avalanchain.jwt.basicChain._
+import com.avalanchain.jwt.jwt.actors.ActorNode
 import com.avalanchain.jwt.jwt.actors.network.NodeStatus
 import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
 import com.avalanchain.jwt.utils.CirceEncoders
 import com.typesafe.config.ConfigFactory
+import io.circe.Json
+import io.circe.parser._
 
 import scala.concurrent.{Awaitable, Future}
 //import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -50,16 +54,16 @@ import io.circe.syntax._
 import io.circe.generic.auto._
 
 import com.avalanchain.jwt.KeysDto._
+import com.avalanchain.jwt.basicChain.ChainDefCodecs._
 
 class Main(port: Int) extends Config with CorsSupport with CirceSupport with CirceEncoders {
 
-  import com.avalanchain.jwt.basicChain.ChainDefCodecs._
   import StockTick._
 
   val chainNode = new ChainNode(port, CurveContext.currentKeys, Set.empty)
-//  val chainNodeMonitor = ActorSelection(chainNode.node, "monitor")
   val demoNode: DemoNode = new DemoNode(chainNode)
 
+  private val globalContext = ExecutionContext.global
   private implicit val system = ActorSystem("webapi", ConfigFactory.load("application.conf"))
   protected implicit val executor: ExecutionContext = system.dispatcher
   protected val log: LoggingAdapter = Logging(system, getClass)
@@ -67,7 +71,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
 
   var childNodes: List[Awaitable[Main]] = List.empty
   def startChild(): Unit = {
-    childNodes = Future { new Main(0)}(ExecutionContext.global) :: childNodes
+    childNodes = Future { new Main(0)}(globalContext) :: childNodes
   }
 
   def userInfos() = {
@@ -137,34 +141,39 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
 //    } //~
   }
 
-  val httpPort = port + 1000
 
-  val localhost = "localhost"
+  def startHttp(localport: Int): Future[ServerBinding] = {
+    val httpPort = localport + 1000
 
-  val routes =
-    pathPrefix("swagger") {
-      getFromResourceDirectory("swagger") ~ pathSingleSlash(get(redirect("index.html", StatusCodes.PermanentRedirect)))
-    } ~
-    pathPrefix("v1") {
-      path("")(getFromResource("public/index.html")) ~
-      corsHandler(new NodeService(chainNode, startChild).route) ~
-      corsHandler(new ChainService(chainNode).route) ~
-      corsHandler(new AdminService().route) ~
-      corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), u => addUserInfo(u)).route)
-    } ~
-    pathPrefix("ws") {
-      wsRoute
-    } ~
-    corsHandler(pathSingleSlash(getFromResource("html/index.html"))) ~
-    corsHandler(getFromResourceDirectory("html/")) ~
-    corsHandler(new SwaggerDocService(system, localhost, httpPort).routes)
+    val localhost = "localhost"
 
-  val bindingFuture = Http().bindAndHandle(
-    handler = DebuggingDirectives.logRequestResult("log")(routes), interface = localhost, port = httpPort)
+    val routes =
+      pathPrefix("swagger") {
+        getFromResourceDirectory("swagger") ~ pathSingleSlash(get(redirect("index.html", StatusCodes.PermanentRedirect)))
+      } ~
+        pathPrefix("v1") {
+          path("")(getFromResource("public/index.html")) ~
+            corsHandler(new NodeService(chainNode, startChild).route) ~
+            corsHandler(new ChainService(chainNode).route) ~
+            corsHandler(new AdminService().route) ~
+            corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), u => addUserInfo(u)).route)
+        } ~
+        pathPrefix("ws") {
+          wsRoute
+        } ~
+        corsHandler(pathSingleSlash(getFromResource("html/index.html"))) ~
+        corsHandler(getFromResourceDirectory("html/")) ~
+        corsHandler(new SwaggerDocService(system, localhost, httpPort).routes)
 
-  println(s"Server online at ${localhost}:$httpPort/\nPress RETURN to stop...")
+    val bindingFuture = Http().bindAndHandle(
+      handler = DebuggingDirectives.logRequestResult("log")(routes), interface = localhost, port = httpPort)
+    println(s"Server online at ${localhost}:$httpPort/\nPress RETURN to stop...")
+    bindingFuture
+  }
+
+  val httpServer = chainNode.localport.flatMap(port => startHttp(port))
   StdIn.readLine() // let it run until user presses return
-  bindingFuture
+  httpServer
     .flatMap(_.unbind()) // trigger unbinding from the port
     .onComplete(_ => system.terminate()) // and shutdown when done
 }
@@ -176,3 +185,38 @@ object Main2 extends Main(2552) with App
 object Main3 extends Main(2553) with App
 
 object MainRnd extends Main(0) with App
+
+
+object MainCmd extends App {
+  val keyPair = CurveContext.currentKeys
+
+  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
+    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.noSpaces))
+    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+    chainDefToken
+  }
+
+  def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512): (ChainDefToken, ChainDef.Derived) = {
+    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, parentRef, ChainDerivationFunction.Map("function(a) { return { b = a.v + 'aaa' }; }"))
+    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+    (chainDefToken, chainDef)
+  }
+
+  def parseJson(j: String) = parse(j).right.toOption.get
+
+  val newChainDefToken = newChain()
+  val derivedChainTuple = derivedChain(ChainRef(newChainDefToken))
+
+  object ActorNode extends ActorNode {
+    override val port: Int = 2222
+  }
+  import ActorNode._
+
+  val nc = new com.avalanchain.jwt.jwt.actors.network.NewChain("ANC", newChainDefToken, keyPair)
+  val dc = new com.avalanchain.jwt.jwt.actors.network.DerivedChain("ADC", derivedChainTuple._1, keyPair, derivedChainTuple._2)
+
+  val printNC = nc.source.runForeach(frm => println(s"NewChain: $frm"))
+  val printDC = nc.source.runForeach(frm => println(s"DerivedChain: $frm"))
+
+  Source(List("A", "B", "C")).map(e => Cmd(parseJson(s"""{ "v": "${e}" }"""))).runWith(nc.sink)
+}

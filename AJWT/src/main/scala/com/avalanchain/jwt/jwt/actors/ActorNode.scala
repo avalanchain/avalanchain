@@ -2,7 +2,7 @@ package com.avalanchain.jwt.jwt.actors
 
 import java.net.InetAddress
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, ExtendedActorSystem}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -18,7 +18,6 @@ trait ActorNode {
 
   val port: Int
 
-  val localhost = InetAddress.getLocalHost.getHostAddress
   implicit val system = ActorSystem(SystemName,
     ConfigFactory.parseString(s"akka.remote.netty.tcp.host = ${localhost}")
       .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port = $port"))
@@ -26,4 +25,10 @@ trait ActorNode {
   implicit val materializer = ActorMaterializer()(system)
   implicit val executor: ExecutionContext = system.dispatcher
   implicit val timeout = Timeout(5 seconds)
+
+  private val myAddress = system.asInstanceOf[ExtendedActorSystem].provider.rootPath.address
+  val localhost = InetAddress.getLocalHost.getHostAddress
+//  val localport = myAddress.port.get
+  //myAddress.host
+
 }

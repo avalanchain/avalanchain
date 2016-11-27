@@ -16,8 +16,10 @@ import com.rbmhtechnology.eventuate.adapter.stream.{DurableEventSource, DurableE
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventProcessor._
 import com.rbmhtechnology.eventuate.log.leveldb.LeveldbEventLog
 import io.circe.{Decoder, Encoder, Json}
+import io.circe.parser._
 import io.circe.syntax._
 import io.circe.generic.auto._
+import cats.implicits._
 
 import scala.collection.immutable.Seq
 import scala.util.Try
@@ -27,12 +29,13 @@ import scala.util.Try
   */
 
 
-trait Chain {
-  val nodeId: NodeId
-  val chainDefToken: ChainDefToken
-  val keyPair: KeyPair
-  implicit val actorSystem: ActorSystem
-  implicit val materializer: Materializer
+abstract class Chain (
+  val nodeId: NodeId,
+  val chainDefToken: ChainDefToken,
+  val keyPair: KeyPair,
+  protected val commandLogName: Option[String],
+  implicit val actorSystem: ActorSystem,
+  implicit val materializer: Materializer) {
 
   if (chainDefToken.payload.isEmpty) throw new RuntimeException(s"Inconsistent ChainDefToken: '$chainDefToken'")
   val chainRef = ChainRef(chainDefToken)
@@ -40,12 +43,13 @@ trait Chain {
   def status = statusInternal
 
   protected def newId() = UUID.randomUUID().toString
-  protected def createLog(cr:ChainRef, id: String = ""): ActorRef =
-    actorSystem.actorOf(LeveldbEventLog.props(cr.sig + (if (id.isEmpty) "" else "." + id), nodeId))
+  protected def createLog(id: String = chainRef.sig): ActorRef =
+    actorSystem.actorOf(LeveldbEventLog.props(id, nodeId))
 
-  protected val commandLog: Option[ActorRef]
-  protected val eventLog = createLog(chainRef)
-  protected val initialState = ChainState(None, new FrameRef(chainRef.sig), -1)
+  protected val commandLog = commandLogName.map(createLog(_))
+  protected val eventLog = createLog()
+  protected val initialVal = parse("{}").getOrElse(Json.Null)
+  protected val initialState = ChainState(None, new FrameRef(chainRef.sig), -1, initialVal)
   def sourceFrame = Source.fromGraph(DurableEventSource(eventLog)).map(_.payload.asInstanceOf[FrameToken])
   def source = sourceFrame.map(_.payloadJson)
 
@@ -55,7 +59,7 @@ trait Chain {
   def current = currentValue
   def pos = currentPosition
 
-  protected val processCurrent = sourceFrame.runWith(Sink.foreach(frame => {
+  protected def processCurrent = sourceFrame.runWith(Sink.foreach(frame => {
     currentFrame = Some(frame)
     if (frame.payload.nonEmpty) {
       currentPosition = frame.payload.get.pos
@@ -70,7 +74,7 @@ trait Chain {
       case HS512 => TypedJwtToken[FSym](FSym(chainRef, newPos, state.lastRef, v), state.lastRef.sig).asInstanceOf[FrameToken]
       case ES512 => TypedJwtToken[FAsym](FAsym(chainRef, newPos, state.lastRef, v, keyPair.getPublic), keyPair.getPrivate).asInstanceOf[FrameToken]
     }
-    (ChainState(Some(token), FrameRef(token), newPos), Seq(token))
+    (ChainState(Some(token), FrameRef(token), newPos, v), Seq(token))
   }
 
   def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken])
@@ -82,11 +86,14 @@ trait Chain {
         .runWith(Sink.ignore))
 
 }
+//object Chain {
+//
+//}
 
-class NewChain(val nodeId: NodeId, val chainDefToken: ChainDefToken, val keyPair: KeyPair,
-               implicit val actorSystem: ActorSystem, implicit val materializer: Materializer) extends Chain {
+class NewChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair)
+               (implicit actorSystem: ActorSystem, materializer: Materializer)
+  extends Chain(nodeId, chainDefToken, keyPair, Some(ChainRef(chainDefToken).sig + "COM"), actorSystem, materializer) {
 
-  protected val commandLog = Some(createLog(chainRef, "COM"))
 
   def sink = Flow[Cmd].map(DurableEvent(_)).via(DurableEventWriter(newId, commandLog.get)).to(Sink.ignore)
 
@@ -98,18 +105,9 @@ class NewChain(val nodeId: NodeId, val chainDefToken: ChainDefToken, val keyPair
 }
 
 
-class DerivedChain(val nodeId: NodeId, val chainDefToken: ChainDefToken, val keyPair: KeyPair,
-                   implicit val actorSystem: ActorSystem, implicit val materializer: Materializer) extends Chain {
-
-  val derived: Derived = chainDefToken.payload.get match {
-    case derived: Derived => derived
-    case New(_, _, _, _) | Fork(_, _, _, _, _) => {
-      statusInternal = ChainStatus.Failed("Impossible case")
-      throw new RuntimeException("Impossible case")
-    }
-  }
-
-  protected val commandLog = Some(createLog(derived.parent))
+class DerivedChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair, derived: Derived)
+                   (implicit actorSystem: ActorSystem, materializer: Materializer)
+  extends Chain(nodeId, chainDefToken, keyPair, Some(derived.parent.sig), actorSystem, materializer) {
 
   val func: (Json, Json) => Seq[Json] =
     derived.cdf match {
@@ -124,7 +122,12 @@ class DerivedChain(val nodeId: NodeId, val chainDefToken: ChainDefToken, val key
 
   def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken]) = {
     event.payload match {
-      case ft: FrameToken => if (ft.payload.nonEmpty) toFrame(state, ft.payload.get.v) else {
+      case ft: FrameToken =>
+        if (ft.payload.nonEmpty) {
+          val ret = func(state.lastValue, ft.payload.get.v).map(v => toFrame(state, v)).unzip
+          (ret._1.last, ret._2.flatten)
+        }
+        else {
         statusInternal = ChainStatus.Failed(s"Incorrect FrameToken payload format: ${ft.payloadJson}")
         (state, Seq[FrameToken]())
       }

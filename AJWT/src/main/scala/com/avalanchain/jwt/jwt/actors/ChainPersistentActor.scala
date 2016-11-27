@@ -10,6 +10,7 @@ import io.circe.syntax._
 import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
+import cats.implicits._
 
 /**
   * Created by Yuriy Habarov on 21/05/2016.
@@ -34,10 +35,10 @@ class ChainPersistentActor(val chainDefToken: ChainDefToken, val snapshotInterva
 
   override def persistenceId = chainRef.sig
 
-  private var state: ChainState = ChainState(None, new FrameRef(chainRef.sig), -1) // pid expected to be chainRef
+  private var state: ChainState = ChainState(None, new FrameRef(chainRef.sig), -1, parse("{}").getOrElse(Json.Null)) // pid expected to be chainRef
 
   private def applyToken(frameToken: FrameToken): ChainState = {
-    ChainState(Some(frameToken), FrameRef(frameToken), frameToken.payload.get.pos)
+    ChainState(Some(frameToken), FrameRef(frameToken), frameToken.payload.get.pos, frameToken.payload.get.v)
   }
 
   private def updateState(chainState: ChainState): Unit = {
