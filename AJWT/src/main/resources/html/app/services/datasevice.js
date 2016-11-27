@@ -24,6 +24,7 @@
             commondata: commondata,
             getId: getId,
             getChat: getChat,
+            getNodes: getNodes,
             getUsers: getUsers,
             newUser:newUser,
             getYahoo: getYahoo
@@ -179,7 +180,30 @@
             return streams
         }
 
-        function getNodes() {
+        function getNodes(vm) {
+            if(vm){
+                vm.newData = function(info) {
+                    if(!info.NodeUp)
+                        return;
+                    vm.nodes = vm.nodes || [];
+                    var same = vm.nodes.filter(function (nd) {
+                        return nd.data.address.port == info.NodeUp.address.port
+                    });
+                    if(same.length == 0){
+                        var num = vm.nodes.length + 1;
+                        vm.nodes.push({
+                            id: getId(),
+                            data: info.NodeUp,
+                            name: 'ND-' + num,
+                            publicKey: getId(),
+                            cluster: data.clusters[0].id
+                        });
+                    }
+
+                };
+                websocketservice.nlisteners.addListener(vm);
+            }
+
             var nodes = [];
             for (var i = 1; i <= 2; i++) {
                 nodes.push({
@@ -230,7 +254,20 @@
         }
 
         function addNode() {
+            var sc = {};
+            return dataProvider.post(sc, '/v1/nodes/newNode', {},
+                function success(data, status) {
+                    logger('NODE ADDED ');
+                    //return data;
+                },
+                function fail(data, status) {
+                    if (data == "Already Added") {
+                        logWarning(data);
+                    } else {
+                        logError(data);
+                    }
 
+                });
         }
 
         function addStream() {

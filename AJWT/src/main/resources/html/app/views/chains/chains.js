@@ -48,6 +48,9 @@
             $rootScope.modal = {};
             $rootScope.modal.parent = parent;
             $rootScope.modal.code = code;
+            $rootScope.modal.radioModel = 'Map';
+            $rootScope.modal.max = 1;
+            $rootScope.modal.json = '{ "id": 1, "title": "node1", "nodes": [ { "id": 11, "title": "node1.1", "nodes": [ { "id": 111, "title": "node1.1.1", "nodes": [] } ] }, { "id": 12, "title": "node1.2", "nodes": [] } ] }';
             $rootScope.modal.editorOptions =  vm.editorOptions;
             $rootScope.modal.ok =function () {
                 return dataservice.newUser().then(function (data) {

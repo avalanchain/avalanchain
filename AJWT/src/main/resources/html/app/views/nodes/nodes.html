@@ -1,50 +1,27 @@
 <div class="wrapper wrapper-content animated fadeInRight" ng-controller="Nodes as vm">
-    <!-- <div class="row">
-        <div ng-hide="vm.nodes.length==0" class="col-lg-3" ng-repeat="node in vm.nodes track by $index">
-            <div class="contact-box center-version">
-                <div class="ibox-title">
-                    <span class="label label-active pull-right">Active</span>
-                    <h5>{{$index+1}}</h5>
-                </div>
-                <a ng-click="vm.showNode(node)">
-
-                    <i class="fa fa-table img-circle fa-5x"></i>
-                    <p class="m-b-xs">
-                        <strong>Cluster</strong>
-
-                        <small>{{node.cluster}}</small>
-                    </p>
-
-                    <p class="m-b-xs">
-                        <strong>ID</strong>
-
-                        {{node.id}}</p>
-
-                    <div class="font-bold">publicKey :
-                        {{node.publicKey}}</div>
-
-                </a>
-                <div class="contact-box-footer">
-                    <div class="m-t-xs btn-group">
-                        <a class="btn btn-xs btn-white">
-                            <i class="fa fa-times-o"></i>
-                            Delete
-                        </a>
-                        <a class="btn btn-xs btn-white">
-                            <i class="fa fa-pause"></i>
-                            Stop</a>
-                        <a class="btn btn-xs btn-white" ng-click="vm.showNode(node)">
-                            View</a>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="text-center">
+                <div class="ibox-content m-b-sm border-bottom">
+                    <div class="text-center">
+                        <h2>Create node</h2>
+                        <span>create new node by selecting
+                        </span>
+                        <button class="btn btn-danger  dim " type="button">
+                            <i class="fa fa-plus"></i>
+                            <span class="bold" ng-click="vm.addNode()">Add node</span>
+                        </button>
+                        button
+                        <!--{{vm.nds}}-->
                     </div>
                 </div>
-
             </div>
         </div>
-    </div> -->
+    </div>
     <div class="row">
         <div class="col-lg-12">
             <div class="row">
-                <div class="col-md-3" ng-repeat="node in vm.nodes track by $index">
+                <div class="col-md-4 col-lg-3" ng-repeat="node in vm.nodes track by $index">
                     <div class="ibox">
                         <div class="ibox-content product-box">
                             <div class="product-imitation" style="padding: 45px 0; cursor:pointer;" ng-click="vm.showNode(node)">
@@ -54,7 +31,7 @@
                                 <span class="product-price" style="background-color:#1ab394;">
                                     Active
                                 </span>
-                                <small class="text-muted">Node: {{$index+1}}
+                                <small class="text-muted">Port: {{node.data.address.port}}
                                 </small>
                                 <a ng-click="vm.showNode(node)" class="product-name">Name:
                                     {{node.name}}</a>
@@ -72,24 +49,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row" ng-hide="vm.nodes.length > 0">
-        <div class="col-lg-12">
-            <div class="text-center m-t-lg">
-                <div class="ibox-content m-b-sm border-bottom">
-                    <div class="text-center p-lg">
-                        <h2>Create node</h2>
-                        <span>create new node by selecting
-                        </span>
-                        <button class="btn btn-danger  dim " type="button">
-                            <i class="fa fa-plus"></i>
-                            <span class="bold">Add node</span>
-                        </button>
-                        button
                     </div>
                 </div>
             </div>

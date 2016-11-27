@@ -12,21 +12,27 @@
             this.path = path ? 'ws://' + host + path: 'ws://' + host + '/ws/yahoo';
             this.stream = $websocket(this.path);
             this.listeners = listeners || [];
+
+            // this.stream.onMessage(function(message) {
+            //     angular.forEach(listeners, function(l) {
+            //         $timeout(function () {
+            //             l.newData(JSON.parse(message.data));
+            //         });
+            //     })
+            // })
         }
         Listeners.prototype = {
             addListener: function (l) { this.listeners.push(l); },
             removeListener: function(l) {
                 this.listeners.pop(l);
             },
-            onMessage:{
+            onMessage: function (l){
 
             }
         };
 
         var ylisteners = new Listeners('/ws/yahoo');
-
-
-        var collection = [];
+        var nlisteners = new Listeners('/ws/nodes');
 
         ylisteners.stream.onMessage(function(message) {
             angular.forEach(ylisteners.listeners, function(l) {
@@ -36,8 +42,16 @@
             })
         });
 
+        nlisteners.stream.onMessage(function(message) {
+            angular.forEach(nlisteners.listeners, function(l) {
+                $timeout(function () {
+                    l.newData(JSON.parse(message.data));
+                });
+            })
+        });
+
         var methods = {
-            collection: collection,
+            nlisteners: nlisteners,
             ylisteners: ylisteners,
             get: function() {
                 ylisteners.stream.send(JSON.stringify({ action: 'get' }));
