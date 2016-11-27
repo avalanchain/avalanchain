@@ -52,9 +52,16 @@
                                                     <div class="pre" id="copytext{{$index}}">{{token.token}}</div>
                                                 </td>
                                                 <td>
-                                                    <button class="btn btn-white btn-sm" ngclipboard data-clipboard-target="#copytext{{$index}}"><i class="fa fa-copy"></i> Copy</button>
-                                                    <button class="btn btn-white btn-sm" ng-click="vm.Fork(token.token)"><i class="fa fa-code-fork"></i> Fork</button>
-                                                    <button class="btn btn-white btn-sm" ng-click="vm.Derived(token.token)"><i class="fa fa-copy"></i> Derived</button>
+                                                    <div class="btn-group-vertical">
+                                                        <button class="btn btn-outline btn-default" type="button" ngclipboard data-clipboard-target="#copytext{{$index}}">
+                                                            <i class="fa fa-copy"></i> Copy</button>
+                                                        <button class="btn btn-outline btn-default" type="button" ng-click="vm.Fork(token.token)">
+                                                            <i class="fa fa-code-fork"></i> Fork</button>
+                                                        <button class="btn btn-outline btn-default" type="button" ng-click="vm.Derived(token.token)">Derived</button>
+                                                    </div>
+                                                    <!--<button class="btn btn-white btn-sm" ngclipboard data-clipboard-target="#copytext{{$index}}"><i class="fa fa-copy"></i> Copy</button>-->
+                                                    <!--<button class="btn btn-white btn-sm" ng-click="vm.Fork(token.token)"><i class="fa fa-code-fork"></i> Fork</button>-->
+                                                    <!--<button class="btn btn-white btn-sm" ng-click="vm.Derived(token.token)"><i class="fa fa-copy"></i> Derived</button>-->
                                                 </td>
                                                 <td class="project-title">
                                                     <span class="label {{token.verified == true ? 'label-active': 'label-warning'}}">

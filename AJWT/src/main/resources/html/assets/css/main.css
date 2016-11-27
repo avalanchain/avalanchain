@@ -206,4 +206,5 @@
 
 .CodeMirror {
     height: auto!important;
+    min-height: 100px;
 }

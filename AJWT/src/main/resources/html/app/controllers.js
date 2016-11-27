@@ -15,15 +15,16 @@ function MainCtrl() {
 
 };
 
-function loginCtrl($scope, PermPermissionStore, $state) {
+function loginCtrl($scope, PermPermissionStore, $state, $sessionStorage, $rootScope) {
 
     var vm = this;
 
     vm.loginForm = function (user) {
         if (vm.login.$valid) {
+            $rootScope.$storage.isAuthorized = true;
             PermPermissionStore
                 .definePermission('isAuthorized', function () {
-                    return true;
+                    return $rootScope.$storage.isAuthorized;
                 });
             $state.go('index.admin');
         } else {

@@ -2,9 +2,9 @@
 (function() {
     'use strict';
     var controllerId = 'chains';
-    angular.module('avalanchain').controller(controllerId, ['common', '$uibModal', 'dataservice', 'jwtservice', '$rootScope', chains]);
+    angular.module('avalanchain').controller(controllerId, ['common', '$uibModal', 'dataservice', 'jwtservice', '$rootScope','$timeout', chains]);
 
-    function chains(common, $uibModal, dataservice, jwtservice, $rootScope) {
+    function chains(common, $uibModal, dataservice, jwtservice, $rootScope, $timeout) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -59,6 +59,12 @@
                 // dataservice.newUser().then(function (data) {
                 //     $rootScope.$emit('updateAccounts');
                 // });
+            };
+            $rootScope.modal.init = function () {
+                $timeout(function () {
+                    $rootScope.modal.refresh = true;
+                }, 200);
+
             };
             var modalInstance = $uibModal.open({
                 templateUrl: '/app/views/chains/derived.html',

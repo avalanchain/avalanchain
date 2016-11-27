@@ -15,17 +15,24 @@
         'luegg.directives',
         'permission',
         'permission.ui',
-        'ngWebSocket'
+        'ngWebSocket',
+        'ngStorage'
         // 'localytics.directives'
         // 'AdalAngular'
     ]);
 
 
-    app.run(['$templateCache', '$rootScope', '$state', '$stateParams', 'dataservice', 'PermPermissionStore', function ($templateCache, $rootScope, $state, $stateParams, dataservice, PermPermissionStore) {
+    app.run(['$templateCache', '$rootScope', '$state', '$stateParams', 'dataservice', 'PermPermissionStore', '$sessionStorage',
+        function ($templateCache, $rootScope, $state, $stateParams, dataservice, PermPermissionStore, $sessionStorage) {
        $rootScope.$state = $state;
-        PermPermissionStore
+            $rootScope.$storage = $sessionStorage;
+            $rootScope.$storage = $sessionStorage.$default({
+                isAuthorized: false
+            });
+
+            PermPermissionStore
             .definePermission('isAuthorized', function () {
-                return false;
+                return $rootScope.$storage.isAuthorized;
             });
 
         // PermPermissionStore.defineRole('AUTH', ['listEvents', 'editEvents']);
