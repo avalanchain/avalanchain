@@ -1,9 +1,9 @@
 ﻿(function() {
     'use strict';
     var controllerId = 'Nodes';
-    angular.module('avalanchain').controller(controllerId, ['common','dataservice','$state', Nodes]);
+    angular.module('avalanchain').controller(controllerId, ['$scope', 'common','dataservice','$state', Nodes]);
 
-    function Nodes(common, dataservice, $state) {
+    function Nodes($scope, common, dataservice, $state) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
 
@@ -21,6 +21,12 @@
             });
 
         }
+
+        $scope.$on("$destroy", function() {
+            if (angular.isDefined(vm.removeListener)) {
+                vm.removeListener();
+            }
+        });
 
         activate();
 

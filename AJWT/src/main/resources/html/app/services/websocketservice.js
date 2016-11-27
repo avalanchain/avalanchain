@@ -12,14 +12,6 @@
             this.path = path ? 'ws://' + host + path: 'ws://' + host + '/ws/yahoo';
             this.stream = $websocket(this.path);
             this.listeners = listeners || [];
-
-            // this.stream.onMessage(function(message) {
-            //     angular.forEach(listeners, function(l) {
-            //         $timeout(function () {
-            //             l.newData(JSON.parse(message.data));
-            //         });
-            //     })
-            // })
         }
         Listeners.prototype = {
             addListener: function (l) { this.listeners.push(l); },
@@ -40,6 +32,14 @@
                     l.newData(JSON.parse(message.data));
                 });
             })
+        });
+
+        ylisteners.stream.onOpen(function() {
+            console.log('yahoo connection open');
+        });
+
+        nlisteners.stream.onOpen(function() {
+            console.log('nodes connection open');
         });
 
         nlisteners.stream.onMessage(function(message) {

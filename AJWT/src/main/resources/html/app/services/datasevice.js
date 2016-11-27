@@ -183,8 +183,11 @@
         function getNodes(vm) {
             if(vm){
                 vm.newData = function(info) {
-                    if(!info.NodeUp)
+                    if(!info.NodeUp){
+                        logger('NODE ADDED Port: ' + info.NodeJoined.address.port);
                         return;
+                    }
+
                     vm.nodes = vm.nodes || [];
                     var same = vm.nodes.filter(function (nd) {
                         return nd.data.address.port == info.NodeUp.address.port
@@ -199,9 +202,13 @@
                             cluster: data.clusters[0].id
                         });
                     }
-
+                    data.nodes = vm.nodes;
+                };
+                vm.removeListener = function() {
+                    websocketservice.nlisteners.removeListener(vm);
                 };
                 websocketservice.nlisteners.addListener(vm);
+                vm.nodes = data.nodes;
             }
 
             var nodes = [];
@@ -257,7 +264,6 @@
             var sc = {};
             return dataProvider.post(sc, '/v1/nodes/newNode', {},
                 function success(data, status) {
-                    logger('NODE ADDED ');
                     //return data;
                 },
                 function fail(data, status) {
