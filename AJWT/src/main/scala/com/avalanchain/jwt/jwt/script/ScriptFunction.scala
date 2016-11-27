@@ -4,6 +4,8 @@ import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.utils.Pipe._
 import io.circe.Json
 
+import scala.util.control.NonFatal
+
 /**
   * Created by Yuriy Habarov on 16/05/2016.
   */
@@ -16,10 +18,29 @@ class ScriptFunction(script: Func) {
   engine.eval("function jw(ff, json) { var j = JSON.parse(json); var r = ff(j); return JSON.stringify(r); }; function jex(json) { return jw(f, json); }");
   private val invocable = engine.asInstanceOf[Invocable]
 
-  def invoke(json: Json) = invocable.invokeFunction("jex", json.asString.get).asInstanceOf[String] |> (Json.fromString)
+  def invoke(json: Json) = {
+    try {
+      println(s"json: ${json.noSpaces}")
+      val ret = invocable.invokeFunction("jex", json.asString.get).asInstanceOf[String]
+      println(s"invoke ret : ${ret}")
+      ret |> (Json.fromString)
+    } catch {
+      case NonFatal(ex) =>
+        println(ex)
+        s"""{ exception: ${ex.getMessage} }""" |> Json.fromString
+    }
+  }
 }
 object ScriptFunction {
-  def apply(script: Func): Json => Json = new ScriptFunction(script).invoke
+  def apply(script: Func): Json => Json = {
+    try {
+      new ScriptFunction(script).invoke
+    } catch {
+      case NonFatal(ex) =>
+        println(s"Exception during function compilation: ${ex.getMessage}")
+        throw ex
+    }
+  }
 }
 
 class ScriptPredicate(script: Func) {
@@ -31,10 +52,26 @@ class ScriptPredicate(script: Func) {
   engine.eval("function jw(f, json) { var j = JSON.parse(json); var r = f(j); return r; }; function jex(json) { return jw(f, json); }");
   private val invocable = engine.asInstanceOf[Invocable]
 
-  def invoke(json: Json) = invocable.invokeFunction("jex", json.asString.get).asInstanceOf[Boolean]
+  def invoke(json: Json) = {
+    try {
+      invocable.invokeFunction("jex", json.asString.get).asInstanceOf[Boolean]
+    } catch {
+      case NonFatal(ex) =>
+        println(ex)
+        false
+    }
+  }
 }
 object ScriptPredicate {
-  def apply(script: Func): Json => Boolean = new ScriptPredicate(script).invoke
+  def apply(script: Func): Json => Boolean = {
+    try {
+      new ScriptPredicate(script).invoke
+    } catch {
+      case NonFatal(ex) =>
+        println(s"Exception during function compilation: ${ex.getMessage}")
+        throw ex
+    }
+  }
 }
 
 class ScriptFunction2(script: Func) {
@@ -46,8 +83,24 @@ class ScriptFunction2(script: Func) {
   engine.eval("function jw(f, acc, json) { var j = JSON.parse(json); var aj = JSON.parse(acc); var r = f(acc, j); return r); }; function jex(json) { return jw(f, json); }");
   private val invocable = engine.asInstanceOf[Invocable]
 
-  def invoke(accJson: Json, json: Json) = invocable.invokeFunction("jex", accJson.asString.get, json.noSpaces).asInstanceOf[String] |> (Json.fromString)
+  def invoke(accJson: Json, json: Json) = {
+    try {
+      invocable.invokeFunction("jex", accJson.asString.get, json.asString.get).asInstanceOf[String] |> (Json.fromString)
+    } catch {
+      case NonFatal(ex) =>
+        println(ex)
+        s"""{ exception: ${ex.getMessage} }""" |> Json.fromString
+    }
+  }
 }
 object ScriptFunction2 {
-  def apply(script: Func): (Json, Json) => Json = new ScriptFunction2(script).invoke
+  def apply(script: Func): (Json, Json) => Json = {
+    try {
+      new ScriptFunction2(script).invoke
+    } catch {
+      case NonFatal(ex) =>
+        println(s"Exception during function compilation: ${ex.getMessage}")
+        throw ex
+    }
+  }
 }

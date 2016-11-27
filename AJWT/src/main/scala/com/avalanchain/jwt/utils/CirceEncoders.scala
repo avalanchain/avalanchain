@@ -28,3 +28,7 @@ trait CirceEncoders {
 //    override def apply(st: StockTick): Encoder[StockTick] = Encoder.forProduct3("symbol", "price", "dt")(st => (st.symbol, st.price, st.dt))
 //  }
 }
+
+trait CirceDecoders {
+
+}

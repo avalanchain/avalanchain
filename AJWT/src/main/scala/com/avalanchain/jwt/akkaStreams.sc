@@ -37,6 +37,13 @@ val keyPair = CurveContext.currentKeys
 //println(s"x1: $x1")
 ////println(s"y: $y")
 
+val jsn = Json.fromString("{ \"a\": 5 }")
+jsn.toString()
+println(jsn.noSpaces)
+println(jsn.asString.get)
+
+val s = """a"a" a """
+
 
 val chainDef: ChainDef = ChainDef.New(JwtAlgo.ES512, UUID.randomUUID(), keyPair.getPublic, Some(Json.fromString("{ \"a\": 5 }")))
 val j = chainDef.asJson

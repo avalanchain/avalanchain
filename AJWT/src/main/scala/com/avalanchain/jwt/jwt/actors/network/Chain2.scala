@@ -34,6 +34,7 @@ abstract class Chain (
   val chainDefToken: ChainDefToken,
   val keyPair: KeyPair,
   protected val commandLogName: Option[String],
+  protected val commandLogRef: Option[ActorRef],
   implicit val actorSystem: ActorSystem,
   implicit val materializer: Materializer) {
 
@@ -43,14 +44,18 @@ abstract class Chain (
   def status = statusInternal
 
   protected def newId() = UUID.randomUUID().toString
-  protected def createLog(id: String = chainRef.sig): ActorRef =
-    actorSystem.actorOf(LeveldbEventLog.props(id, nodeId))
+  protected def createLog(id: String = chainRef.sig): ActorRef = {
+    val actorRef = actorSystem.actorOf(LeveldbEventLog.props(id, nodeId))
+    println(s"Log created: $id")
+    actorRef
+  }
 
-  protected val commandLog = commandLogName.map(createLog(_))
-  protected val eventLog = createLog()
+  protected val commandLog = Seq(commandLogRef, commandLogName.map(createLog(_))).filter(_.nonEmpty).head
+  val eventLog = createLog()
   protected val initialVal = parse("{}").getOrElse(Json.Null)
   protected val initialState = ChainState(None, new FrameRef(chainRef.sig), -1, initialVal)
-  def sourceFrame = Source.fromGraph(DurableEventSource(eventLog)).map(_.payload.asInstanceOf[FrameToken])
+  def sourceDES = Source.fromGraph(DurableEventSource(eventLog))
+  def sourceFrame = sourceDES.map(_.payload.asInstanceOf[FrameToken])
   def source = sourceFrame.map(_.payloadJson)
 
   private var currentFrame: Option[FrameToken] = None
@@ -79,7 +84,7 @@ abstract class Chain (
 
   def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken])
 
-  protected val process =
+  def process() =
     commandLog.map(
       cl => Source.fromGraph(DurableEventSource(cl))
         .via(statefulProcessor(newId, eventLog)(initialState)(processingLogic))
@@ -92,12 +97,12 @@ abstract class Chain (
 
 class NewChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair)
                (implicit actorSystem: ActorSystem, materializer: Materializer)
-  extends Chain(nodeId, chainDefToken, keyPair, Some(ChainRef(chainDefToken).sig + "COM"), actorSystem, materializer) {
+  extends Chain(nodeId, chainDefToken, keyPair, Some(ChainRef(chainDefToken).sig + "COM"), None, actorSystem, materializer) {
 
 
   def sink = Flow[Cmd].map(DurableEvent(_)).via(DurableEventWriter(newId, commandLog.get)).to(Sink.ignore)
 
-  def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken]) = {
+  override def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken]) = {
     event.payload match {
       case cmd: Cmd => toFrame(state, cmd.v)
     }
@@ -105,9 +110,9 @@ class NewChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair)
 }
 
 
-class DerivedChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair, derived: Derived)
+class DerivedChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair, derived: Derived, parentLogRef: ActorRef)
                    (implicit actorSystem: ActorSystem, materializer: Materializer)
-  extends Chain(nodeId, chainDefToken, keyPair, Some(derived.parent.sig), actorSystem, materializer) {
+  extends Chain(nodeId, chainDefToken, keyPair, None, Some(parentLogRef), actorSystem, materializer) {
 
   val func: (Json, Json) => Seq[Json] =
     derived.cdf match {
@@ -120,17 +125,22 @@ class DerivedChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPai
       case Reduce(f) => (acc, e) => Seq(ScriptFunction2(f)(acc, e))
     }
 
-  def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken]) = {
+  override def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken]) = {
     event.payload match {
-      case ft: FrameToken =>
+      case jt: JwtToken =>
+        val ft = jt.asInstanceOf[FrameToken]
         if (ft.payload.nonEmpty) {
           val ret = func(state.lastValue, ft.payload.get.v).map(v => toFrame(state, v)).unzip
           (ret._1.last, ret._2.flatten)
         }
         else {
-        statusInternal = ChainStatus.Failed(s"Incorrect FrameToken payload format: ${ft.payloadJson}")
+          statusInternal = ChainStatus.Failed(s"Incorrect FrameToken payload format: ${ft.payloadJson}")
+          (state, Seq[FrameToken]())
+        }
+      case _ =>
+        println(s"Incorrect payload: ${event.payload}!")
+        statusInternal = ChainStatus.Failed(s"Incorrect payload: ${event.payload}!")
         (state, Seq[FrameToken]())
-      }
     }
   }
 }

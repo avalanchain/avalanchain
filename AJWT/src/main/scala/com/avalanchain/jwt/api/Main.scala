@@ -14,8 +14,12 @@ import com.avalanchain.jwt.jwt.actors.ActorNode
 import com.avalanchain.jwt.jwt.actors.network.NodeStatus
 import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
 import com.avalanchain.jwt.utils.CirceEncoders
+import com.rbmhtechnology.eventuate.adapter.stream.DurableEventProcessor._
+import com.rbmhtechnology.eventuate.adapter.stream.DurableEventSource
+import com.rbmhtechnology.eventuate.log.leveldb.LeveldbEventLog
 import com.typesafe.config.ConfigFactory
 import io.circe.Json
+import io.circe.syntax._
 import io.circe.parser._
 
 import scala.concurrent.{Awaitable, Future}
@@ -197,12 +201,12 @@ object MainCmd extends App {
   }
 
   def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512): (ChainDefToken, ChainDef.Derived) = {
-    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, parentRef, ChainDerivationFunction.Map("function(a) { return { b = a.v + 'aaa' }; }"))
+    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     (chainDefToken, chainDef)
   }
 
-  def parseJson(j: String) = parse(j).right.toOption.get
+  def parseJson(j: String) = Json.fromString(j)
 
   val newChainDefToken = newChain()
   val derivedChainTuple = derivedChain(ChainRef(newChainDefToken))
@@ -212,11 +216,23 @@ object MainCmd extends App {
   }
   import ActorNode._
 
-  val nc = new com.avalanchain.jwt.jwt.actors.network.NewChain("ANC", newChainDefToken, keyPair)
-  val dc = new com.avalanchain.jwt.jwt.actors.network.DerivedChain("ADC", derivedChainTuple._1, keyPair, derivedChainTuple._2)
+  val nc = new com.avalanchain.jwt.jwt.actors.network.NewChain("AC", newChainDefToken, keyPair)
+  val dc = new com.avalanchain.jwt.jwt.actors.network.DerivedChain("AC", derivedChainTuple._1, keyPair, derivedChainTuple._2, nc.eventLog)
 
+//  val printNCDES = nc.sourceFrame.runForeach(frm => println(s"NewChain DES: $frm"))
+//  val printDCDES = dc.sourceFrame.runForeach(frm => println(s"DerivedChain DES: $frm"))
+
+//  val printNCF = nc.sourceFrame.runForeach(frm => println(s"NewChain F: $frm"))
+//  val printDCF = dc.sourceFrame.runForeach(frm => println(s"DerivedChain F: $frm"))
+//
   val printNC = nc.source.runForeach(frm => println(s"NewChain: $frm"))
-  val printDC = nc.source.runForeach(frm => println(s"DerivedChain: $frm"))
+  val printDC = dc.source.runForeach(frm => println(s"DerivedChain: $frm"))
 
-  Source(List("A", "B", "C")).map(e => Cmd(parseJson(s"""{ "v": "${e}" }"""))).runWith(nc.sink)
+  nc.process()
+  dc.process()
+
+  Source.fromGraph(DurableEventSource(nc.eventLog))
+    .runWith(Sink.foreach(e => println(s"aaa $e")))
+
+  Source(List("A", "B", "C")).map(e => Cmd(parseJson(s"""{ "e": "${e}" }"""))).runWith(nc.sink)
 }
