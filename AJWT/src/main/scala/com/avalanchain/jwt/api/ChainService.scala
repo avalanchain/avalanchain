@@ -26,26 +26,33 @@ class ChainService(chainNode: ChainNode)(implicit encoder: Encoder[ChainDef], de
   //val a = List[ChainDefToken]().asJson
 
   val route = pathPrefix("chains") {
-    allchains ~ newchain
+    path("allChains") {
+      allChains
+    } ~
+    path("newChain") {
+      newChain
+    }
   }
 
+  @Path("newChain")
   @ApiOperation(value = "Create New Chain", notes = "", nickname = "newchain", httpMethod = "POST")
   @ApiResponses(Array(
     new ApiResponse(code = 201, message = "Chain created", response = classOf[ChainDefToken]),
     new ApiResponse(code = 409, message = "Internal server error")
   ))
-  def newchain =
+  def newChain =
     post {
       onSuccess(chainNode.newChain()) { node =>
         complete(StatusCodes.Created, node.chainDefToken)
       }
     }
 
+  @Path("allChains")
   @ApiOperation(httpMethod = "GET", response = classOf[List[ChainDefToken]], value = "Returns the list of active chains")
   @ApiResponses(Array(
     new ApiResponse(code = 200, message = "Active Chains", response = classOf[List[ChainDefToken]])
   ))
-  def allchains =
+  def allChains =
     get {
       onSuccess(chainNode.chains()) { chains =>
         completeWith(instanceOf[List[ChainDefToken]])(_ (chains.values.toList))
