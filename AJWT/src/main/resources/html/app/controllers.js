@@ -26,7 +26,7 @@ function loginCtrl($scope, PermPermissionStore, $state, $sessionStorage, $rootSc
                 .definePermission('isAuthorized', function () {
                     return $rootScope.$storage.isAuthorized;
                 });
-            $state.go('index.admin');
+            $state.go('admin.users');
         } else {
             vm.login.submitted = true;
         }
