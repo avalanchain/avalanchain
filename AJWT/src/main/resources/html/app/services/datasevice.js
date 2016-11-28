@@ -50,7 +50,7 @@
                     //if(same.length == 0){
                     vm.messages.push({
                         id: getId(),
-                        name: names[1],
+                        name: mes.nodeName,
                         date: mes.dt,
                         message: mes.message,
                         side: sides[1],

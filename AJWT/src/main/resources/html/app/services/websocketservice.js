@@ -21,6 +21,9 @@
             });
             this.stream.onError(function(event) {
                 console.log('connection Error', event);
+                // function reOpenconn() {
+                //
+                // }
             });
         }
         Listeners.prototype = {
