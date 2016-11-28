@@ -9,7 +9,7 @@ import akka.http.scaladsl.server.Directives
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import com.avalanchain.jwt.basicChain.{Cmd, FrameToken}
+import com.avalanchain.jwt.basicChain.{Cmd, FrameToken, FrameTokenCodecs}
 import com.avalanchain.jwt.jwt.actors.ChainNode
 import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
 import com.avalanchain.jwt.utils.{CirceDecoders, CirceEncoders}
@@ -30,7 +30,7 @@ case class ChatTweet(msg: String)
 @Path("chat")
 @Api(value = "/chat", produces = "application/json")
 class ChatService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, materializer: Materializer)
-  extends Directives with CorsSupport with CirceSupport with CirceEncoders with CirceDecoders {
+  extends Directives with CorsSupport with CirceSupport with CirceEncoders with CirceDecoders with FrameTokenCodecs {
   import scala.concurrent.duration._
 
   implicit val timeout = Timeout(2 seconds)

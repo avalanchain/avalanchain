@@ -136,6 +136,13 @@ package object basicChain {
     if (pos < 0) throw new RuntimeException(s"Frame pos cannot be negative, but found $pos")
   }
   type FrameToken = TypedJwtToken[Frame]
+  trait FrameTokenCodecs {
+    import io.circe.Decoder, io.circe.generic.semiauto._
+    implicit val encoderFrameToken: Encoder[FrameToken] = deriveEncoder
+    implicit val decoderFrameToken: Decoder[FrameToken] = deriveDecoder
+  }
+  object FrameTokenCodecs extends ChainDefCodecs
+
 
   sealed trait ChainStatus
   object ChainStatus {
