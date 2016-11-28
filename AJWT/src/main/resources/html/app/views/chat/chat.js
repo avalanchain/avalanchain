@@ -9,29 +9,38 @@
         var log = getLogFn(controllerId);
         var vm = this;
 
-        dataservice.getData().then(function(data) {
-            vm.chat = data.chat;
-            vm.messages = vm.chat.messages;
-            vm.users = vm.chat.users;
-            vm.lastMessage = new Date();
-            vm.lastMessage = vm.chat.lastMessage
+        // dataservice.getData().then(function(data) {
+        //     vm.chat = data.chat;
+        //     vm.messages = vm.chat.messages;
+        //     vm.users = vm.chat.users;
+        //     vm.lastMessage = new Date();
+        //     vm.lastMessage = vm.chat.lastMessage
+        // });
+        dataservice.getChat(vm);
+        vm.users = [];
+        vm.users.push({
+            id: dataservice.getId(),
+            name: 'you'
         });
-
+        vm.users.push({
+            id: dataservice.getId(),
+            name: 'server'
+        });
         vm.send = function(message) {
             dataservice.sendMessage(message).then(function(data) {
                 var mes = data.data.msg;
-                if (message.length > 0) {
-                    vm.messages.push({
-                        id: dataservice.getId(),
-                        name: vm.users[0].name,
-                        date: new Date(),
-                        message: mes,
-                        side: 'right',
-
-                    })
-                }
+                // if (message.length > 0) {
+                //     vm.messages.push({
+                //         id: dataservice.getId(),
+                //         name: vm.users[0].name,
+                //         date: new Date(),
+                //         message: mes,
+                //         side: 'right',
+                //
+                //     })
+                // }
                 vm.message = '';
-                vm.lastMessage = new Date();
+                // vm.lastMessage = new Date();
             });
 
         };

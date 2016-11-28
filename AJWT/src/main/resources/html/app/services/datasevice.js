@@ -34,41 +34,40 @@
 
         return service;
 
-        function getChat() {
-            var accounts = [];
-            var sc = {};
-            var chat = {};
-            chat.messages = [];
-            chat.users = [];
-            chat.lastMessage = new Date();
-            chat.users.push({
-                id: getId(),
-                name: 'you'
-            });
-            chat.users.push({
-                id: getId(),
-                name: 'server'
-            });
+        function getChat(vm) {
+            vm.messages = [];
+
+            vm.lastMessage = new Date();
+
             var names = ['you', 'server'];
             var sides = ['right', 'left'];
-            var testMessages = ['Server is on', 'cluster created', 'admin subscribed to the server: ' + chat.users[1].id];
+            if(vm){
+                vm.newData = function(mes) {
+                    vm.messages = vm.messages || [];
+                    // var same = vm.chat.messages.filter(function (nd) {
+                    //     return nd.data.address.port == info.NodeUp.address.port
+                    // });
+                    //if(same.length == 0){
+                    vm.messages.push({
+                        id: getId(),
+                        name: names[1],
+                        date: mes.dt,
+                        message: mes.message,
+                        side: sides[1],
 
-            for (var i = 0; i < 3; i++) {
-                chat.messages.push({
-                    id: getId(),
-                    name: chat.users[1].name,
-                    date: new Date(),
-                    message: testMessages[i],
-                    side: sides[1],
+                    })
+                    vm.lastMessage = new Date();
+                    //}
+                    data.messages = vm.messages;
+                    data.nodesLoaded=true;
+                };
 
-                })
-                chat.lastMessage = new Date();
+                vm.removeListener = function() {
+                    websocketservice.mlisteners.removeListener(vm);
+                };
+                websocketservice.mlisteners.addListener(vm);
+                vm.messages = data.messages;
             }
-
-            return chat;
-            // return dataProvider.get(sc, '/api/account/all', function (data, status) {
-            //     //$scope.GetAllProgresses = data;
-            // });
         }
         
         function sendMessage(mes) {
@@ -398,7 +397,7 @@
             }
             data.accounts = data.accounts ? data.accounts : getAccounts();
 
-            data.chat = data.chat ? data.chat : getChat();
+            data.messages = data.messages ? data.messages : getChat(data);
 
             $timeout(function () {
                 defer.resolve(data);

@@ -16,8 +16,11 @@
             this.stream.onOpen(function() {
                 console.log('connection open: ' + this.url);
             });
+            this.stream.onClose(function(event) {
+                console.log('connection closed', event);
+            });
             this.stream.onError(function(event) {
-                console.log('connection Error'+event);
+                console.log('connection Error', event);
             });
         }
         Listeners.prototype = {
@@ -32,7 +35,7 @@
 
         var ylisteners = new Listeners('/ws/yahoo', 'yahoo');
         var nlisteners = new Listeners('/ws/nodes', 'nodes');
-        // var mlisteners = new Listeners('/ws/messages');
+        var mlisteners = new Listeners('/ws/chat', 'chat');
 
 
         ylisteners.stream.onMessage(function(message) {
@@ -43,21 +46,13 @@
             })
         });
 
-        // mlisteners.stream.onMessage(function(message) {
-        //     angular.forEach(ylisteners.listeners, function(l) {
-        //         $timeout(function () {
-        //             l.newData(JSON.parse(message.data));
-        //         });
-        //     })
-        // });
-
-        // ylisteners.stream.onOpen(function() {
-        //     console.log('yahoo connection open');
-        // });
-        //
-        // nlisteners.stream.onOpen(function() {
-        //     console.log('nodes connection open');
-        // });
+        mlisteners.stream.onMessage(function(message) {
+            angular.forEach(mlisteners.listeners, function(l) {
+                $timeout(function () {
+                    l.newData(JSON.parse(message.data));
+                });
+            })
+        });
 
         nlisteners.stream.onMessage(function(message) {
             var mes = JSON.parse(message.data);
@@ -74,6 +69,7 @@
         var methods = {
             nlisteners: nlisteners,
             ylisteners: ylisteners,
+            mlisteners: mlisteners,
             get: function() {
                 ylisteners.stream.send(JSON.stringify({ action: 'get' }));
             }
