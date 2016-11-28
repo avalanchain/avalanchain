@@ -20,4 +20,10 @@
             return [];
         }
     });
+    app.filter('moment', function () {
+        return function (date) {
+            var dt =moment(date, "YYYYMMDD").fromNow();
+            return dt;
+        }
+    });
 })();

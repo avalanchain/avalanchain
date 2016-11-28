@@ -43,9 +43,13 @@
         });
 
         nlisteners.stream.onMessage(function(message) {
+            var mes = JSON.parse(message.data);
+            if(!mes.NodeUp){
+                log('NODE ADDED Port: ' + mes.NodeJoined.address.port);
+            }
             angular.forEach(nlisteners.listeners, function(l) {
                 $timeout(function () {
-                    l.newData(JSON.parse(message.data));
+                    l.newData(mes);
                 });
             })
         });

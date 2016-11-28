@@ -27,12 +27,12 @@
                 vm.removeListener();
             }
         });
-        vm.newData = function(info) {
-            if(!info.NodeUp){
-                log('NODE ADDED Port: ' + info.NodeJoined.address.port);
-                return;
-            }
-        }
+        // vm.newData = function(info) {
+        //     if(!info.NodeUp){
+        //         log('NODE ADDED Port: ' + info.NodeJoined.address.port);
+        //         return;
+        //     }
+        // }
 
         activate();
 

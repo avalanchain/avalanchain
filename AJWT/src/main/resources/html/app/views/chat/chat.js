@@ -18,18 +18,22 @@
         });
 
         vm.send = function(message) {
-            if (message.length > 0) {
-                vm.messages.push({
-                    id: dataservice.getId(),
-                    name: vm.users[0].name,
-                    date: new Date(),
-                    message: message,
-                    side: 'right',
+            dataservice.sendMessage(message).then(function(data) {
+                var mes = data.data.msg;
+                if (message.length > 0) {
+                    vm.messages.push({
+                        id: dataservice.getId(),
+                        name: vm.users[0].name,
+                        date: new Date(),
+                        message: mes,
+                        side: 'right',
 
-                })
-            }
-            vm.message = '';
-            vm.lastMessage = new Date();
+                    })
+                }
+                vm.message = '';
+                vm.lastMessage = new Date();
+            });
+
         };
 
 

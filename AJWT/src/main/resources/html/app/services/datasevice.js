@@ -25,6 +25,7 @@
             commondata: commondata,
             getId: getId,
             getChat: getChat,
+            sendMessage: sendMessage,
             getNodes: getNodes,
             getUsers: getUsers,
             newUser:newUser,
@@ -68,6 +69,22 @@
             // return dataProvider.get(sc, '/api/account/all', function (data, status) {
             //     //$scope.GetAllProgresses = data;
             // });
+        }
+        
+        function sendMessage(mes) {
+            var message = {msg:mes};
+            return dataProvider.post({}, '/v1/chat/newMessage', message,
+                function success(data, status) {
+                    return data;
+                },
+                function fail(data, status) {
+                    if (data == "Already Added") {
+                        logWarning(data);
+                    } else {
+                        logError(data);
+                    }
+
+                });
         }
 
         function getAccounts() {
@@ -186,10 +203,8 @@
             if(vm){
                 vm.newData = function(info) {
                     if(!info.NodeUp){
-                        //logger('NODE ADDED Port: ' + info.NodeJoined.address.port);
                         return;
                     }
-
                     vm.nodes = vm.nodes || [];
                     var same = vm.nodes.filter(function (nd) {
                         return nd.data.address.port == info.NodeUp.address.port
