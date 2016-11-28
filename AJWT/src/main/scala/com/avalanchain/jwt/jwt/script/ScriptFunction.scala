@@ -20,9 +20,7 @@ class ScriptFunction(script: Func) {
 
   def invoke(json: Json) = {
     try {
-      println(s"json: ${json.noSpaces}")
       val ret = invocable.invokeFunction("jex", json.asString.get).asInstanceOf[String]
-      println(s"invoke ret : ${ret}")
       ret |> (Json.fromString)
     } catch {
       case NonFatal(ex) =>

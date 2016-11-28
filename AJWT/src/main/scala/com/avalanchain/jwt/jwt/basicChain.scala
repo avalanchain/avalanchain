@@ -16,6 +16,7 @@ import pdi.jwt.exceptions.JwtLengthException
 import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 import cats.implicits._
 import com.avalanchain.jwt.KeysDto.PubKey
+import com.avalanchain.jwt.basicChain.TypedJwtToken
 
 import scala.collection.immutable.Map
 import scala.util.{Success, Try}
@@ -25,7 +26,7 @@ import scala.concurrent.duration._
   * Created by Yuriy Habarov on 08/05/2016.
   */
 package object basicChain {
-  type Id = UUID
+  type Id = String
   type Position = Int
   type JsonStr = String
 
@@ -36,6 +37,9 @@ package object basicChain {
   }
 
   case class ResourceGroup(name: String)
+  object ResourceGroup {
+    val ALL = ResourceGroup("_ALL_")
+  }
 
   type Func = String
   type Func1 = Func
@@ -56,11 +60,11 @@ package object basicChain {
     final case object ES512 extends JwtAlgo { override def toString = "ES512" }
   }
 
-  sealed trait ChainDef extends JwtPayload.Asym { val algo: JwtAlgo; val id: Id; val pub: PubKey }
+  sealed trait ChainDef extends JwtPayload.Asym { val algo: JwtAlgo; val id: Id; val pub: PubKey; val rg: ResourceGroup }
   object ChainDef {
-    final case class New(algo: JwtAlgo, id: Id, pub: PubKey, init: Option[JsonStr]) extends ChainDef
-    final case class Fork(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, pos: Position) extends ChainDef
-    final case class Derived(algo: JwtAlgo, id: Id, pub: PubKey, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
+    final case class New(algo: JwtAlgo, id: Id, pub: PubKey, rg: ResourceGroup, init: Option[JsonStr]) extends ChainDef
+    final case class Fork(algo: JwtAlgo, id: Id, pub: PubKey, rg: ResourceGroup, parent: ChainRef, pos: Position) extends ChainDef
+    final case class Derived(algo: JwtAlgo, id: Id, pub: PubKey, rg: ResourceGroup, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
   }
   object ChainDefCodecs {
     import io.circe.Decoder, io.circe.generic.semiauto._
@@ -151,8 +155,12 @@ package object basicChain {
   case class ChainState(frame: Option[FrameToken], lastRef: FrameRef, pos: Position, lastValue: Json)
 
 
-  type NodeId = String
-
+  case class NodeId(name: String, host: String, port: Int, pub: PubKey) extends JwtPayload.Asym
+  type NodeIdToken = TypedJwtToken[NodeId]
+  object NodeIdToken {
+    def apply(name: String, host: String, port: Int, pub: PubKey, privateKey: PrivateKey): NodeIdToken =
+      TypedJwtToken[NodeId](NodeId(name, host, port, pub), privateKey)
+  }
 
   class Chain3(val chainDefToken: ChainDefToken, val keyPair: KeyPair,
                tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None)(implicit actorRefFactory: ActorRefFactory) {
@@ -230,14 +238,14 @@ package object basicChain {
       newChain
     }
 
-    def newChain(jwtAlgo: JwtAlgo, initValue: Option[Json] = Some(Json.fromString("{}"))): Chain3 =
-      addChainDef(ChainDef.New(jwtAlgo, UUID.randomUUID(), publicKey, initValue.map(_.noSpaces)))
+    def newChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))): Chain3 =
+      addChainDef(ChainDef.New(jwtAlgo, id, publicKey, ResourceGroup.ALL, initValue.map(_.noSpaces)))
 
-    def nestedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, pos: Position): Chain3 =
-      addChainDef(ChainDef.Fork(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, pos))
+    def nestedChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), parentChainRef: ChainRef, pos: Position): Chain3 =
+      addChainDef(ChainDef.Fork(jwtAlgo, id, publicKey, ResourceGroup.ALL, parentChainRef, pos))
 
-    def derivedChain(jwtAlgo: JwtAlgo, parentChainRef: ChainRef, cdf: ChainDerivationFunction): Chain3 =
-      addChainDef(ChainDef.Derived(jwtAlgo, UUID.randomUUID(), publicKey, parentChainRef, cdf))
+    def derivedChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), parentChainRef: ChainRef, cdf: ChainDerivationFunction): Chain3 =
+      addChainDef(ChainDef.Derived(jwtAlgo, id, publicKey, ResourceGroup.ALL, parentChainRef, cdf))
   }
 
 

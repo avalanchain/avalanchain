@@ -42,7 +42,7 @@ class ChainService(chainNode: ChainNode)(implicit encoder: Encoder[ChainDef], de
   ))
   def newChain =
     post {
-      onSuccess(chainNode.newChain()) { node =>
+      onSuccess(chainNode.newChain2()) { node =>
         complete(StatusCodes.Created, node.chainDefToken)
       }
     }

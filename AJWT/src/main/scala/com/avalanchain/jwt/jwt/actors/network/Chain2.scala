@@ -30,7 +30,7 @@ import scala.util.Try
 
 
 abstract class Chain (
-  val nodeId: NodeId,
+  val nodeId: NodeIdToken,
   val chainDefToken: ChainDefToken,
   val keyPair: KeyPair,
   protected val commandLogName: Option[String],
@@ -45,7 +45,7 @@ abstract class Chain (
 
   protected def newId() = UUID.randomUUID().toString
   protected def createLog(id: String = chainRef.sig): ActorRef = {
-    val actorRef = actorSystem.actorOf(LeveldbEventLog.props(id, nodeId))
+    val actorRef = actorSystem.actorOf(LeveldbEventLog.props(id, nodeId.sig))
     println(s"Log created: $id")
     actorRef
   }
@@ -95,7 +95,7 @@ abstract class Chain (
 //
 //}
 
-class NewChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair)
+class NewChain(nodeId: NodeIdToken, chainDefToken: ChainDefToken, keyPair: KeyPair)
                (implicit actorSystem: ActorSystem, materializer: Materializer)
   extends Chain(nodeId, chainDefToken, keyPair, Some(ChainRef(chainDefToken).sig + "COM"), None, actorSystem, materializer) {
 
@@ -110,7 +110,7 @@ class NewChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair)
 }
 
 
-class DerivedChain(nodeId: NodeId, chainDefToken: ChainDefToken, keyPair: KeyPair, derived: Derived, parentLogRef: ActorRef)
+class DerivedChain(nodeId: NodeIdToken, chainDefToken: ChainDefToken, keyPair: KeyPair, derived: Derived, parentLogRef: ActorRef)
                    (implicit actorSystem: ActorSystem, materializer: Materializer)
   extends Chain(nodeId, chainDefToken, keyPair, None, Some(parentLogRef), actorSystem, materializer) {
 

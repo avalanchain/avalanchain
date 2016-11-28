@@ -11,7 +11,7 @@ import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.actor.ActorPublisher
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.actors.ActorNode
-import com.avalanchain.jwt.jwt.actors.network.NodeStatus
+import com.avalanchain.jwt.jwt.actors.network.{DerivedChain, NewChain, NodeStatus}
 import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
 import com.avalanchain.jwt.utils.CirceEncoders
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventProcessor._
@@ -195,18 +195,18 @@ object MainCmd extends App {
   val keyPair = CurveContext.currentKeys
 
   def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
-    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.get))
+    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.get))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     chainDefToken
   }
 
   def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512): (ChainDefToken, ChainDef.Derived) = {
-    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, ResourceGroup.ALL, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
+    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     (chainDefToken, chainDef)
   }
 
-  def parseJson(j: String) = Json.fromString(j)
+  def toJson(j: String) = Json.fromString(j)
 
   val newChainDefToken = newChain()
   val derivedChainTuple = derivedChain(ChainRef(newChainDefToken))
@@ -216,8 +216,9 @@ object MainCmd extends App {
   }
   import ActorNode._
 
-  val nc = new com.avalanchain.jwt.jwt.actors.network.NewChain("AC", newChainDefToken, keyPair)
-  val dc = new com.avalanchain.jwt.jwt.actors.network.DerivedChain("AC", derivedChainTuple._1, keyPair, derivedChainTuple._2, nc.eventLog)
+  private val nodeIdToken: NodeIdToken = NodeIdToken("AC", "localhost", port, keyPair.getPublic, keyPair.getPrivate)
+  val nc = new NewChain(nodeIdToken, newChainDefToken, keyPair)
+  val dc = new DerivedChain(nodeIdToken, derivedChainTuple._1, keyPair, derivedChainTuple._2, nc.eventLog)
 
 //  val printNCDES = nc.sourceFrame.runForeach(frm => println(s"NewChain DES: $frm"))
 //  val printDCDES = dc.sourceFrame.runForeach(frm => println(s"DerivedChain DES: $frm"))
@@ -234,5 +235,5 @@ object MainCmd extends App {
   Source.fromGraph(DurableEventSource(nc.eventLog))
     .runWith(Sink.foreach(e => println(s"aaa $e")))
 
-  Source(List("A", "B", "C")).map(e => Cmd(parseJson(s"""{ "e": "${e}" }"""))).runWith(nc.sink)
+  Source(List("A", "B", "C")).map(e => Cmd(toJson(s"""{ "e": "${e}" }"""))).runWith(nc.sink)
 }

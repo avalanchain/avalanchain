@@ -49,10 +49,20 @@ class ChainNode(val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey]/*, at
 
   def chains() = (registry ? GetChains).mapTo[Map[ChainRef, ChainDefToken]]
 
-  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
-    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.noSpaces))
+  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
+    val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.get))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
-    (registry ? CreateChain(chainDefToken)).mapTo[ChainCreationResult]
+    chainDefToken
+  }
+
+  def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", "")): (ChainDefToken, ChainDef.Derived) = {
+    val chainDef = ChainDef.Derived(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
+    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+    (chainDefToken, chainDef)
+  }
+
+  def newChain2(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
+    (registry ? CreateChain(newChain(jwtAlgo, id, initValue))).mapTo[ChainCreationResult]
   }
 
   def getChain(chainRef: ChainRef) = (registry ? GetChainByRef(chainRef)).mapTo[Either[ChainRegistryError, (ChainDefToken, ActorRef)]]
