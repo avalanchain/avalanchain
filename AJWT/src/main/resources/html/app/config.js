@@ -124,6 +124,26 @@
                     }
                 }
             })
+            .state('admin', {
+                abstract: true,
+                // url: "/",
+                templateUrl: "/app/views/common/content.html",
+                data: {
+                    permissions: {
+                        only: 'isAuthorized',
+                        redirectTo: 'login'
+                    }
+                },
+                resolve: {
+                    loadPlugin: function($ocLazyLoad) {
+                        return $ocLazyLoad.load([{
+                            insertBefore: '#loadBefore',
+                            name: 'localytics.directives',
+                            files: ['/assets/css/plugins/chosen/bootstrap-chosen.css', '/assets/js/plugins/chosen/chosen.jquery.js', '/assets/js/plugins/chosen/chosen.js']
+                        },footable, footable_angular, clipboard, clipboardng]);
+                    }
+                }
+            })
             .state('dashboards.dashboard', {
                 url: "/dashboard",
                 templateUrl: "/app/views/dashboard/dashboard.html",
@@ -283,7 +303,7 @@
                     label: 'Chains'
                 }
             })
-            .state('index.admin', {
+            .state('admin.admin', {
                 url: "/admin",
                 templateUrl: "/app/views/admin/admin.html",
                 data: {
@@ -291,6 +311,16 @@
                 },
                 ncyBreadcrumb: {
                     label: 'Admin'
+                }
+            })
+            .state('admin.log', {
+                url: "/log",
+                templateUrl: "/app/views/log/log.html",
+                data: {
+                    pageTitle: 'Log'
+                },
+                ncyBreadcrumb: {
+                    label: 'Log'
                 }
             })
             .state('user', {

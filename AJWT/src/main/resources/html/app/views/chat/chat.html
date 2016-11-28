@@ -30,7 +30,7 @@
                             <div class="chat-discussion"  scroll-glue full-scroll>
 
                                 <div class="chat-message {{message.side}}" data-ng-repeat="message in vm.messages">
-                                    <i class="message-avatar fa fa-user fa-3x"></i>
+                                    <i class="message-avatar fa {{message.side == 'left' ? 'fa-server':'fa-user'}} fa-3x"></i>
                                     <!-- <img class="message-avatar" src="img/a1.jpg" alt="" > -->
                                     <div class="message">
                                         <a class="message-author">
@@ -52,7 +52,7 @@
                                 <div class="users-list">
                                     <div class="chat-user" data-ng-repeat="user in vm.users">
                                         <span class="pull-right label label-primary">Online</span>
-                                        <i class="chat-avatar fa fa-user fa-3x"></i>
+                                        <i class="chat-avatar fa {{user.name == 'server' ? 'fa-server':'fa-user'}} fa-3x"></i>
                                         <div class="chat-user-name">
                                             <a href="#">{{user.name}}</a>
                                         </div>
