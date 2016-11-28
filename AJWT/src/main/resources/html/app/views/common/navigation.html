@@ -30,24 +30,10 @@
                 <a ui-sref="index.dashboard"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> </a>
             </li>-->
             <li ng-class="{active: $state.includes('admin')}">
-                <a href="">
-                    <i class="fa fa-user"></i>
-                    <span class="nav-label">Admin</span>
-                    <span class="fa arrow"></span>
-                </a>
-                <ul class="nav nav-second-level collapse" ng-class="{in: $state.includes('admin')}">
-                    <li ui-sref-active="active">
-                        <a ui-sref="admin.users">
-                            <!--<i class="fa fa-user"></i>-->
-                            <span class="nav-label">Users</span>
-                        </a>
-                    </li>
-                    <li ui-sref-active="active">
-                        <a ui-sref="admin.log">
-                            <!--<i class="fa fa-code"></i>-->
-                            <span class="nav-label">Log</span>
-                        </a>
-                    </li>
+                <a href=""><i class="fa fa-user"></i><span class="nav-label">Admin</span><span class="fa arrow"></span> </a>
+                <ul class="nav nav-second-level collapse" >
+                    <li ui-sref-active="active"><a ui-sref="admin.users">Users </a> </li>
+                    <li ui-sref-active="active"><a ui-sref="admin.log">Log</a></li>
                 </ul>
             </li>
 

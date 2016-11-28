@@ -7,11 +7,18 @@
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn('websocketservice');
 
-        function Listeners(path, listeners, stream) {
+        function Listeners(path, name, listeners, stream) {
             var host = $window.location.host;
+            this.name = name|| 'websocket';
             this.path = path ? 'ws://' + host + path: 'ws://' + host + '/ws/yahoo';
             this.stream = $websocket(this.path);
             this.listeners = listeners || [];
+            this.stream.onOpen(function() {
+                console.log('connection open: ' + this.url);
+            });
+            this.stream.onError(function(event) {
+                console.log('connection Error'+event);
+            });
         }
         Listeners.prototype = {
             addListener: function (l) { this.listeners.push(l); },
@@ -23,8 +30,10 @@
             }
         };
 
-        var ylisteners = new Listeners('/ws/yahoo');
-        var nlisteners = new Listeners('/ws/nodes');
+        var ylisteners = new Listeners('/ws/yahoo', 'yahoo');
+        var nlisteners = new Listeners('/ws/nodes', 'nodes');
+        // var mlisteners = new Listeners('/ws/messages');
+
 
         ylisteners.stream.onMessage(function(message) {
             angular.forEach(ylisteners.listeners, function(l) {
@@ -34,13 +43,21 @@
             })
         });
 
-        ylisteners.stream.onOpen(function() {
-            console.log('yahoo connection open');
-        });
+        // mlisteners.stream.onMessage(function(message) {
+        //     angular.forEach(ylisteners.listeners, function(l) {
+        //         $timeout(function () {
+        //             l.newData(JSON.parse(message.data));
+        //         });
+        //     })
+        // });
 
-        nlisteners.stream.onOpen(function() {
-            console.log('nodes connection open');
-        });
+        // ylisteners.stream.onOpen(function() {
+        //     console.log('yahoo connection open');
+        // });
+        //
+        // nlisteners.stream.onOpen(function() {
+        //     console.log('nodes connection open');
+        // });
 
         nlisteners.stream.onMessage(function(message) {
             var mes = JSON.parse(message.data);
