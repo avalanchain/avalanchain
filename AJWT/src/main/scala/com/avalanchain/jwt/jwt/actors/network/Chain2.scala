@@ -26,6 +26,8 @@ import scala.util.Try
 import java.util.Base64
 import java.nio.charset.StandardCharsets
 
+import akka.NotUsed
+
 /**
   * Created by Yuriy Habarov on 26/11/2016.
   */
@@ -66,7 +68,8 @@ abstract class Chain (
   protected val initialState = ChainState(None, new FrameRef(chainRef.sig), -1, initialVal)
   def sourceDES = Source.fromGraph(DurableEventSource(eventLog))
   def sourceFrame = sourceDES.map(_.payload.asInstanceOf[FrameToken])
-  def source = sourceFrame.map(_.payloadJson)
+  def sourceJson = sourceFrame.map(_.payloadJson)
+  def source[T <: JwtPayload](implicit decoder: Decoder[T]) = sourceFrame.map(_.payload.get.v.as[T].right.toOption.get).mapMaterializedValue(_ => NotUsed.getInstance())
 
   private var currentFrame: Option[FrameToken] = None
   private var currentValue: Option[Json] = None

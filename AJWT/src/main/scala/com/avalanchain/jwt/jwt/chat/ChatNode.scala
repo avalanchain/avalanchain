@@ -31,9 +31,9 @@ class ChatNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => Ch
 
   val sink = chain.sink
 
-  val source: Source[ChatMsg, NotUsed] = chain.sourceFrame.map(_.payload.get.v.as[ChatMsg].right.toOption.get).mapMaterializedValue(_ => NotUsed.getInstance())
+  val source: Source[ChatMsg, NotUsed] = chain.source[ChatMsg]
   val sourceToken = chain.sourceFrame
-  val sourceJson = chain.source
+  val sourceJson = chain.sourceJson
 
   chain.process()
 }

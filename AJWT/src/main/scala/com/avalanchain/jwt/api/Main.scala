@@ -234,8 +234,8 @@ object MainCmd extends App {
 //  val printNCF = nc.sourceFrame.runForeach(frm => println(s"NewChain F: $frm"))
 //  val printDCF = dc.sourceFrame.runForeach(frm => println(s"DerivedChain F: $frm"))
 //
-  val printNC = nc.source.runForeach(frm => println(s"NewChain: $frm"))
-  val printDC = dc.source.runForeach(frm => println(s"DerivedChain: $frm"))
+  val printNC = nc.sourceJson.runForeach(frm => println(s"NewChain: $frm"))
+  val printDC = dc.sourceJson.runForeach(frm => println(s"DerivedChain: $frm"))
 
   nc.process()
   dc.process()
