@@ -8,6 +8,7 @@
         var logError = common.logger.getLogFn('dataservice', 'error');
         var logWarning = common.logger.getLogFn('dataservice', 'warn');
         var data = {};
+        data.nodesLoaded = false;
         var service = {
             getData: getData,
             sendPayment: sendPayment,
@@ -136,7 +137,7 @@
             var account = '';
             for (var i = 1; i <= 1000; i++) {
                 var type = (i % 2) == 0 ? types[0] : types[1];
-                var node = i <= (1000 / 2) ? 0 : 1;
+                var node = Math.floor(Math.random() * data.nodes.length);
                 var action, value, typename = '';
                 if (type === "users") {
                     account = data.accounts[Math.floor(Math.random() * data.accounts.length)].ref.address;
@@ -168,10 +169,11 @@
             for (var i = 1; i <= 200; i++) {
                 var type = (i % 2) == 0 ? types[0] : types[1];
                 var typename = Math.floor(Math.random() * typenames.length);
+                var node = Math.floor(Math.random() * data.nodes.length);
                 streams.push({
                     id: getId(),
-                    publicKey: data.nodes[i % 2].publicKey,
-                    node: data.nodes[i % 2].id,
+                    publicKey: data.nodes[node].publicKey,
+                    node: data.nodes[node].id,
                     type: type,
                     typename: typenames[typename],
                     date: new Date()
@@ -184,7 +186,7 @@
             if(vm){
                 vm.newData = function(info) {
                     if(!info.NodeUp){
-                        logger('NODE ADDED Port: ' + info.NodeJoined.address.port);
+                        //logger('NODE ADDED Port: ' + info.NodeJoined.address.port);
                         return;
                     }
 
@@ -203,6 +205,7 @@
                         });
                     }
                     data.nodes = vm.nodes;
+                    data.nodesLoaded=true;
                 };
                 vm.removeListener = function() {
                     websocketservice.nlisteners.removeListener(vm);
@@ -212,14 +215,14 @@
             }
 
             var nodes = [];
-            for (var i = 1; i <= 2; i++) {
-                nodes.push({
-                    id: getId(),
-                    name: 'ND-' + i,
-                    publicKey: getId(),
-                    cluster: data.clusters[0].id
-                })
-            }
+            // for (var i = 1; i <= 2; i++) {
+            //     nodes.push({
+            //         id: getId(),
+            //         name: 'ND-' + i,
+            //         publicKey: getId(),
+            //         cluster: data.clusters[0].id
+            //     })
+            // }
             return nodes;
         }
 
@@ -369,10 +372,17 @@
         function getData() {
             var defer = $q.defer();
             data.clusters = data.clusters ? data.clusters : getClusters();
-            data.nodes = data.nodes ? data.nodes : getNodes();
+            data.nodes = data.nodes ? data.nodes : getNodes(data);
+            if(data.nodesLoaded){
+                data.streams = data.streams.length !== 0 ? data.streams : getStreams();
+                data.transactions = data.transactions.length !== 0 ? data.transactions : getTransactions();
+            }
+            else{
+                data.streams = [];
+                data.transactions = [];
+            }
             data.accounts = data.accounts ? data.accounts : getAccounts();
-            data.streams = data.streams ? data.streams : getStreams();
-            data.transactions = data.transactions ? data.transactions : getTransactions();
+
             data.chat = data.chat ? data.chat : getChat();
 
             $timeout(function () {

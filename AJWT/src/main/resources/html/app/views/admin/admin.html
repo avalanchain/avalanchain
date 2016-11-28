@@ -8,6 +8,18 @@
                     <!--<div ibox-tools></div>-->
                 </div>
                 <div class="ibox-content">
+                    <div class="row m-b-sm m-t-sm">
+                        <!--<div class="col-md-1">-->
+                            <!--<button type="button" id="loading-example-btn" class="btn btn-white btn-sm" ng-click="refresh()"><i class="fa fa-refresh"></i> Refresh</button>-->
+                        <!--</div>-->
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <input type="text" placeholder="Search" class="input-sm form-control" ng-model="searchUsers"> <span class="input-group-btn">
+                                        <button type="button" class="btn btn-sm btn-primary" ng-click="searchUsers==''"> Clean</button>
+                                    </span>
+                            </div>
+                        </div>
+                    </div>
                     <table class="table table-hover no-margins">
                         <thead>
                         <tr>
@@ -22,7 +34,7 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr data-ng-repeat="user in vm.users | pagination:(userPage-1)*10 | limitTo:10">
+                        <tr data-ng-repeat="user in vm.users | pagination:(userPage-1)*10 | filter:searchUsers | limitTo:10">
                             <td class="project-title">{{user.userId}}</td>
                             <td>{{user.data.firstName}}</td>
                             <td>{{user.data.lastName}}</td>
