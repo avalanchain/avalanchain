@@ -30,4 +30,7 @@ class ChatNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => Ch
   val sink = chain.sink
 
   val source = chain.sourceFrame.map(_.asInstanceOf[ChatMsgToken])
+  val sourceJson = chain.source
+
+  chain.process()
 }

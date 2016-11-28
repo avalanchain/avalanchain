@@ -151,7 +151,7 @@ val result3 = time {
 engine.eval("var f = (function(j){return { val: j.val + 11 }});")
 engine.eval("function jw(f, json) { var j = JSON.parse(json); var r = f(j); return JSON.stringify(r); }; function jex(json) { return jw(f, json); }");
 val ret = invocable.invokeFunction("jex", """{ "val":  10}""")
-val ret = invocable.invokeFunction("jex", Json.fromString("""{ "val":  10}""").asString.get)
+val ret = invocable.invokeFunction("jex", Json.fromString("""{ "val":  10}""").asString.getOrElse("{}"))
 
 ret.asInstanceOf[String] |> println
 ret.getClass |> println
@@ -164,8 +164,8 @@ engine.eval("""function jex(json) { var f = function(j){return { val: j.val + 11
 invocable.invokeFunction("jex", s"""{ "val":  10}""")
 
 val sf = ScriptFunction("function(j){return { v: j.val + 11 }}")
-sf(Json.fromString(s"""{ "val":  10}""")).asString.get
+sf(Json.fromString(s"""{ "val":  10}""")).asString.getOrElse("{}")
 
-val a = Json.fromString(s"""{ val:  10}""").noSpaces
+val a = Json.fromString(s"""{ val:  10}""").asString.getOrElse("{}")
 
 val sf1 = ScriptFunction("function(j){return j}")

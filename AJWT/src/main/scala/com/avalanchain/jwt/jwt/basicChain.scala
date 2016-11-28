@@ -240,7 +240,7 @@ package object basicChain {
     }
 
     def newChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))): Chain3 =
-      addChainDef(ChainDef.New(jwtAlgo, id, publicKey, ResourceGroup.ALL, initValue.map(_.noSpaces)))
+      addChainDef(ChainDef.New(jwtAlgo, id, publicKey, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}"))))
 
     def nestedChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), parentChainRef: ChainRef, pos: Position): Chain3 =
       addChainDef(ChainDef.Fork(jwtAlgo, id, publicKey, ResourceGroup.ALL, parentChainRef, pos))

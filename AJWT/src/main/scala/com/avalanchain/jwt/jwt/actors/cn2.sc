@@ -16,7 +16,7 @@ import io.circe.generic.auto._
 val keyPair = CurveContext.currentKeys
 
 def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
-  val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.noSpaces))
+  val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.asString.getOrElse("{}")))
   val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
   chainDefToken
 }

@@ -40,7 +40,7 @@ val keyPair = CurveContext.currentKeys
 val jsn = Json.fromString("{ \"a\": 5 }")
 jsn.toString()
 println(jsn.noSpaces)
-println(jsn.asString.get)
+println(jsn.asString.getOrElse("{}"))
 
 val s = """a"a" a """
 

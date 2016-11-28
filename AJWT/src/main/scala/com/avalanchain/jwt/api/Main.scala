@@ -64,7 +64,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
 
   import StockTick._
 
-  val chainNode = new ChainNode("Main-" + port, port, CurveContext.currentKeys, Set.empty)
+  val chainNode = new ChainNode("Main" + port, port, CurveContext.currentKeys, Set.empty)
   val demoNode: DemoNode = new DemoNode(chainNode)
 
   private val globalContext = ExecutionContext.global
@@ -196,7 +196,7 @@ object MainCmd extends App {
   val keyPair = CurveContext.currentKeys
 
   def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
-    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.get))
+    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     chainDefToken
   }

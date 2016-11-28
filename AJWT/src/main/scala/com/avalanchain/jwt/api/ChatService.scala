@@ -18,6 +18,8 @@ import io.circe.generic.auto._
 import io.circe.syntax._
 import io.swagger.annotations.{ApiImplicitParam, _}
 
+import scala.util.{Failure, Success}
+
 case class ChatTweet(msg: String)
 
 /**
@@ -37,8 +39,11 @@ class ChatService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, mater
     path("allMessages") {
       allMessages
     } ~
-    path("allMessageTokens") {
-      allMessages
+    path("allMessagesTokens") {
+      allMessagesTokens
+    } ~
+    path("allMessagesJson") {
+      allMessagesJson
     } ~
     path("newMessage") {
       newMessage
@@ -71,20 +76,36 @@ class ChatService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, mater
   ))
   def allMessages =
     get {
-      onSuccess(chainNode.chatNode.source.runFold(List.empty[ChatMsgToken])((acc, cm) => cm :: acc)) { msgs =>
-        completeWith(instanceOf[List[ChatMsg]])(_ (msgs.reverse.map(_.payload.get)))
+      onComplete(chainNode.chatNode.source.takeWithin(10 milliseconds).runFold(List.empty[ChatMsgToken])((acc, cm) => cm :: acc)(chainNode.materializer)) {
+        case Success(msgs) => completeWith(instanceOf[List[ChatMsg]])(_(msgs.reverse.map(_.payload.get)))
+        case Failure(e) => {
+          println(s"Error: ${e.getMessage}")
+          failWith(e)
+        }
       }
     }
 
-  @Path("allMessageTokens")
+  @Path("allMessagesTokens")
   @ApiOperation(httpMethod = "GET", response = classOf[List[ChatMsg]], value = "Gets all chat messages as JWT tokens")
   @ApiResponses(Array(
     new ApiResponse(code = 200, message = "All chat messages as JWT tokens", response = classOf[List[ChatMsg]])
   ))
-  def allMessageTokens =
+  def allMessagesTokens =
     get {
-      onSuccess(chainNode.chatNode.source.runFold(List.empty[ChatMsgToken])((acc, cm) => cm :: acc)) { msgs =>
-        completeWith(instanceOf[List[ChatMsgToken]])(_ (msgs.reverse))
+      onSuccess(chainNode.chatNode.source.takeWithin(10 milliseconds).runFold(List.empty[ChatMsgToken])((acc, cm) => cm :: acc)) { msgs =>
+        completeWith(instanceOf[List[ChatMsgToken]])(_(msgs.reverse))
+      }
+    }
+
+  @Path("allMessagesJson")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[ChatMsg]], value = "Gets all chat messages")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "All chat messages", response = classOf[List[ChatMsg]])
+  ))
+  def allMessagesJson =
+    get {
+      onSuccess(chainNode.chatNode.sourceJson.takeWithin(10 milliseconds).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
+        completeWith(instanceOf[List[String]])(_(msgs.reverse))
       }
     }
 }

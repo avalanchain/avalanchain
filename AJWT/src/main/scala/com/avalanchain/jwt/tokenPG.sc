@@ -18,7 +18,7 @@ implicit val system = ActorSystem()
 implicit val executor: ExecutionContext = system.dispatcher
 implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-val chainNode: ChainNode = new ChainNode(CurveContext.currentKeys, Set.empty)
+val chainNode: ChainNode = new ChainNode("AC", CurveContext.currentKeys, Set.empty)
 val demoNode: DemoNode = new DemoNode(chainNode)
 
 val ref = demoNode.tickerChainRef

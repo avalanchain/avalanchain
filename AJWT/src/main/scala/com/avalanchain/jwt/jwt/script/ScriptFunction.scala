@@ -20,7 +20,7 @@ class ScriptFunction(script: Func) {
 
   def invoke(json: Json) = {
     try {
-      val ret = invocable.invokeFunction("jex", json.asString.get).asInstanceOf[String]
+      val ret = invocable.invokeFunction("jex", json.asString.getOrElse("{}")).asInstanceOf[String]
       ret |> (Json.fromString)
     } catch {
       case NonFatal(ex) =>
@@ -52,7 +52,7 @@ class ScriptPredicate(script: Func) {
 
   def invoke(json: Json) = {
     try {
-      invocable.invokeFunction("jex", json.asString.get).asInstanceOf[Boolean]
+      invocable.invokeFunction("jex", json.asString.getOrElse("{}")).asInstanceOf[Boolean]
     } catch {
       case NonFatal(ex) =>
         println(ex)
@@ -83,7 +83,7 @@ class ScriptFunction2(script: Func) {
 
   def invoke(accJson: Json, json: Json) = {
     try {
-      invocable.invokeFunction("jex", accJson.asString.get, json.asString.get).asInstanceOf[String] |> (Json.fromString)
+      invocable.invokeFunction("jex", accJson.asString.getOrElse("{}"), json.asString.getOrElse("{}")).asInstanceOf[String] |> (Json.fromString)
     } catch {
       case NonFatal(ex) =>
         println(ex)

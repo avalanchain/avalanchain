@@ -1,6 +1,6 @@
 package com.avalanchain.jwt.jwt.actors.network
 
-import java.security.KeyPair
+import java.security.{KeyPair, MessageDigest}
 import java.util.UUID
 
 import akka.actor.{ActorRef, ActorRefFactory, ActorSystem}
@@ -23,6 +23,8 @@ import cats.implicits._
 
 import scala.collection.immutable.Seq
 import scala.util.Try
+import java.util.Base64
+import java.nio.charset.StandardCharsets
 
 /**
   * Created by Yuriy Habarov on 26/11/2016.
@@ -43,10 +45,18 @@ abstract class Chain (
   var statusInternal: ChainStatus = ChainStatus.Created
   def status = statusInternal
 
-  protected def newId() = UUID.randomUUID().toString
+  def sha(text: String) = {
+    val md = MessageDigest.getInstance("SHA-256");
+    md.update(text.getBytes("UTF-8"))
+    Base64.getEncoder.encodeToString(md.digest)
+  }
+
+  protected def newId() = UUID.randomUUID().toString.replace("-", "")
   protected def createLog(id: String = chainRef.sig): ActorRef = {
-    val actorRef = actorSystem.actorOf(LeveldbEventLog.props(id, nodeId.sig))
-    println(s"Log created: $id")
+    val idCoded = sha(id)
+    val nodeCoded = sha(nodeId.sig)
+    val actorRef = actorSystem.actorOf(LeveldbEventLog.props(idCoded, nodeCoded))
+    println(s"Log created: '$idCoded' for node '$nodeCoded'")
     actorRef
   }
 
@@ -66,6 +76,7 @@ abstract class Chain (
 
   protected def processCurrent = sourceFrame.runWith(Sink.foreach(frame => {
     currentFrame = Some(frame)
+    println(s"Frame: $frame")
     if (frame.payload.nonEmpty) {
       currentPosition = frame.payload.get.pos
       currentValue = Some(frame.payload.get.v
