@@ -64,7 +64,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
 
   import StockTick._
 
-  val chainNode = new ChainNode(port, CurveContext.currentKeys, Set.empty)
+  val chainNode = new ChainNode("Main-" + port, port, CurveContext.currentKeys, Set.empty)
   val demoNode: DemoNode = new DemoNode(chainNode)
 
   private val globalContext = ExecutionContext.global
@@ -160,6 +160,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
             corsHandler(new NodeService(chainNode, startChild).route) ~
             corsHandler(new ChainService(chainNode).route) ~
             corsHandler(new AdminService().route) ~
+            corsHandler(new ChatService(chainNode).route) ~
             corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), u => addUserInfo(u)).route)
         } ~
         pathPrefix("ws") {

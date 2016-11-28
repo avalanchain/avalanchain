@@ -19,6 +19,7 @@ import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.{GetNetworkMonitor, NewChain}
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
 import com.avalanchain.jwt.jwt.actors.network.{NetworkMonitor, NodeStatus}
+import com.avalanchain.jwt.jwt.chat.ChatNode
 import com.typesafe.config.ConfigFactory
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._
@@ -34,9 +35,10 @@ import scala.util.Try
 /**
   * Created by Yuriy Habarov on 21/05/2016.
   */
-class ChainNode(val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey]/*, atMost: FiniteDuration = 5 seconds*/) extends ActorNode {
+class ChainNode(val nodeName: String, val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey]/*, atMost: FiniteDuration = 5 seconds*/) extends ActorNode {
 
   val publicKey = keyPair.getPublic
+  val nodeIdToken: NodeIdToken = NodeIdToken(nodeName, localhost, port, keyPair.getPublic, keyPair.getPrivate)
 
   private val registry = actor("registry")(new ChainRegistryActor())
   private val addr = actor("addr")(new Act {
@@ -48,6 +50,8 @@ class ChainNode(val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey]/*, at
   def localport(): Future[Int] = (addr ? "port").map(_.asInstanceOf[Option[Int]].get)
 
   def chains() = (registry ? GetChains).mapTo[Map[ChainRef, ChainDefToken]]
+
+  val chatNode = new ChatNode(nodeIdToken, keyPair, cn => newChain(JwtAlgo.ES512, cn))
 
   def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
     val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.get))

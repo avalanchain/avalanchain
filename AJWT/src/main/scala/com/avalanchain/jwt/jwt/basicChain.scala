@@ -66,11 +66,12 @@ package object basicChain {
     final case class Fork(algo: JwtAlgo, id: Id, pub: PubKey, rg: ResourceGroup, parent: ChainRef, pos: Position) extends ChainDef
     final case class Derived(algo: JwtAlgo, id: Id, pub: PubKey, rg: ResourceGroup, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
   }
-  object ChainDefCodecs {
+  trait ChainDefCodecs {
     import io.circe.Decoder, io.circe.generic.semiauto._
     implicit val encoderChainDef: Encoder[ChainDef] = deriveEncoder
     implicit val decoderChainDef: Decoder[ChainDef] = deriveDecoder
   }
+  object ChainDefCodecs extends ChainDefCodecs
 
   sealed trait JwtToken {
     val token: String
