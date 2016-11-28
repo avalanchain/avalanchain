@@ -3,8 +3,10 @@ package com.avalanchain.jwt.jwt.chat
 import java.security.{KeyPair, PrivateKey}
 import java.time.OffsetDateTime
 
-import akka.actor.ActorSystem
+import akka.NotUsed
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.actors.network.NewChain
@@ -29,7 +31,8 @@ class ChatNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => Ch
 
   val sink = chain.sink
 
-  val source = chain.sourceFrame.map(_.asInstanceOf[ChatMsgToken])
+  val source: Source[ChatMsg, NotUsed] = chain.sourceFrame.map(_.payload.get.v.as[ChatMsg].right.toOption.get).mapMaterializedValue(_ => NotUsed.getInstance())
+  val sourceToken = chain.sourceFrame
   val sourceJson = chain.source
 
   chain.process()

@@ -9,13 +9,15 @@ import akka.http.scaladsl.server.Directives
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import com.avalanchain.jwt.basicChain.Cmd
+import com.avalanchain.jwt.basicChain.{Cmd, FrameToken}
 import com.avalanchain.jwt.jwt.actors.ChainNode
 import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
 import com.avalanchain.jwt.utils.{CirceDecoders, CirceEncoders}
 import de.heikoseeberger.akkahttpcirce.CirceSupport
+import io.circe.Json
 import io.circe.generic.auto._
 import io.circe.syntax._
+import io.circe.parser._
 import io.swagger.annotations.{ApiImplicitParam, _}
 
 import scala.util.{Failure, Success}
@@ -76,24 +78,20 @@ class ChatService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, mater
   ))
   def allMessages =
     get {
-      onComplete(chainNode.chatNode.source.takeWithin(10 milliseconds).runFold(List.empty[ChatMsgToken])((acc, cm) => cm :: acc)(chainNode.materializer)) {
-        case Success(msgs) => completeWith(instanceOf[List[ChatMsg]])(_(msgs.reverse.map(_.payload.get)))
-        case Failure(e) => {
-          println(s"Error: ${e.getMessage}")
-          failWith(e)
-        }
+      onSuccess(chainNode.chatNode.source.takeWithin(10 milliseconds).runFold(List.empty[ChatMsg])((acc, cm) => cm :: acc)) { msgs =>
+        completeWith(instanceOf[List[ChatMsg]])(_(msgs.reverse))
       }
     }
 
   @Path("allMessagesTokens")
-  @ApiOperation(httpMethod = "GET", response = classOf[List[ChatMsg]], value = "Gets all chat messages as JWT tokens")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[FrameToken]], value = "Gets all chat messages as JWT tokens")
   @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "All chat messages as JWT tokens", response = classOf[List[ChatMsg]])
+    new ApiResponse(code = 200, message = "All chat messages as JWT tokens", response = classOf[List[FrameToken]])
   ))
   def allMessagesTokens =
     get {
-      onSuccess(chainNode.chatNode.source.takeWithin(10 milliseconds).runFold(List.empty[ChatMsgToken])((acc, cm) => cm :: acc)) { msgs =>
-        completeWith(instanceOf[List[ChatMsgToken]])(_(msgs.reverse))
+      onSuccess(chainNode.chatNode.sourceToken.takeWithin(10 milliseconds).runFold(List.empty[FrameToken])((acc, cm) => cm :: acc)) { msgs =>
+        completeWith(instanceOf[List[FrameToken]])(_(msgs.reverse))
       }
     }
 
@@ -105,7 +103,7 @@ class ChatService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, mater
   def allMessagesJson =
     get {
       onSuccess(chainNode.chatNode.sourceJson.takeWithin(10 milliseconds).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
-        completeWith(instanceOf[List[String]])(_(msgs.reverse))
+        completeWith(instanceOf[List[Json]])(_(msgs.reverse.map(parse(_).right.toOption.getOrElse(Json.Null))))
       }
     }
 }
