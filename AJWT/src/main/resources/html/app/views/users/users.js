@@ -1,9 +1,9 @@
 ﻿(function () {
     'use strict';
-    var controllerId = 'admin';
-    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$uibModal', '$rootScope', admin]);
+    var controllerId = 'users';
+    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$uibModal', '$rootScope', users]);
 
-    function admin(common, dataservice, $scope, $uibModal, $rootScope) {
+    function users(common, dataservice, $scope, $uibModal, $rootScope) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -31,7 +31,7 @@
                 // });
             };
             var modalInstance = $uibModal.open({
-                templateUrl: '/app/views/admin/create_user.html',
+                templateUrl: '/app/views/users/create_user.html',
                 controller: modalCtrl
             });
         };
@@ -52,7 +52,7 @@
                 // });
             };
             var modalInstance = $uibModal.open({
-                templateUrl: '/app/views/admin/edit_user.html',
+                templateUrl: '/app/views/users/edit_user.html',
                 controller: modalCtrl
             });
         };
@@ -61,7 +61,7 @@
 
         function activate() {
             common.activateController([getData(vm)],controllerId)
-                .then(function () { log('Activated Admin View') });//log('Activated Admin View');
+                .then(function () { log('Activated Admin Users') });//log('Activated Admin View');
         }
         function getData(vm) {
             dataservice.getUsers().then(function(data) {

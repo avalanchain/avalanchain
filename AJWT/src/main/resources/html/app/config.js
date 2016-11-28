@@ -303,14 +303,14 @@
                     label: 'Chains'
                 }
             })
-            .state('admin.admin', {
-                url: "/admin",
-                templateUrl: "/app/views/admin/admin.html",
+            .state('admin.users', {
+                url: "/users",
+                templateUrl: "/app/views/users/users.html",
                 data: {
-                    pageTitle: 'admin'
+                    pageTitle: 'users'
                 },
                 ncyBreadcrumb: {
-                    label: 'Admin'
+                    label: 'Users'
                 }
             })
             .state('admin.log', {
