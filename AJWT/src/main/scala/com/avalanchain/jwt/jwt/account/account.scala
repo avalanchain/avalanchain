@@ -3,6 +3,7 @@ package com.avalanchain.jwt.jwt.account
 import java.security.PublicKey
 import java.util.UUID
 
+import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain.{ChainRef, JwtPayload, TypedJwtToken}
 import com.avalanchain.jwt.jwt.account.permissions.{Permission, UserId}
 import io.swagger.annotations.ApiModel
@@ -12,47 +13,6 @@ import scala.util.matching.Regex
 /**
   * Created by Yuriy on 10/04/2016.
   */
-package object account {
-  type AccountId = UUID
-  //type SignedAccountId = Signed[AccountId]
-
-  sealed trait AccountCommand extends JwtPayload.Sym { def accountId: AccountId }
-  final case class Add(accountId: AccountId) extends AccountCommand
-  final case class Block(accountId: AccountId) extends AccountCommand
-  final case class Invalidate(accountId: AccountId) extends AccountCommand
-
-  type AccountEvent = TypedJwtToken[AccountCommand]
-
-  sealed trait AccountState { def accountId: AccountId }
-  object AccountState {
-
-//    final case class Empty(userId: UserId) extends AccountState
-//    final case class Valid(user: User, roles: Set[RoleId], permissions: ACL) extends AccountState { val userId = user.userId }
-//    final case class Invalid(userId: UserId, reason: String) extends AccountState
-//    final case class Deleted(userId: UserId, reason: String) extends AccountState
-
-//    def applyUserEvents(userId: UserId, events: List[UserEvent], roleValidator: RoleId => Boolean): AccountState = {
-//      events.map(_.value.value).filter(_.userId == userId).foldLeft (Empty(userId).asInstanceOf[UserState]) ((us, c) => (us, c) match {
-//        case (Invalid(_, _), _) => us
-//        case (Deleted(_, _), _) => us
-//        case (Empty(_), Create(user, roles, acl)) =>
-//          val validRoles = roles.filter(roleValidator)
-//          Valid(user, validRoles, acl) // TODO: Add warning on invalid roles
-//        case (Empty(_), _) => Invalid(userId, "The only allowed event for an empty User State is 'Create'")
-//        case (Valid(user, roles, acl), Update(_, data)) => Valid(user.copy(data = data), roles, acl)
-//        case (Valid(_, _, _), Delete(_, reason)) => Deleted(userId, reason)
-//        case (Valid(user, roles, acl), AddPermissions(_, newAcl)) => Valid(user, roles, acl + newAcl)
-//        case (Valid(user, roles, acl), RemovePermission(_, permission)) => Valid(user, roles, acl - permission)
-//        case (Valid(user, roles, acl), AddRole(userId, roleId)) =>
-//          if (roleValidator(roleId)) Valid(user, roles + roleId, acl)
-//          else Invalid(userId, s"Invalid role Id '$roleId'")
-//        case (Valid(user, roles, acl), RemoveRole(userId, roleId)) => Valid(user, roles - roleId, acl)
-//        case (state, event) => Invalid(userId, s"Event '$event' is not allowed for User State '${state.getClass.getName}'")
-//      })
-//    }
-  }
-
-}
 
 package object permissions {
 

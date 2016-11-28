@@ -22,7 +22,7 @@ object Demo extends CirceEncoders with CirceDecoders {
   type ChatMsgToken = TypedJwtToken[ChatMsg]
   object ChatMsgToken {
     def apply(nodeId: NodeIdToken, message: String, pub: PubKey, privateKey: PrivateKey): ChatMsgToken =
-      TypedJwtToken[ChatMsg](ChatMsg(nodeId.payload.get.name, message, OffsetDateTime.now, pub), privateKey)
+      TypedJwtToken[ChatMsg](ChatMsg(nodeId.payload.get.name, message, OffsetDateTime.now(), pub), privateKey)
   }
 
 }

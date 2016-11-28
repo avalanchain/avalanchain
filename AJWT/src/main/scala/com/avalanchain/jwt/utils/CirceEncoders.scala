@@ -38,6 +38,6 @@ trait CirceDecoders {
 //    override def apply(dt: OffsetDateTime): Json = dateTimeFormat.format(dt).asJson
 //  }
   implicit val decodeInstant: Decoder[OffsetDateTime] = Decoder.decodeString.emap { str =>
-    Either.catchNonFatal(OffsetDateTime.parse("2011-12-03T10:15:30+01:00", DateTimeFormatter.ISO_OFFSET_DATE_TIME)).leftMap(t => "Instant")
+    Either.catchNonFatal(OffsetDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME)).leftMap(t => "OffsetDateTime")
   }
 }
