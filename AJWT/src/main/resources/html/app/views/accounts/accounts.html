@@ -68,12 +68,12 @@
                               </tr>
                               </thead>
                                 <tbody>
-                                <tr style="cursor: pointer" ng-repeat="account in accounts | filter:{name : searchAccounts} | pagination:(currentPage-1)*10 | limitTo:10" >
+                                <tr style="cursor: pointer" ng-repeat="account in vm.accounts | filter:{name : searchAccounts} | pagination:(currentPage-1)*10 | limitTo:10" >
                                   <td class="project-completion">
                                       {{($index-9)+(currentPage*10)}}
                                   </td>
                                     <td class="project-status">
-                                        <span class="label {{account.status == 1? 'label-active': 'label-primary'}}">{{account.status == 1? 'Active': account.status == 2? 'Disabled':'Blocked'}}</span>
+                                        <span class="label {{account.status == 'Active'? 'label-active': 'label-primary'}}">{{account.status}}</span>
                                     </td>
                                     <td class="project-title">
                                         <strong>{{account.name}}</strong>
@@ -90,7 +90,7 @@
                                         <i class="fa fa-check text-navy"></i>
                                     </td>
                                     <td class="project-completion">
-                                        Jul 14, 2016
+                                        {{account.expired | date : 'short'}}
                                     </td>
                                     <td >
                                         <a ng-click="showAccount(account)" class="btn btn-white btn-sm"> Open </a>

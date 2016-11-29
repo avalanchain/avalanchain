@@ -89,26 +89,38 @@
         function getAccounts(vm) {
             var accounts = [];
             if(vm){
-                vm.accountData = function(acc) {
+                vm.accountData = function(accounts) {
                     vm.accounts = vm.accounts || [];
-                    // var same = vm.chat.messages.filter(function (nd) {
-                    //     return nd.data.address.port == info.NodeUp.address.port
-                    // });
-                    //if(same.length == 0){
-                    vm.accounts.push({
-                        name: acc.accountId,
-                        publicKey: acc.accountId,
-                        balance: acc.balance,
-                        status: acc.accountId,
-                        signed: true,
-                        expired: acc.expired,
-                        ref: {
-                            address: acc.accountId
+                    for (var pr in accounts) {
+                        var acc = accounts[pr];
+                        var same = vm.accounts.filter(function (ac) {
+                            return ac.name == acc.account.accountId
+                        });
+                        if(same.length == 0){
+                            var property = '';
+                            for (var prop in acc.status) {
+                                if (acc.status.hasOwnProperty(prop)){
+                                    property =  prop;
+                                    break;
+                                }
+
+                            }
+                            vm.accounts.push({
+                                name: acc.account.accountId,
+                                publicKey: acc.account.accountId,
+                                balance: acc.balance,
+                                status: property,
+                                signed: true,
+                                expired: acc.account.expire,
+                                ref: {
+                                    address: acc.account.accountId
+                                }
+                            });
+
                         }
-                    })
-                    vm.lastMessage = new Date();
-                    //}
-                    data.accounts = vm.accounts;
+                        data.accounts = vm.accounts;
+                    }
+
                 };
 
                 vm.removeListener = function() {
@@ -117,22 +129,22 @@
                 websocketservice.alisteners.addListener(vm);
                 vm.accounts = data.accounts;
             }
-            if (accounts.length < 1) {
-                for (var i = 0; i < 200; i++) {
-                    accounts.push({
-                        name: getId(),
-                        publicKey: getId(),
-                        balance: Math.floor(Math.random() * 1000) + 100,
-                        status: Math.floor(Math.random() * 3) + 1,
-                        signed: true,
-                        ref: {
-                            address: getId()
-                        }
-                    })
-                }
-            }
-
-            return accounts;
+            // if (accounts.length < 1) {
+            //     for (var i = 0; i < 200; i++) {
+            //         accounts.push({
+            //             name: getId(),
+            //             publicKey: getId(),
+            //             balance: Math.floor(Math.random() * 1000) + 100,
+            //             status: Math.floor(Math.random() * 3) + 1,
+            //             signed: true,
+            //             ref: {
+            //                 address: getId()
+            //             }
+            //         })
+            //     }
+            // }
+            //
+            // return accounts;
             // return dataProvider.get(sc, '/api/account/all', function (data, status) {
             //     //$scope.GetAllProgresses = data;
             // });

@@ -22,7 +22,7 @@
         $scope.transactionPage = 1;
         $scope.transactions = [];
 
-
+        dataservice.getAccounts(vm);
         $scope.openModal = function () {
             var m = new Mnemonic(96);
             $rootScope.modal = {};
@@ -44,9 +44,9 @@
         //$scope.toggleModal = function () {
         //    $scope.showModal = !$scope.showModal;
         //};
-        $rootScope.$on('updateAccounts', function () {
-            getAccounts();
-        });
+        // $rootScope.$on('updateAccounts', function () {
+        //     getAccounts();
+        // });
 
         $scope.getTransactions = function (address) {
 
@@ -89,7 +89,7 @@
         $scope.sendPayment = function () {
             dataservice.sendPayment($scope.payment).then(function (data) {
                 $scope.getTransactions($scope.current.ref.address);
-                getAccounts();
+                //getAccounts();
             });
         }
 
@@ -101,15 +101,15 @@
             getAccounts();
         }
 
-        setInterval(function updateRandom() {
-
-            if ($scope.isAccountPage) {
-                $scope.getTransactions($scope.current.ref.address);
-            }
-                getAccounts();
-
-
-        }, 3000);
+        // setInterval(function updateRandom() {
+        //
+        //     if ($scope.isAccountPage) {
+        //         $scope.getTransactions($scope.current.ref.address);
+        //     }
+        //         getAccounts();
+        //
+        //
+        // }, 3000);
 
         function addStatus(data) {
             if (data) {
@@ -125,11 +125,11 @@
         }
 
         function getAccounts() {
-          dataservice.getData().then(function(data) {
-            $scope.accounts = addStatus(data.accounts);
-            $scope.totalItems = $scope.accounts.length;
-            // $rootScope.accountsamount = $scope.accounts.length;
-          });
+          // dataservice.getData().then(function(data) {
+          //   $scope.accounts = addStatus(data.accounts);
+          //   $scope.totalItems = $scope.accounts.length;
+          //   // $rootScope.accountsamount = $scope.accounts.length;
+          // });
             // $scope.accounts = addStatus(dataservice.getData().accounts);
             // $scope.totalItems = $scope.accounts.length;
             // $rootScope.accountsamount = $scope.accounts.length;
