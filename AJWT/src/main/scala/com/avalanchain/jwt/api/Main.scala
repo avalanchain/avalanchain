@@ -142,13 +142,13 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
     } ~
-    path("accounts") {
-      val src = chainNode.currencyNode.accountsSource.map(i => TextMessage(i.asJson.noSpaces))
-
-      extractUpgradeToWebSocket { upgrade =>
-        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
-      }
-    } ~
+//    path("accounts") {
+      //      val src = chainNode.currencyNode.accountsSource.map(i => TextMessage(i.asJson.noSpaces))
+      //
+      //      extractUpgradeToWebSocket { upgrade =>
+      //        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      //      }
+      //    } ~
     path("transactions") {
       val src = chainNode.currencyNode.transactionSource.map(i => TextMessage(i.asJson.noSpaces))
 
@@ -171,8 +171,6 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
 //      }
 //    } //~
   }
-
-  //(0 until 100).foreach(_ => chainNode.currencyNode.addAccount1000)
 
   def startHttp(localport: Int): Future[ServerBinding] = {
     val httpPort = localport + 1000

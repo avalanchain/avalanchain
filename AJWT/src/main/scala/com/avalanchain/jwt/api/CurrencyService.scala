@@ -15,7 +15,7 @@ import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode
 import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
 import com.avalanchain.jwt.jwt.demo.account.AccountCommand.{Add, Block, Disable}
-import com.avalanchain.jwt.jwt.demo.account.{AccountCommand, AccountEvent, AccountStates, Transaction}
+import com.avalanchain.jwt.jwt.demo.account._
 import com.avalanchain.jwt.utils.CirceCodecs
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Json
@@ -25,7 +25,7 @@ import io.circe.parser._
 import io.swagger.annotations.{ApiImplicitParam, _}
 
 import scala.util.{Failure, Success}
-
+import scala.concurrent.duration._
 
 /**
   * Created by Yuriy on 22/11/2016.
@@ -153,9 +153,10 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def accounts =
     get {
-      onSuccess(chainNode.currencyNode.accountsSource.takeWithin(10 milliseconds).runFold(List.empty[AccountStates])((acc, cm) => cm :: acc)) { msgs =>
-        completeWith(instanceOf[List[AccountStates]])(_(msgs.reverse))
-      }
+//      onSuccess(chainNode.currencyNode.accountsSource.takeWithin(500 milliseconds).runFold[Option[AccountStates]](None)((acc, cm) => Some(cm))) { msg =>
+//        completeWith(instanceOf[Map[AccountId, AccountState]])(_(msg.getOrElse(Predef.Map.empty[AccountId, AccountState]).toMap))
+//      }
+      completeWith(instanceOf[Map[AccountId, AccountState]])(_(chainNode.currencyNode.accountStates))
     }
 
 //  @Path("accountEvents")
@@ -177,7 +178,7 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def accountEvents =
     get {
-      onSuccess(chainNode.currencyNode.accountSource.takeWithin(10 milliseconds).runFold(List.empty[AccountCommand])((acc, cm) => cm :: acc)) { msgs =>
+      onSuccess(chainNode.currencyNode.accountSource.takeWithin(1 second).runFold(List.empty[AccountCommand])((acc, cm) => cm :: acc)) { msgs =>
         completeWith(instanceOf[List[AccountCommand]])(_(msgs.reverse))
       }
     }
@@ -189,7 +190,7 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def accountEventsTokens =
     get {
-      onSuccess(chainNode.currencyNode.accountSourceToken.takeWithin(10 milliseconds).runFold(List.empty[FrameToken])((acc, cm) => cm :: acc)) { msgs =>
+      onSuccess(chainNode.currencyNode.accountSourceToken.takeWithin(1 second).runFold(List.empty[FrameToken])((acc, cm) => cm :: acc)) { msgs =>
         completeWith(instanceOf[List[FrameToken]])(_(msgs.reverse))
       }
     }
@@ -201,7 +202,7 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def accountEventsJson =
     get {
-      onSuccess(chainNode.currencyNode.accountSourceJson.takeWithin(10 milliseconds).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
+      onSuccess(chainNode.currencyNode.accountSourceJson.takeWithin(1 second).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
         completeWith(instanceOf[List[Json]])(_(msgs.reverse.map(parse(_).right.toOption.getOrElse(Json.Null))))
       }
     }
@@ -214,7 +215,8 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def randomPayment =
     post {
-      complete(StatusCodes.Created, chainNode.currencyNode.randomPayment())
+      chainNode.currencyNode.randomPayment()
+      complete(StatusCodes.Created, true)
     }
 
 
@@ -226,7 +228,7 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def transactions =
     get {
-      onSuccess(chainNode.currencyNode.transactionSource.take(1000).takeWithin(10 milliseconds).runFold(List.empty[Transaction])((acc, cm) => cm :: acc)) { msgs =>
+      onSuccess(chainNode.currencyNode.transactionSource.take(1000).takeWithin(1 second).runFold(List.empty[Transaction])((acc, cm) => cm :: acc)) { msgs =>
         completeWith(instanceOf[List[Transaction]])(_(msgs.reverse))
       }
     }
@@ -238,7 +240,7 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def transactionsTokens =
     get {
-      onSuccess(chainNode.currencyNode.transactionSourceToken.take(1000).takeWithin(10 milliseconds).runFold(List.empty[FrameToken])((acc, cm) => cm :: acc)) { msgs =>
+      onSuccess(chainNode.currencyNode.transactionSourceToken.take(1000).takeWithin(100 milliseconds).runFold(List.empty[FrameToken])((acc, cm) => cm :: acc)) { msgs =>
         completeWith(instanceOf[List[FrameToken]])(_(msgs.reverse))
       }
     }
@@ -250,7 +252,7 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   ))
   def transactionsJson =
     get {
-      onSuccess(chainNode.currencyNode.transactionSourceJson.take(1000).takeWithin(10 milliseconds).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
+      onSuccess(chainNode.currencyNode.transactionSourceJson.take(1000).takeWithin(100 milliseconds).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
         completeWith(instanceOf[List[Json]])(_(msgs.reverse.map(parse(_).right.toOption.getOrElse(Json.Null))))
       }
     }

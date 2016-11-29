@@ -55,6 +55,19 @@ class ChainNode(val nodeName: String, val port: Int, keyPair: KeyPair, knownKeys
   val chatNode = new ChatNode(nodeIdToken, keyPair, cn => newChain(JwtAlgo.ES512, cn))
   val currencyNode = new CurrencyNode(nodeIdToken, keyPair, cn => newChain(JwtAlgo.ES512, cn))
 
+  private val bot = actor("bot")(new Act {
+    become {
+      case "tick" => currencyNode.randomPayment()
+    }
+  })
+
+  val cancellable =
+    system.scheduler.schedule(
+      2 seconds,
+      50 milliseconds,
+      bot,
+      "tick")
+
   def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
     val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)

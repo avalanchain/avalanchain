@@ -4,11 +4,14 @@ import java.math.MathContext
 import java.security.KeyPair
 import java.time.OffsetDateTime
 import java.util.UUID
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import java.util.concurrent.atomic.AtomicReference
+import collection.JavaConverters._
 
+import scala.concurrent.duration._
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.Materializer
+import akka.stream.{Materializer, OverflowStrategy}
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain._
@@ -27,6 +30,7 @@ import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 
+import scala.collection.mutable
 import scala.util.Random
 
 
@@ -114,22 +118,6 @@ package object account {
     val accountSourceToken = accountChain.sourceFrame
     val accountSourceJson = accountChain.sourceJson
 
-    val accountsSource: Source[AccountStates, NotUsed] = accountSource.scan(Map.empty[AccountId, AccountState])((acc, ac) => ac match {
-      case Add(accountId, balance, expire, pubAcc, pub) =>
-        val account = Account(accountId, expire, pubAcc, pub)
-        val accountState = AccountState(account, balance, AccountStatus.Active)
-        acc + (accountId -> accountState)
-      case Block(accountId, pub) =>
-        val accountState = acc(accountId).copy(status = AccountStatus.Blocked)
-        acc + (accountId -> accountState)
-      case Disable(accountId, pub) =>
-        val accountState = acc(accountId).copy(status = AccountStatus.Disabled)
-        acc + (accountId -> accountState)
-    })
-
-    private val accountStates = new AtomicReference(Map.empty[AccountId, AccountState])
-    private val accountStatesUpdater = accountsSource.runForeach(accountStates.set(_))
-
     val transactionChainDefToken = chainFactory("__transactions__")
     val transactionChain = new NewChain(nodeId, transactionChainDefToken, keyPair)
 
@@ -148,18 +136,58 @@ package object account {
 //    val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
 //    Source.single(Cmd(accountCommand.asJson)).runWith(chainNode.chatNode.sink)
 
+    val accountsSource =
+      accountSource
+        //.merge(transactionSource)
+        .scan(new java.util.concurrent.ConcurrentHashMap[AccountId, AccountState]().asScala)((acc, ac) => ac match {
+//          case Transaction(from, to, amount, _) =>
+//            val f = acc(from)
+//            val t = acc(to)
+//            acc.put(from, f.copy(balance = f.balance - amount))
+//            acc.put(to, t.copy(balance = t.balance + amount))
+//            acc
+          case Add(accountId, balance, expire, pubAcc, pub) =>
+            val account = Account(accountId, expire, pubAcc, pub)
+            val accountState = AccountState(account, balance, AccountStatus.Active)
+            acc.put(accountId, accountState)
+            acc
+          case Block(accountId, pub) =>
+            val accountState = acc(accountId).copy(status = AccountStatus.Blocked)
+            acc.put(accountId, accountState)
+            acc
+          case Disable(accountId, pub) =>
+            val accountState = acc(accountId).copy(status = AccountStatus.Disabled)
+            acc.put(accountId, accountState)
+            acc
+        })
+        .map(_.toMap)
+    var accountStates = Map.empty[AccountId, AccountState]
+    private val accountStatesUpdater = accountsSource.runForeach(accountStates = _)
+
+
+    private val paymentQueue = Source.queue(1000, OverflowStrategy.backpressure).to(transactionSink).run()
     def randomPayment() = {
-      val accStates = accountStates.get().values.toArray
-      val from = accStates(Random.nextInt(accStates.length))
-      val to = accStates(Random.nextInt(accStates.length))
-      val amount = (Random.nextDouble() * from.balance.round(MathContext.DECIMAL32)).round(MathContext.DECIMAL32)
-      val payment = PaymentTransaction(from.account.accountId, to.account.accountId, amount)
-      Source.single(payment).runWith(transactionSink)
+      val accStates = accountStates.values.toArray
+      if (accStates.length > 0) {
+        var from = accStates(Random.nextInt(accStates.length))
+        var to = accStates(Random.nextInt(accStates.length))
+//        if (from.balance < to.balance) {
+//          val a = from
+//          from = to
+//          to = a
+//        }
+        val amount = if (from.balance < 0) -from.balance else (Random.nextDouble() * from.balance.round(MathContext.DECIMAL32)).round(MathContext.DECIMAL32)
+        val payment = PaymentTransaction(from.account.accountId, to.account.accountId, amount)
+        paymentQueue.offer(payment)
+        payment
+      }
     }
+
+    private val accountQueue = Source.queue(1000, OverflowStrategy.backpressure).to(accountSink).run()
 
     def addAccount1000(): AccountCommand.Add = {
       val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
-      Source.single(accountCommand).runWith(accountSink)
+      accountQueue.offer(accountCommand)
       accountCommand
     }
 
