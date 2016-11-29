@@ -138,14 +138,14 @@ package object account {
 
     val accountsSource =
       accountSource
-        //.merge(transactionSource)
+        .merge(transactionSource)
         .scan(new java.util.concurrent.ConcurrentHashMap[AccountId, AccountState]().asScala)((acc, ac) => ac match {
-//          case Transaction(from, to, amount, _) =>
-//            val f = acc(from)
-//            val t = acc(to)
-//            acc.put(from, f.copy(balance = f.balance - amount))
-//            acc.put(to, t.copy(balance = t.balance + amount))
-//            acc
+          case Transaction(from, to, amount, _) =>
+            val f = acc(from)
+            val t = acc(to)
+            acc.put(from, f.copy(balance = f.balance - amount))
+            acc.put(to, t.copy(balance = t.balance + amount))
+            acc
           case Add(accountId, balance, expire, pubAcc, pub) =>
             val account = Account(accountId, expire, pubAcc, pub)
             val accountState = AccountState(account, balance, AccountStatus.Active)
