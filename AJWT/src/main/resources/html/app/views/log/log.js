@@ -22,8 +22,7 @@
         $scope.current = {};
         function getData() {
           dataservice.getData().then(function(data) {
-            $scope.data = data;
-            $scope.transactions = $scope.data.transactions;
+            $scope.transactions = data.log;
           });
         }
         activate();

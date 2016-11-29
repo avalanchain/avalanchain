@@ -29,7 +29,8 @@
             getNodes: getNodes,
             getUsers: getUsers,
             newUser:newUser,
-            getYahoo: getYahoo
+            getYahoo: getYahoo,
+            getLog: getLog
         };
 
         return service;
@@ -182,8 +183,43 @@
                 });
         }
 
-
         function getTransactions() {
+            var sc = {};
+            var tusers = ["EUR/USD", "USD/EUR", "USD/JPY", "USD/GBP", "USD/AUD", "USD/CHF", "USD/SEK", "USD/NOK", "USD/RUB"];
+            var tsystems = ["Error", "Warning", "Success"];
+            var ausers = ["send", "receive", "denied", "accept"];
+            var asystems = ["signed", "new cluster", "new node", "new account"];
+            var types = ["users", "system"]
+            var transactions = [];
+            // var account = '';
+            // for (var i = 1; i <= 1000; i++) {
+            //     var type = (i % 2) == 0 ? types[0] : types[1];
+            //     var node = Math.floor(Math.random() * data.nodes.length);
+            //     var action, value, typename = '';
+            //     if (type === "users") {
+            //         account = data.accounts[Math.floor(Math.random() * data.accounts.length)].ref.address;
+            //         action = ausers[Math.floor(Math.random() * ausers.length)];
+            //         typename = tusers[Math.floor(Math.random() * tusers.length)];
+            //     } else {
+            //         account = 'system';
+            //         action = asystems[Math.floor(Math.random() * asystems.length)];
+            //         typename = tsystems[Math.floor(Math.random() * tsystems.length)];
+            //     }
+            //     transactions.push({
+            //         id: getId(),
+            //         publicKey: getId(),
+            //         node: data.nodes[node].id,
+            //         action: action,
+            //         account: account,
+            //         type: type,
+            //         typename: typename,
+            //         date: new Date()
+            //     })
+            // }
+            return transactions;
+        }
+
+        function getLog() {
             var sc = {};
             var tusers = ["EUR/USD", "USD/EUR", "USD/JPY", "USD/GBP", "USD/AUD", "USD/CHF", "USD/SEK", "USD/NOK", "USD/RUB"];
             var tsystems = ["Error", "Warning", "Success"];
@@ -197,7 +233,7 @@
                 var node = Math.floor(Math.random() * data.nodes.length);
                 var action, value, typename = '';
                 if (type === "users") {
-                    account = data.accounts[Math.floor(Math.random() * data.accounts.length)].ref.address;
+                    account = getId();
                     action = ausers[Math.floor(Math.random() * ausers.length)];
                     typename = tusers[Math.floor(Math.random() * tusers.length)];
                 } else {
@@ -428,6 +464,7 @@
             if(data.nodesLoaded){
                 data.streams = data.streams.length !== 0 ? data.streams : getStreams();
                 data.transactions = data.transactions.length !== 0 ? data.transactions : getTransactions();
+                data.log = data.log ? data.log : getLog();
             }
             else{
                 data.streams = [];
