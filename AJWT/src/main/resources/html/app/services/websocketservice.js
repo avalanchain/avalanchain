@@ -37,6 +37,7 @@
         var ylisteners = new Listeners('/ws/yahoo');
         var nlisteners = new Listeners('/ws/nodes');
         var mlisteners = new Listeners('/ws/chat');
+        var alisteners = new Listeners('/ws/accounts');
 
 
         function reopenConn(url) {
@@ -87,10 +88,19 @@
             })
         });
 
+        alisteners.stream.onMessage(function(message) {
+            angular.forEach(alisteners.listeners, function(l) {
+                $timeout(function () {
+                    l.accountData(JSON.parse(message.data));
+                });
+            })
+        });
+
         var methods = {
             nlisteners: nlisteners,
             ylisteners: ylisteners,
             mlisteners: mlisteners,
+            alisteners: alisteners,
             get: function() {
                 ylisteners.stream.send(JSON.stringify({ action: 'get' }));
             }

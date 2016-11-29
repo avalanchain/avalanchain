@@ -86,9 +86,37 @@
                 });
         }
 
-        function getAccounts() {
+        function getAccounts(vm) {
             var accounts = [];
-            var sc = {};
+            if(vm){
+                vm.accountData = function(acc) {
+                    vm.accounts = vm.accounts || [];
+                    // var same = vm.chat.messages.filter(function (nd) {
+                    //     return nd.data.address.port == info.NodeUp.address.port
+                    // });
+                    //if(same.length == 0){
+                    vm.accounts.push({
+                        name: acc.accountId,
+                        publicKey: acc.accountId,
+                        balance: acc.balance,
+                        status: acc.accountId,
+                        signed: true,
+                        expired: acc.expired,
+                        ref: {
+                            address: acc.accountId
+                        }
+                    })
+                    vm.lastMessage = new Date();
+                    //}
+                    data.accounts = vm.accounts;
+                };
+
+                vm.removeListener = function() {
+                    websocketservice.alisteners.removeListener(vm);
+                };
+                websocketservice.alisteners.addListener(vm);
+                vm.accounts = data.accounts;
+            }
             if (accounts.length < 1) {
                 for (var i = 0; i < 200; i++) {
                     accounts.push({
@@ -308,18 +336,20 @@
 
         }
 
-        function newAccount() {
-            logger("Account created!");
-            // return $http.post('/api/account/new')
-            //     .success(function(data, status, headers, config) {
-            //         log("Account created!");
-            //         return data;
-            //     })
-            //     .error(function(data, status, headers, config) {
-            //         var err = status + ", " + data;
-            //         log("Request failed: " + err);
-            //         return "error";
-            //     });
+        function newAccount() {//
+            return dataProvider.post({}, '/v1/currency/newAccount1000', {},
+                function success(data, status) {
+                    logger("Account created!");
+                    //return data;
+                },
+                function fail(data, status) {
+                    if (data == "Already Added") {
+                        logWarning(data);
+                    } else {
+                        logError(data);
+                    }
+
+                });
         }
 
         function newUser() {
@@ -353,14 +383,6 @@
         function commondata() {
             var curr = ["USD", "EUR", "JPY", "GBP", "AUD", "CHF", "SEK", "NOK", "RUB", "TRY", "BRL", "CAD", "CNY", "HKD", "INR", "KRW", "MXN", "NZD", "SGD", "ZAR"];
             var percentage = [45, 17, 12, 6, 4, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5, 0.5];
-            //return this.currencies = function () {
-
-            //     return curr;
-            // }
-            //return this.percentage = function () {
-
-            //     return percentage;
-            //}
 
             return {
                 currencies: function () {

@@ -53,10 +53,10 @@
             $rootScope.modal.json = '{ "id": 1, "title": "node1", "nodes": [ { "id": 11, "title": "node1.1", "nodes": [ { "id": 111, "title": "node1.1.1", "nodes": [] } ] }, { "id": 12, "title": "node1.2", "nodes": [] } ] }';
             $rootScope.modal.editorOptions =  vm.editorOptions;
             $rootScope.modal.ok =function () {
-                return dataservice.newUser().then(function (data) {
-                    // $rootScope.$emit('updateAccounts');
-                    return 200;
-                });
+                // return dataservice.newUser().then(function (data) {
+                //     // $rootScope.$emit('updateAccounts');
+                //     return 200;
+                // });
             };
             $rootScope.modal.canel =function () {
                 // dataservice.newUser().then(function (data) {

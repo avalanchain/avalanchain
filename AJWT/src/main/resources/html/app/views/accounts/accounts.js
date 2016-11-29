@@ -30,8 +30,9 @@
             $rootScope.modal.hexPass = m.toHex();
             $rootScope.modal.guid = dataservice.getId();
             $rootScope.modal.ok =function () {
-                dataservice.newAccount().then(function (data) {
-                    $rootScope.$emit('updateAccounts');
+                return dataservice.newAccount().then(function (data) {
+                    // $rootScope.$emit('updateAccounts');
+                    return 200;
                 });
             };
             var modalInstance = $uibModal.open({
