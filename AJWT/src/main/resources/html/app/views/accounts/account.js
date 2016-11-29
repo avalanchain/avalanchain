@@ -9,11 +9,35 @@
         var log = getLogFn(controllerId);
         var vm = this;
 
+        vm.accounts= [];
         var accountId = $stateParams.accountId;
         vm.accountid = accountId;
-        dataservice.getData().then(function(data) {
-          $scope.accounts = data.accounts;
-            $scope.current = data.accounts.filter(function(acc) {
+        dataservice.getAccs().then(function(data) {
+            vm.users = data.data;
+            for (var pr in data.data) {
+                var acc = data.data[pr];
+                var property = '';
+                for (var prop in acc.status) {
+                    if (acc.status.hasOwnProperty(prop)){
+                        property =  prop;
+                        break;
+                    }
+
+                }
+                vm.accounts.push({
+                    name: acc.account.accountId.replace(/-/gi, ''),
+                    publicKey: acc.account.accountId.replace(/-/gi, ''),
+                    balance: acc.balance,
+                    status: property,
+                    signed: true,
+                    expired: acc.account.expire,
+                    ref: {
+                        address: acc.account.accountId.replace(/-/gi, '')
+                    }
+                });
+            }
+          $scope.accounts = vm.accounts;
+            $scope.current = vm.accounts.filter(function(acc) {
                 return acc.ref.address === accountId;
             })[0];
             if(!$scope.current){

@@ -37,7 +37,7 @@
         var ylisteners = new Listeners('/ws/yahoo');
         var nlisteners = new Listeners('/ws/nodes');
         var mlisteners = new Listeners('/ws/chat');
-        var alisteners = new Listeners('/ws/accounts');
+        // var alisteners = new Listeners('/ws/accounts');
         var tlisteners = new Listeners('/ws/transactions');
 
 
@@ -57,10 +57,10 @@
                     // mlisteners.close();
                     mlisteners = new Listeners('/ws/chat');
                     break;
-                case '/ws/accounts':
-                    // mlisteners.close();
-                    alisteners = new Listeners('/ws/accounts');
-                    break;
+                // case '/ws/accounts':
+                //     // mlisteners.close();
+                //     alisteners = new Listeners('/ws/accounts');
+                //     break;
                 case '/ws/accounts':
                     // mlisteners.close();
                     tlisteners = new Listeners('/ws/transactions');
@@ -97,13 +97,13 @@
             })
         });
 
-        alisteners.stream.onMessage(function(message) {
-            angular.forEach(alisteners.listeners, function(l) {
-                $timeout(function () {
-                    l.accountData(JSON.parse(message.data));
-                });
-            })
-        });
+        // alisteners.stream.onMessage(function(message) {
+        //     angular.forEach(alisteners.listeners, function(l) {
+        //         $timeout(function () {
+        //             l.accountData(JSON.parse(message.data));
+        //         });
+        //     })
+        // });
 
         tlisteners.stream.onMessage(function(message) {
             angular.forEach(tlisteners.listeners, function(l) {
@@ -117,7 +117,7 @@
             nlisteners: nlisteners,
             ylisteners: ylisteners,
             mlisteners: mlisteners,
-            alisteners: alisteners,
+            // alisteners: alisteners,
             tlisteners: tlisteners,
             get: function() {
                 ylisteners.stream.send(JSON.stringify({ action: 'get' }));

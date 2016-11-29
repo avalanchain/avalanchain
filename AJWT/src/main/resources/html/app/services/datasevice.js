@@ -15,6 +15,7 @@
             getTransactions: getTransactions,
             newAccount: newAccount,
             getAccounts: getAccounts,
+            getAccs: getAccs,
             getYData: getYData,
             addCluster: addCluster,
             addNode: addNode,
@@ -86,6 +87,7 @@
 
                 });
         }
+
 
         function getAccounts(vm) {
             var accounts = [];
@@ -169,6 +171,23 @@
                 });
         }
 
+        function getAccs() {
+            var sc = {};
+            return dataProvider.get(sc, '/v1/currency/accounts', {},
+                function success(data, status) {
+                    // logger('GET ' + data.length + ' USERS');
+                    return data;
+                },
+                function fail(data, status) {
+                    if (data == "Already Added") {
+                        logWarning(data);
+                    } else {
+                        logError(data);
+                    }
+
+                });
+        }
+
         function sendPayment(payment) {
             return $http.post('/api/transaction/submit', payment)
                 .success(function (data, status, headers, config) {
@@ -193,8 +212,8 @@
                     // if(same.length == 0){
                         //var num = vm.nodes.length + 1;
                         vm.transactions.push({
-                            from: transaction.from,
-                            to: transaction.to,
+                            from: transaction.from.replace(/-/gi, ''),
+                            to: transaction.to.replace(/-/gi, ''),
                             amount: transaction.amount,
                             pub: transaction.pub.X
                         });
@@ -444,7 +463,7 @@
             var defer = $q.defer();
             data.clusters = data.clusters ? data.clusters : getClusters();
             data.nodes = data.nodes || getNodes(data);
-            data.accounts = data.accounts ? data.accounts : getAccounts(data);
+            data.accounts = data.accounts ? data.accounts : getAccs();//getAccounts(data);
             data.transactions = data.transactions || getTransactions(data);
             data.messages = data.messages ? data.messages : getChat(data);
             data.yahoodata = data.yahoodata ? data.yahoodata : getYahoo(data);

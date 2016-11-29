@@ -2,9 +2,9 @@
 (function () {
     'use strict';
     var controllerId = 'accounts';
-    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$filter', '$uibModal', '$rootScope', '$state', accounts]);
+    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$filter', '$uibModal', '$rootScope', '$state', '$interval', accounts]);
 
-    function accounts(common, dataservice, $scope, $filter, $uibModal, $rootScope, $state) {
+    function accounts(common, dataservice, $scope, $filter, $uibModal, $rootScope, $state, $interval) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -21,8 +21,8 @@
         $scope.currentPage = 1;
         $scope.transactionPage = 1;
         $scope.transactions = [];
-
-        dataservice.getAccounts(vm);
+        vm.accounts = [];
+        // dataservice.getAccounts(vm);
         $scope.openModal = function () {
             var m = new Mnemonic(96);
             $rootScope.modal = {};
@@ -101,6 +101,47 @@
             getAccounts();
         }
 
+        vm.startTimer = function() {
+            vm.Timer = $interval(getAccounts, 500);
+        };
+
+        //TODO: add to service
+        $scope.$on("$destroy", function() {
+            if (angular.isDefined(vm.Timer)) {
+                $interval.cancel(vm.Timer);
+            }
+        });
+
+        function getAccounts() {
+            dataservice.getAccs().then(function(data) {
+                vm.users = data.data;
+                for (var pr in data.data) {
+                    var acc = data.data[pr];
+                        var property = '';
+                        for (var prop in acc.status) {
+                            if (acc.status.hasOwnProperty(prop)){
+                                property =  prop;
+                                break;
+                            }
+
+                        }
+                        vm.accounts.push({
+                            name: acc.account.accountId.replace(/-/gi, ''),
+                            publicKey: acc.account.accountId.replace(/-/gi, ''),
+                            balance: acc.balance,
+                            status: property,
+                            signed: true,
+                            expired: acc.account.expire,
+                            ref: {
+                                address: acc.account.accountId.replace(/-/gi, '')
+                            }
+                        });
+                }
+            });
+        }
+
+        vm.startTimer()
+
         // setInterval(function updateRandom() {
         //
         //     if ($scope.isAccountPage) {
@@ -124,21 +165,12 @@
             return data;
         }
 
-        function getAccounts() {
-          // dataservice.getData().then(function(data) {
-          //   $scope.accounts = addStatus(data.accounts);
-          //   $scope.totalItems = $scope.accounts.length;
-          //   // $rootScope.accountsamount = $scope.accounts.length;
-          // });
-            // $scope.accounts = addStatus(dataservice.getData().accounts);
-            // $scope.totalItems = $scope.accounts.length;
-            // $rootScope.accountsamount = $scope.accounts.length;
-        }
+
 
         activate();
 
         function activate() {
-            common.activateController([getAccounts()], controllerId)
+            common.activateController([], controllerId)
                 .then(function () { log('Activated Accounts') });//log('Activated Admin View');
         }
 
