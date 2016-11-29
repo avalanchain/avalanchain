@@ -14,7 +14,7 @@ import com.avalanchain.jwt.basicChain.{Cmd, FrameToken}
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode
 import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
-import com.avalanchain.jwt.jwt.demo.account.AccountCommand.Add
+import com.avalanchain.jwt.jwt.demo.account.AccountCommand.{Add, Block, Disable}
 import com.avalanchain.jwt.jwt.demo.account.{AccountCommand, AccountEvent, AccountStates}
 import com.avalanchain.jwt.utils.CirceCodecs
 import de.heikoseeberger.akkahttpcirce.CirceSupport
@@ -37,8 +37,6 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   import scala.concurrent.duration._
 
   implicit val timeout = Timeout(2 seconds)
-
-  //val a = List[ChainDefToken]().asJson
 
   val route = pathPrefix("currency") {
     path("accounts") {
@@ -80,17 +78,54 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
 //      }
 //    }
 
+  @Path("block")
+  @ApiOperation(value = "Block Account", notes = "", nickname = "block", httpMethod = "POST")
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "body", value = "\"AccountId\" to block", required = true,
+      dataType = "UUID", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "Account Blocked", response = classOf[Boolean]),
+    new ApiResponse(code = 409, message = "Internal server error")
+  ))
+  def block =
+    post {
+      entity(as[UUID]) { accountId => {
+        Source.single(Block(accountId, chainNode.publicKey)).runWith(chainNode.currencyNode.accountSink)
+        complete(StatusCodes.OK, true)
+      }
+      }
+    }
+
+
+  @Path("disable")
+  @ApiOperation(value = "Disable Account", notes = "", nickname = "disable", httpMethod = "POST")
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "body", value = "\"AccountId\" to disable", required = true,
+      dataType = "UUID", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "Account Disabled", response = classOf[Boolean]),
+    new ApiResponse(code = 409, message = "Internal server error")
+  ))
+  def disable =
+    post {
+      entity(as[UUID]) { accountId => {
+        Source.single(Disable(accountId, chainNode.publicKey)).runWith(chainNode.currencyNode.accountSink)
+        complete(StatusCodes.OK, true)
+      }
+      }
+    }
+
   @Path("newAccount1000")
   @ApiOperation(value = "Create a new Account with 1000 balance", notes = "", nickname = "newAccount1000", httpMethod = "POST")
   @ApiResponses(Array(
-    //new ApiResponse(code = 201, message = "AccountCreated", response = classOf[Add]),
+    //new ApiResponse(code = 201, message = "Account Created", response = classOf[Add]),
     new ApiResponse(code = 409, message = "Internal server error")
   ))
   def newAccount1000 =
     post {
-      val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, chainNode.publicKey)
-      Source.single(accountCommand).runWith(chainNode.currencyNode.accountSink)
-      complete(StatusCodes.Created, accountCommand)
+      complete(StatusCodes.Created, chainNode.currencyNode.addAccount1000())
     }
 
   @Path("accounts")

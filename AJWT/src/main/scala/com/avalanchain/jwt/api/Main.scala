@@ -165,6 +165,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
 //    } //~
   }
 
+  //(0 until 100).foreach(_ => chainNode.currencyNode.addAccount1000)
 
   def startHttp(localport: Int): Future[ServerBinding] = {
     val httpPort = localport + 1000

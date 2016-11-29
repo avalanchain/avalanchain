@@ -141,5 +141,14 @@ package object account {
     //val trace2 = accountChain.source.runForeach(e => println(s"DES: ${e.payloadJson}"))
 //    val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
 //    Source.single(Cmd(accountCommand.asJson)).runWith(chainNode.chatNode.sink)
+
+
+    def addAccount1000(): AccountCommand.Add = {
+      val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
+      Source.single(accountCommand).runWith(accountSink)
+      accountCommand
+    }
+
+    (0 until 100).foreach(_ => addAccount1000)
   }
 }
