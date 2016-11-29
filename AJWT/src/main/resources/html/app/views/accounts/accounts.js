@@ -102,7 +102,7 @@
         }
 
         vm.startTimer = function() {
-            vm.Timer = $interval(getAccounts, 500);
+            vm.Timer = $interval(getAccounts, 1000);
         };
 
         //TODO: add to service
@@ -111,9 +111,11 @@
                 $interval.cancel(vm.Timer);
             }
         });
-
+        vm.dt = [];
         function getAccounts() {
+
             dataservice.getAccs().then(function(data) {
+                vm.dt = [];
                 vm.users = data.data;
                 for (var pr in data.data) {
                     var acc = data.data[pr];
@@ -125,7 +127,8 @@
                             }
 
                         }
-                        vm.accounts.push({
+
+                    vm.dt.push({
                             name: acc.account.accountId.replace(/-/gi, ''),
                             publicKey: acc.account.accountId.replace(/-/gi, ''),
                             balance: acc.balance,
@@ -137,7 +140,10 @@
                             }
                         });
                 }
+                vm.accounts = angular.copy(vm.dt);
             });
+
+
         }
 
         vm.startTimer()

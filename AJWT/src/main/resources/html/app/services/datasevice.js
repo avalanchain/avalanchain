@@ -397,7 +397,7 @@
                     if (data == "Already Added") {
                         logWarning(data);
                     } else {
-                        logError(data);
+                        //logError(data);
                     }
 
                 });
