@@ -9,8 +9,7 @@
 
         function Listeners(path, name, listeners, stream) {
             var host = $window.location.host;
-            this.name = name|| 'websocket';
-            this.path = path ? 'ws://' + host + path: 'ws://' + host + '/ws/yahoo';
+            this.path = path ? 'ws://' + host + path : 'ws://' + host + '/ws/yahoo';
             this.stream = $websocket(this.path);
             this.listeners = listeners || [];
             this.stream.onOpen(function() {
@@ -18,12 +17,11 @@
             });
             this.stream.onClose(function(event) {
                 console.log('connection closed', event);
+                reopenConn(this.url);
             });
             this.stream.onError(function(event) {
                 console.log('connection Error', event);
-                // function reOpenconn() {
-                //
-                // }
+
             });
         }
         Listeners.prototype = {
@@ -36,10 +34,30 @@
             }
         };
 
-        var ylisteners = new Listeners('/ws/yahoo', 'yahoo');
-        var nlisteners = new Listeners('/ws/nodes', 'nodes');
-        var mlisteners = new Listeners('/ws/chat', 'chat');
+        var ylisteners = new Listeners('/ws/yahoo');
+        var nlisteners = new Listeners('/ws/nodes');
+        var mlisteners = new Listeners('/ws/chat');
 
+
+        function reopenConn(url) {
+            var host = $window.location.host;
+            var path  = url.replace('ws://' + host ,'');
+            switch(path) {
+                case '/ws/yahoo':
+                    // ylisteners.close();
+                    ylisteners = new Listeners('/ws/yahoo');
+                    break;
+                case '/ws/nodes':
+                    // nlisteners.close();
+                    nlisteners = new Listeners('/ws/nodes');
+                    break;
+                case '/ws/chat':
+                    // mlisteners.close();
+                    mlisteners = new Listeners('/ws/chat');
+                    break;
+            }
+
+        }
 
         ylisteners.stream.onMessage(function(message) {
             angular.forEach(ylisteners.listeners, function(l) {
