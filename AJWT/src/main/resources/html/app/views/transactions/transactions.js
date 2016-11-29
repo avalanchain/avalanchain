@@ -7,28 +7,31 @@
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
 
+        var vm = this;
+
         $scope.datayahoo = [];
         $scope.transactions = [];
         $scope.transactionPage = 1;
         $scope.isEdit = false;
         $scope.maxSize = 5;
 
-        setInterval(function updateRandom() {
-                getData();
-        }, 3000);
+        dataservice.getTransactions(vm);
+        // setInterval(function updateRandom() {
+        //         getData();
+        // }, 3000);
 
 
         var dataprev = [];
         $scope.current = {};
-        function getData() {
-          dataservice.getData().then(function(data) {
-            $scope.data = data;
-            $scope.transactions = $scope.data.transactions;
-          });
-        }
+        // function getData() {
+        //   dataservice.getData().then(function(data) {
+        //     $scope.data = data;
+        //     $scope.transactions = $scope.data.transactions;
+        //   });
+        // }
         activate();
         function activate() {
-            common.activateController([getData()], controllerId)
+            common.activateController([], controllerId)
                 .then(function () { log('Activated transactions') });//log('Activated Admin View');
         }
     };

@@ -183,40 +183,31 @@
                 });
         }
 
-        function getTransactions() {
-            var sc = {};
-            var tusers = ["EUR/USD", "USD/EUR", "USD/JPY", "USD/GBP", "USD/AUD", "USD/CHF", "USD/SEK", "USD/NOK", "USD/RUB"];
-            var tsystems = ["Error", "Warning", "Success"];
-            var ausers = ["send", "receive", "denied", "accept"];
-            var asystems = ["signed", "new cluster", "new node", "new account"];
-            var types = ["users", "system"]
-            var transactions = [];
-            // var account = '';
-            // for (var i = 1; i <= 1000; i++) {
-            //     var type = (i % 2) == 0 ? types[0] : types[1];
-            //     var node = Math.floor(Math.random() * data.nodes.length);
-            //     var action, value, typename = '';
-            //     if (type === "users") {
-            //         account = data.accounts[Math.floor(Math.random() * data.accounts.length)].ref.address;
-            //         action = ausers[Math.floor(Math.random() * ausers.length)];
-            //         typename = tusers[Math.floor(Math.random() * tusers.length)];
-            //     } else {
-            //         account = 'system';
-            //         action = asystems[Math.floor(Math.random() * asystems.length)];
-            //         typename = tsystems[Math.floor(Math.random() * tsystems.length)];
-            //     }
-            //     transactions.push({
-            //         id: getId(),
-            //         publicKey: getId(),
-            //         node: data.nodes[node].id,
-            //         action: action,
-            //         account: account,
-            //         type: type,
-            //         typename: typename,
-            //         date: new Date()
-            //     })
-            // }
-            return transactions;
+        function getTransactions(vm) {
+            if(vm){
+                vm.transactionData = function(transaction) {
+                    vm.transactions = vm.transactions || [];
+                    // var same = vm.nodes.filter(function (nd) {
+                    //     return nd.data.address.port == info.NodeUp.address.port
+                    // });
+                    // if(same.length == 0){
+                        //var num = vm.nodes.length + 1;
+                        vm.transactions.push({
+                            from: transaction.from,
+                            to: transaction.to,
+                            amount: transaction.amount,
+                            pub: transaction.pub.X
+                        });
+                    // }
+                    data.transactions = vm.transactions;
+                    // data.nodesLoaded=true;
+                };
+                vm.removeListener = function() {
+                    websocketservice.tlisteners.removeListener(vm);
+                };
+                websocketservice.tlisteners.addListener(vm);
+                vm.transactions = data.transactions;
+            }
         }
 
         function getLog() {
@@ -307,17 +298,9 @@
                 websocketservice.nlisteners.addListener(vm);
                 vm.nodes = data.nodes;
             }
-
-            var nodes = [];
-            // for (var i = 1; i <= 2; i++) {
-            //     nodes.push({
-            //         id: getId(),
-            //         name: 'ND-' + i,
-            //         publicKey: getId(),
-            //         cluster: data.clusters[0].id
-            //     })
-            // }
-            return nodes;
+            //
+            // var nodes = [];
+            // return nodes;
         }
 
         function getClusters() {
@@ -451,7 +434,7 @@
                 }
                 vm.messages.unshift(info);
             };
-
+            //vm.nodes = data.yahoo;
             websocketservice.ylisteners.addListener(vm);
         }
 
@@ -461,19 +444,20 @@
             var defer = $q.defer();
             data.clusters = data.clusters ? data.clusters : getClusters();
             data.nodes = data.nodes || getNodes(data);
+            data.accounts = data.accounts ? data.accounts : getAccounts(data);
+            data.transactions = data.transactions || getTransactions(data);
+            data.messages = data.messages ? data.messages : getChat(data);
+            data.yahoo = data.yahoo ? data.yahoo : getYahoo(data);
+
+
             if(data.nodesLoaded){
                 data.streams = data.streams.length !== 0 ? data.streams : getStreams();
-                data.transactions = data.transactions.length !== 0 ? data.transactions : getTransactions();
                 data.log = data.log ? data.log : getLog();
             }
             else{
                 data.streams = [];
                 data.transactions = [];
             }
-            data.accounts = data.accounts ? data.accounts : getAccounts();
-
-            data.messages = data.messages ? data.messages : getChat(data);
-
             $timeout(function () {
                 defer.resolve(data);
             }, 200)

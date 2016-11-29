@@ -38,6 +38,7 @@
         var nlisteners = new Listeners('/ws/nodes');
         var mlisteners = new Listeners('/ws/chat');
         var alisteners = new Listeners('/ws/accounts');
+        var tlisteners = new Listeners('/ws/transactions');
 
 
         function reopenConn(url) {
@@ -58,7 +59,11 @@
                     break;
                 case '/ws/accounts':
                     // mlisteners.close();
-                    mlisteners = new Listeners('/ws/accounts');
+                    alisteners = new Listeners('/ws/accounts');
+                    break;
+                case '/ws/accounts':
+                    // mlisteners.close();
+                    tlisteners = new Listeners('/ws/transactions');
                     break;
             }
 
@@ -100,11 +105,20 @@
             })
         });
 
+        tlisteners.stream.onMessage(function(message) {
+            angular.forEach(tlisteners.listeners, function(l) {
+                $timeout(function () {
+                    l.transactionData(JSON.parse(message.data));
+                });
+            })
+        });
+
         var methods = {
             nlisteners: nlisteners,
             ylisteners: ylisteners,
             mlisteners: mlisteners,
             alisteners: alisteners,
+            tlisteners: tlisteners,
             get: function() {
                 ylisteners.stream.send(JSON.stringify({ action: 'get' }));
             }

@@ -10,19 +10,20 @@
         var vm = this;
 
         var accountId = $stateParams.accountId;
-
+        vm.accountid = accountId;
         dataservice.getData().then(function(data) {
           $scope.accounts = data.accounts;
             $scope.current = data.accounts.filter(function(acc) {
                 return acc.ref.address === accountId;
             })[0];
-            $scope.getTransactions();
             if(!$scope.current){
                 $state.go('index.accounts');
             }
+            $scope.getTransactions();
+
         });
 
-        $scope.transactions = [];
+        vm.transactions = [];
 
         $scope.payment = {
             fromAcc: {},
@@ -41,8 +42,8 @@
 
         $scope.getTransactions = function() {
             dataservice.getData().then(function(data) {
-                $scope.transactions = data.transactions.filter(function(transaction) {
-                    return transaction.account === accountId;
+                vm.transactions = data.transactions.filter(function(transaction) {
+                    return transaction.from === accountId || transaction.to === accountId;
                 });
 
                 var currentTransactionPage = $scope.transactionPage;
@@ -57,18 +58,18 @@
             });
         }
 
-        function addStatus(data) {
-            if (data) {
-                for (var i = 0; i < data.length; i++) {
-                    if (data[i].status === 1) {
-                        data[i]["navigation"] = 'label-primary';
-                    } else {
-                        data[i]["navigation"] = 'label-deafault';
-                    }
-                }
-            }
-            return data;
-        }
+        // function addStatus(data) {
+        //     if (data) {
+        //         for (var i = 0; i < data.length; i++) {
+        //             if (data[i].status === 1) {
+        //                 data[i]["navigation"] = 'label-primary';
+        //             } else {
+        //                 data[i]["navigation"] = 'label-deafault';
+        //             }
+        //         }
+        //     }
+        //     return data;
+        // }
 
         $scope.startTimer = function() {
             $scope.Timer = $interval($scope.getTransactions, 3000);
