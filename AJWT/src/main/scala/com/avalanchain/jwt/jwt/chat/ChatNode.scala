@@ -35,5 +35,5 @@ class ChatNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => Ch
   val sourceToken = chain.sourceFrame
   val sourceJson = chain.sourceJson
 
-  chain.process()
+  private val processFuture = chain.process()
 }

@@ -10,6 +10,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain._
+import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.network.NewChain
 import com.avalanchain.jwt.jwt.demo.account.AccountCommand._
 import com.avalanchain.jwt.utils.{CirceCodecs, CirceSimpleCodecs}
@@ -133,7 +134,11 @@ package object account {
 //    val transactionSourceJson = transactionChain.sourceJson
 
 
-    accountChain.process()
+    private val processFuture = accountChain.process()
 //    transactionChain.process()
+
+    val trace = accountChain.sourceDES.runForeach(e => println(s"DES: $e"))
+//    val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
+//    Source.single(Cmd(accountCommand.asJson)).runWith(chainNode.chatNode.sink)
   }
 }

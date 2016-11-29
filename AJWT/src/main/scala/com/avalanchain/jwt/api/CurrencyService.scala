@@ -89,7 +89,7 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
   def newAccount1000 =
     post {
       val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, chainNode.publicKey)
-      Source.single(Cmd(accountCommand.asJson)).runWith(chainNode.chatNode.sink)
+      Source.single(accountCommand).runWith(chainNode.currencyNode.accountSink)
       complete(StatusCodes.Created, accountCommand)
     }
 
