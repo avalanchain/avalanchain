@@ -12,6 +12,8 @@ import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.actors.network.NewChain
 import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
 import com.avalanchain.jwt.utils.CirceCodecs
+import com.rbmhtechnology.eventuate.{ReplicationConnection, ReplicationEndpoint}
+import com.rbmhtechnology.eventuate.log.leveldb.LeveldbEventLog
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._
 import io.circe.parser._
@@ -22,7 +24,8 @@ import io.circe.generic.auto._
 /**
   * Created by Yuriy on 28/11/2016.
   */
-class ChatNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => ChainDefToken)(implicit actorSystem: ActorSystem, materializer: Materializer)
+class ChatNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => ChainDefToken)
+              (implicit actorSystem: ActorSystem, materializer: Materializer)
   extends CirceCodecs {
 
   val chainDefToken = chainFactory("__chat__")
@@ -36,4 +39,9 @@ class ChatNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => Ch
   val sourceJson = chain.sourceJson
 
   private val processFuture = chain.process()
+
+//  protected val endpoint = new ReplicationEndpoint(id = nodeId.sig, logNames = Set(eventLog),
+//    logFactory = logId => LeveldbEventLog.props(logId, nodeId.sig),
+//    connections = connectTo.map(ep => ReplicationConnection(ep._1, ep._2)))
+
 }
