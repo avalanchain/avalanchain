@@ -428,11 +428,11 @@
 
         function getYahoo(vm) {
             vm.newData = function(info) {
-                vm.messages = vm.messages || [];
-                if (vm.messages.length > 16) {
-                    vm.messages.pop();
+                vm.yahoodata = vm.yahoodata || [];
+                if (vm.yahoodata.length > 16) {
+                    vm.yahoodata.pop();
                 }
-                vm.messages.unshift(info);
+                vm.yahoodata.unshift(info);
             };
             //vm.nodes = data.yahoo;
             websocketservice.ylisteners.addListener(vm);
@@ -447,7 +447,7 @@
             data.accounts = data.accounts ? data.accounts : getAccounts(data);
             data.transactions = data.transactions || getTransactions(data);
             data.messages = data.messages ? data.messages : getChat(data);
-            data.yahoo = data.yahoo ? data.yahoo : getYahoo(data);
+            data.yahoodata = data.yahoodata ? data.yahoodata : getYahoo(data);
 
 
             if(data.nodesLoaded){

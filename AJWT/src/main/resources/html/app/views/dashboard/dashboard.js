@@ -98,7 +98,7 @@
             }
         });
         function updCurrency() {
-            vm.currencies = angular.copy(vm.messages);
+            vm.currencies = angular.copy(vm.yahoodata);
         }
 
         activate();
@@ -122,7 +122,7 @@
     }
 
     function getData(dataservice, vm) {
-        vm.messages = [];
+        vm.yahoodata = [];
         dataservice.getYahoo(vm);
         vm.startTimer();
         // setInterval(function updateRandom() {
