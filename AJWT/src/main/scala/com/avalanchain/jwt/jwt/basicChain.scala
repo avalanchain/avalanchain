@@ -67,7 +67,7 @@ package object basicChain {
     final case class Derived(algo: JwtAlgo, id: Id, pub: PubKey, rg: ResourceGroup, parent: ChainRef, cdf: ChainDerivationFunction) extends ChainDef
   }
   trait ChainDefCodecs {
-    import io.circe.Decoder, io.circe.generic.semiauto._
+    import io.circe.generic.semiauto._
     implicit val encoderChainDef: Encoder[ChainDef] = deriveEncoder
     implicit val decoderChainDef: Decoder[ChainDef] = deriveDecoder
   }
@@ -137,12 +137,11 @@ package object basicChain {
   }
   type FrameToken = TypedJwtToken[Frame]
   trait FrameTokenCodecs {
-    import io.circe.Decoder, io.circe.generic.semiauto._
+    import io.circe.generic.semiauto._
     implicit val encoderFrameToken: Encoder[FrameToken] = deriveEncoder
     implicit val decoderFrameToken: Decoder[FrameToken] = deriveDecoder
   }
-  object FrameTokenCodecs extends ChainDefCodecs
-
+  object FrameTokenCodecs extends FrameTokenCodecs
 
   sealed trait ChainStatus
   object ChainStatus {

@@ -17,7 +17,7 @@ import akka.stream.{Materializer, SourceShape, ThrottleMode}
 import akka.stream.scaladsl.{GraphDSL, Source}
 import akka.util.ByteString
 import com.avalanchain.jwt.basicChain.{JwtPayload, TypedJwtToken}
-import com.avalanchain.jwt.utils.CirceEncoders
+import com.avalanchain.jwt.utils.CirceCodecs
 import com.typesafe.config.ConfigFactory
 import org.joda.time.DateTime
 import yahoofinance.YahooFinance
@@ -43,7 +43,7 @@ trait StockPriceClient {
 /**
   * Retrieves historical service.stock prices from Yahoo Finance.
   */
-class YahooStockPriceClient() extends StockPriceClient
+class YahooStockPriceClient() extends StockPriceClient with CirceCodecs
 {
   private val defaultStocks = Array("EURUSD","USDEUR", "USDJPY", "USDGBP", "USDAUD", "USDCHF", "USDSEK", "USDNOK",
     "USDRUB", "USDTRY", "USDBRL", "USDCAD", "USDCNY", "USDHKD", "USDINR", "USDKRW", "USDMXN", "USDNZD", "USDSGD", "USDZAR")

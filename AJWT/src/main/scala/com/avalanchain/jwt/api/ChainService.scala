@@ -5,8 +5,9 @@ import javax.ws.rs.Path
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives
 import akka.util.Timeout
-import com.avalanchain.jwt.basicChain.{ChainDef, ChainDefCodecs, ChainDefToken}
+import com.avalanchain.jwt.basicChain.{ChainDef, ChainDefToken}
 import com.avalanchain.jwt.jwt.actors.ChainNode
+import com.avalanchain.jwt.utils.CirceCodecs
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.generic.auto._
 import io.circe.{Decoder, Encoder}
@@ -18,7 +19,7 @@ import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
 @Path("chains")
 @Api(value = "/chains", produces = "application/json")
 class ChainService(chainNode: ChainNode)
-  extends Directives with ChainDefCodecs with CorsSupport with CirceSupport {
+  extends Directives with CirceCodecs with CorsSupport with CirceSupport {
   import scala.concurrent.duration._
 
   implicit val timeout = Timeout(2 seconds)

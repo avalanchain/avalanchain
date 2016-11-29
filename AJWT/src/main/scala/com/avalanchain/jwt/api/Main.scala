@@ -13,7 +13,7 @@ import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.actors.ActorNode
 import com.avalanchain.jwt.jwt.actors.network.{DerivedChain, NewChain, NodeStatus}
 import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
-import com.avalanchain.jwt.utils.CirceEncoders
+import com.avalanchain.jwt.utils.CirceCodecs
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventProcessor._
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventSource
 import com.rbmhtechnology.eventuate.log.leveldb.LeveldbEventLog
@@ -58,9 +58,8 @@ import io.circe.syntax._
 import io.circe.generic.auto._
 
 import com.avalanchain.jwt.KeysDto._
-import com.avalanchain.jwt.basicChain.ChainDefCodecs._
 
-class Main(port: Int) extends Config with CorsSupport with CirceSupport with CirceEncoders {
+class Main(port: Int) extends Config with CorsSupport with CirceSupport with CirceCodecs {
 
   import StockTick._
 
@@ -168,6 +167,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
             corsHandler(new ChainService(chainNode).route) ~
             corsHandler(new AdminService().route) ~
             corsHandler(new ChatService(chainNode).route) ~
+            corsHandler(new CurrencyService(chainNode).route) ~
             corsHandler(new UsersService(userInfos, u => userInfos.exists(_ == u), u => addUserInfo(u)).route)
         } ~
         pathPrefix("ws") {
@@ -199,7 +199,7 @@ object Main3 extends Main(2553) with App
 object MainRnd extends Main(0) with App
 
 
-object MainCmd extends App {
+object MainCmd extends App with CirceCodecs {
   val keyPair = CurveContext.currentKeys
 
   def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
