@@ -56,6 +56,10 @@
                     // mlisteners.close();
                     mlisteners = new Listeners('/ws/chat');
                     break;
+                case '/ws/accounts':
+                    // mlisteners.close();
+                    mlisteners = new Listeners('/ws/accounts');
+                    break;
             }
 
         }

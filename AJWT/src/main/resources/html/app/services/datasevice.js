@@ -119,6 +119,7 @@
 
                         }
                         data.accounts = vm.accounts;
+                        vm.totalItems = vm.accounts.length;
                     }
 
                 };
