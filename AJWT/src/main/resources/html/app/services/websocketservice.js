@@ -52,7 +52,7 @@
         mlisteners.stream.onMessage(function(message) {
             angular.forEach(mlisteners.listeners, function(l) {
                 $timeout(function () {
-                    l.newData(JSON.parse(message.data));
+                    l.newMesData(JSON.parse(message.data));
                 });
             })
         });
@@ -64,7 +64,7 @@
             }
             angular.forEach(nlisteners.listeners, function(l) {
                 $timeout(function () {
-                    l.newData(mes);
+                    l.nodeData(mes);
                 });
             })
         });

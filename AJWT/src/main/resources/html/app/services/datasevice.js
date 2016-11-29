@@ -42,7 +42,7 @@
             var names = ['you', 'server'];
             var sides = ['right', 'left'];
             if(vm){
-                vm.newData = function(mes) {
+                vm.newMesData = function(mes) {
                     vm.messages = vm.messages || [];
                     // var same = vm.chat.messages.filter(function (nd) {
                     //     return nd.data.address.port == info.NodeUp.address.port
@@ -185,22 +185,25 @@
             for (var i = 1; i <= 200; i++) {
                 var type = (i % 2) == 0 ? types[0] : types[1];
                 var typename = Math.floor(Math.random() * typenames.length);
-                var node = Math.floor(Math.random() * data.nodes.length);
-                streams.push({
-                    id: getId(),
-                    publicKey: data.nodes[node].publicKey,
-                    node: data.nodes[node].id,
-                    type: type,
-                    typename: typenames[typename],
-                    date: new Date()
-                })
+                if(data.nodes.length>0){
+                    var node = Math.floor(Math.random() * data.nodes.length);
+                    streams.push({
+                        id: getId(),
+                        //publicKey: data.nodes[node].publicKey,
+                        node: data.nodes[node].id,
+                        type: type,
+                        typename: typenames[typename],
+                        date: new Date()
+                    })
+                }
+
             }
             return streams
         }
 
         function getNodes(vm) {
             if(vm){
-                vm.newData = function(info) {
+                vm.nodeData = function(info) {
                     if(!info.NodeUp){
                         return;
                     }
@@ -386,7 +389,7 @@
         function getData() {
             var defer = $q.defer();
             data.clusters = data.clusters ? data.clusters : getClusters();
-            data.nodes = data.nodes ? data.nodes : getNodes(data);
+            data.nodes = data.nodes || getNodes(data);
             if(data.nodesLoaded){
                 data.streams = data.streams.length !== 0 ? data.streams : getStreams();
                 data.transactions = data.transactions.length !== 0 ? data.transactions : getTransactions();

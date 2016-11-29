@@ -27,21 +27,12 @@
             name: 'server'
         });
         vm.send = function(message) {
-            dataservice.sendMessage(message).then(function(data) {
-                var mes = data.data.msg;
-                // if (message.length > 0) {
-                //     vm.messages.push({
-                //         id: dataservice.getId(),
-                //         name: vm.users[0].name,
-                //         date: new Date(),
-                //         message: mes,
-                //         side: 'right',
-                //
-                //     })
-                // }
-                vm.message = '';
-                // vm.lastMessage = new Date();
-            });
+            if (message.length > 0) {
+                dataservice.sendMessage(message).then(function(data) {
+                    var mes = data.data.msg;
+                    vm.message = '';
+                });
+            }
 
         };
 
