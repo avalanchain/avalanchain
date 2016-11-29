@@ -29,9 +29,9 @@ trait CirceSimpleCodecs {
     Either.catchNonFatal(OffsetDateTime.parse(str, DateTimeFormatter.ISO_DATE_TIME)).leftMap(t => "OffsetDateTime")
   }
 
-  implicit object UuidEncoder extends Encoder[UUID] {
-    override def apply(u: UUID): Json = u.toString.replace("-", "").asJson
-  }
+//  implicit object UuidEncoder extends Encoder[UUID] {
+//    override def apply(u: UUID): Json = u.toString.replace("-", "").asJson
+//  }
 
 }
 

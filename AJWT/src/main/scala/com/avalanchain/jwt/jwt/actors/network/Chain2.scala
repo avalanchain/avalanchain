@@ -69,7 +69,11 @@ abstract class Chain (
   def sourceDES = Source.fromGraph(DurableEventSource(eventLog))
   def sourceFrame = sourceDES.map(_.payload.asInstanceOf[FrameToken])
   def sourceJson = sourceFrame.map(_.payloadJson)
-  def source[T <: JwtPayload](implicit decoder: Decoder[T]) = sourceFrame.map(_.payload.get.v.as[T].right.toOption.get).mapMaterializedValue(_ => NotUsed.getInstance())
+  def source[T <: JwtPayload](implicit decoder: Decoder[T]) = sourceFrame.map(e => {
+    val v = e.payload.get.v.as[T]
+    println(s"V: $v")
+    v.right.toOption.get
+  }).mapMaterializedValue(_ => NotUsed.getInstance())
 
   private var currentFrame: Option[FrameToken] = None
   private var currentValue: Option[Json] = None

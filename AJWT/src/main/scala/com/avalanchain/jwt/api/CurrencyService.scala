@@ -105,8 +105,20 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
       }
     }
 
+//  @Path("accountEvents")
+//  @ApiOperation(httpMethod = "GET", response = classOf[List[AccountEvent]], value = "Gets all accounts events")
+//  @ApiResponses(Array(
+//    new ApiResponse(code = 200, message = "All accounts", response = classOf[List[AccountEvent]])
+//  ))
+//  def accountEvents =
+//    get {
+//      onSuccess(chainNode.currencyNode.accountSource.takeWithin(10 milliseconds).runFold(List.empty[AccountEvent])((acc, cm) => cm :: acc)) { msgs =>
+//        completeWith(instanceOf[List[AccountEvent]])(_(msgs.reverse))
+//      }
+//    }
+
   @Path("accountEvents")
-  @ApiOperation(httpMethod = "GET", response = classOf[List[AccountCommand]], value = "Gets all chat messages")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[AccountCommand]], value = "Gets all account related commands")
   @ApiResponses(Array(
     new ApiResponse(code = 200, message = "All accounts", response = classOf[List[AccountCommand]])
   ))

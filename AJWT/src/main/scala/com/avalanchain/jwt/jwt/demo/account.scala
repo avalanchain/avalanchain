@@ -104,7 +104,7 @@ package object account {
     val accountChainDefToken = chainFactory("__accounts__")
     val accountChain = new NewChain(nodeId, accountChainDefToken, keyPair)
 
-    val accountSink = Flow[AccountCommand].map(pt => Cmd(TypedJwtToken(pt, keyPair.getPrivate).asJson)).to(accountChain.sink)
+    val accountSink = Flow[AccountCommand].map(pt => Cmd(pt.asJson)).to(accountChain.sink)
 
     val accountSource: Source[AccountCommand, NotUsed] = accountChain.source[AccountCommand]
     val accountSourceToken = accountChain.sourceFrame
@@ -138,6 +138,7 @@ package object account {
 //    transactionChain.process()
 
     val trace = accountChain.sourceDES.runForeach(e => println(s"DES: $e"))
+    //val trace2 = accountChain.source.runForeach(e => println(s"DES: ${e.payloadJson}"))
 //    val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
 //    Source.single(Cmd(accountCommand.asJson)).runWith(chainNode.chatNode.sink)
   }
