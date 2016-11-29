@@ -15,7 +15,7 @@ import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode
 import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
 import com.avalanchain.jwt.jwt.demo.account.AccountCommand.{Add, Block, Disable}
-import com.avalanchain.jwt.jwt.demo.account.{AccountCommand, AccountEvent, AccountStates}
+import com.avalanchain.jwt.jwt.demo.account.{AccountCommand, AccountEvent, AccountStates, Transaction}
 import com.avalanchain.jwt.utils.CirceCodecs
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.circe.Json
@@ -54,8 +54,26 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
 //    path("newAccount") {
 //      newAccount
 //    } ~
+    path("block") {
+      block
+    } ~
+    path("disable") {
+      disable
+    } ~
     path("newAccount1000") {
       newAccount1000
+    } ~
+    path("transactions") {
+      transactions
+    } ~
+    path("transactionsTokens") {
+      transactionsTokens
+    } ~
+    path("transactionsJson") {
+      transactionsJson
+    } ~
+    path("randomPayment") {
+      randomPayment
     }
   }
 
@@ -129,9 +147,9 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
     }
 
   @Path("accounts")
-  @ApiOperation(httpMethod = "GET", response = classOf[List[AccountStates]], value = "Gets all chat messages")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[AccountStates]], value = "Gets accounts state")
   @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "All accounts", response = classOf[List[ChatMsg]])
+    new ApiResponse(code = 200, message = "All accounts", response = classOf[List[AccountStates]])
   ))
   def accounts =
     get {
@@ -177,13 +195,62 @@ class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, m
     }
 
   @Path("accountEventsJson")
-  @ApiOperation(httpMethod = "GET", response = classOf[List[ChatMsg]], value = "Gets all accounts as Json")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[Json]], value = "Gets all accounts as Json")
   @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "All accounts as Json", response = classOf[List[ChatMsg]])
+    new ApiResponse(code = 200, message = "All accounts as Json", response = classOf[List[Json]])
   ))
   def accountEventsJson =
     get {
       onSuccess(chainNode.currencyNode.accountSourceJson.takeWithin(10 milliseconds).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
+        completeWith(instanceOf[List[Json]])(_(msgs.reverse.map(parse(_).right.toOption.getOrElse(Json.Null))))
+      }
+    }
+
+  @Path("randomPayment")
+  @ApiOperation(value = "Create a new Account with 1000 balance", notes = "", nickname = "newAccount1000", httpMethod = "POST")
+  @ApiResponses(Array(
+    //new ApiResponse(code = 201, message = "Account Created", response = classOf[Add]),
+    new ApiResponse(code = 409, message = "Internal server error")
+  ))
+  def randomPayment =
+    post {
+      complete(StatusCodes.Created, chainNode.currencyNode.randomPayment())
+    }
+
+
+
+  @Path("transactions")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[Transaction]], value = "Get first 1000 transactions")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "First 1000 transactions", response = classOf[List[Transaction]])
+  ))
+  def transactions =
+    get {
+      onSuccess(chainNode.currencyNode.transactionSource.take(1000).takeWithin(10 milliseconds).runFold(List.empty[Transaction])((acc, cm) => cm :: acc)) { msgs =>
+        completeWith(instanceOf[List[Transaction]])(_(msgs.reverse))
+      }
+    }
+
+  @Path("transactionsTokens")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[FrameToken]], value = "Gets first 1000 transactions as JWT tokens")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "First 1000 transactions as JWT tokens", response = classOf[List[FrameToken]])
+  ))
+  def transactionsTokens =
+    get {
+      onSuccess(chainNode.currencyNode.transactionSourceToken.take(1000).takeWithin(10 milliseconds).runFold(List.empty[FrameToken])((acc, cm) => cm :: acc)) { msgs =>
+        completeWith(instanceOf[List[FrameToken]])(_(msgs.reverse))
+      }
+    }
+
+  @Path("transactionsJson")
+  @ApiOperation(httpMethod = "GET", response = classOf[List[Json]], value = "Gets first 1000 transactions as Json")
+  @ApiResponses(Array(
+    new ApiResponse(code = 200, message = "First 1000 transactions as Json", response = classOf[List[Json]])
+  ))
+  def transactionsJson =
+    get {
+      onSuccess(chainNode.currencyNode.transactionSourceJson.take(1000).takeWithin(10 milliseconds).runFold(List.empty[String])((acc, cm) => cm :: acc)) { msgs =>
         completeWith(instanceOf[List[Json]])(_(msgs.reverse.map(parse(_).right.toOption.getOrElse(Json.Null))))
       }
     }

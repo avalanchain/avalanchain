@@ -1,8 +1,10 @@
 package com.avalanchain.jwt.jwt.demo
 
+import java.math.MathContext
 import java.security.KeyPair
 import java.time.OffsetDateTime
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -24,6 +26,8 @@ import io.circe.syntax._
 import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
+
+import scala.util.Random
 
 
 /**
@@ -123,25 +127,35 @@ package object account {
         acc + (accountId -> accountState)
     })
 
+    private val accountStates = new AtomicReference(Map.empty[AccountId, AccountState])
+    private val accountStatesUpdater = accountsSource.runForeach(accountStates.set(_))
 
-//    val transactionChainDefToken = chainFactory("__transactions__")
-//    val transactionChain = new NewChain(nodeId, transactionChainDefToken, keyPair)
-//
-//    val transactionSink = Flow[PaymentTransaction].map(pt => Cmd(Transaction(pt.from, pt.to, pt.amount, keyPair.getPublic).asJson)).to(transactionChain.sink)
-//
-//    val transactionSource: Source[Transaction, NotUsed] = transactionChain.source[Transaction]
-//    val transactionSourceToken = transactionChain.sourceFrame
-//    val transactionSourceJson = transactionChain.sourceJson
+    val transactionChainDefToken = chainFactory("__transactions__")
+    val transactionChain = new NewChain(nodeId, transactionChainDefToken, keyPair)
+
+    val transactionSink = Flow[PaymentTransaction].map(pt => Cmd(Transaction(pt.from, pt.to, pt.amount, keyPair.getPublic).asJson)).to(transactionChain.sink)
+
+    val transactionSource: Source[Transaction, NotUsed] = transactionChain.source[Transaction]
+    val transactionSourceToken = transactionChain.sourceFrame
+    val transactionSourceJson = transactionChain.sourceJson
 
 
-    private val processFuture = accountChain.process()
-//    transactionChain.process()
+    private val processAccountFuture = accountChain.process()
+    private val processTransactionsFuture = transactionChain.process()
 
     val trace = accountChain.sourceDES.runForeach(e => println(s"DES: $e"))
     //val trace2 = accountChain.source.runForeach(e => println(s"DES: ${e.payloadJson}"))
 //    val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
 //    Source.single(Cmd(accountCommand.asJson)).runWith(chainNode.chatNode.sink)
 
+    def randomPayment() = {
+      val accStates = accountStates.get().values.toArray
+      val from = accStates(Random.nextInt(accStates.length))
+      val to = accStates(Random.nextInt(accStates.length))
+      val amount = (Random.nextDouble() * from.balance.round(MathContext.DECIMAL32)).round(MathContext.DECIMAL32)
+      val payment = PaymentTransaction(from.account.accountId, to.account.accountId, amount)
+      Source.single(payment).runWith(transactionSink)
+    }
 
     def addAccount1000(): AccountCommand.Add = {
       val accountCommand = Add(UUID.randomUUID(), 1000, OffsetDateTime.now().plusYears(1), CurveContext.newKeys().getPublic, keyPair.getPublic)
@@ -150,5 +164,6 @@ package object account {
     }
 
     (0 until 100).foreach(_ => addAccount1000)
+    (0 until 100).foreach(_ => randomPayment)
   }
 }

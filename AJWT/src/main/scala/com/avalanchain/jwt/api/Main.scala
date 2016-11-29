@@ -149,6 +149,13 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
     } ~
+    path("transactions") {
+      val src = chainNode.currencyNode.transactionSource.map(i => TextMessage(i.asJson.noSpaces))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
     path("yahoo") {
       val src = YahooFinSource().map(i => TextMessage(i.asJson.noSpaces))
 
