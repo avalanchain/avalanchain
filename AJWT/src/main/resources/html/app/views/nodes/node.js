@@ -24,9 +24,10 @@
         });
         vm.getTransactions = function() {
             dataservice.getData().then(function(data) {
-                vm.transactions = data.transactions.filter(function(transaction) {
-                    return transaction.node === nodeId;
-                });
+                vm.transactions = data.transactions;
+                //     .filter(function(transaction) {
+                //     return transaction.node === nodeId;
+                // });
 
                 // var currentTransactionPage = vm.transactionPage;
                 // $scope.payment.fromAcc = vm.current.ref;
