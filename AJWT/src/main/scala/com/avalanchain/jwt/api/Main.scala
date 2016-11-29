@@ -229,7 +229,8 @@ object MainCmd extends App with CirceCodecs {
   }
 
   def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512): (ChainDefToken, ChainDef.Derived) = {
-    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
+    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, parentRef,
+      ChainDerivationFunction.Map("function(a) { return { b: a.e + ' Hello!' }; }"))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     (chainDefToken, chainDef)
   }

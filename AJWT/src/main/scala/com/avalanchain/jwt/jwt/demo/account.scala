@@ -168,15 +168,20 @@ package object account {
     private val paymentQueue = Source.queue(1000, OverflowStrategy.backpressure).to(transactionSink).run()
     def randomPayment() = {
       val accStates = accountStates.values.toArray
+      var i = 100
       if (accStates.length > 0) {
         var from = accStates(Random.nextInt(accStates.length))
-        var to = accStates(Random.nextInt(accStates.length))
+        while (from.balance < 0 && i > 0) {
+          from = accStates(Random.nextInt(accStates.length))
+          i = i - 1
+        }
+        val to = accStates(Random.nextInt(accStates.length))
 //        if (from.balance < to.balance) {
 //          val a = from
 //          from = to
 //          to = a
 //        }
-        val amount = if (from.balance < 0) -from.balance else (Random.nextDouble() * from.balance.round(MathContext.DECIMAL32)).round(MathContext.DECIMAL32)
+        val amount = (Random.nextDouble() * from.balance.round(MathContext.DECIMAL32)).round(MathContext.DECIMAL32)
         val payment = PaymentTransaction(from.account.accountId, to.account.accountId, amount)
         paymentQueue.offer(payment)
         payment
