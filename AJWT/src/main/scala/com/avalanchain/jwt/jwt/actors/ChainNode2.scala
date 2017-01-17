@@ -14,7 +14,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import cats.implicits._
 import com.avalanchain.jwt.KeysDto.PubKey
-import com.avalanchain.jwt.basicChain.{Frame, _}
+import com.avalanchain.jwt.basicChain.{ChainRef, Frame, _}
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.NewChain
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
@@ -28,11 +28,14 @@ import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 
+import scala.collection.mutable
+
 //import scala.collection._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
+import collection.JavaConverters._
 
 /**
   * Created by Yuriy Habarov on 21/05/2016.
@@ -47,6 +50,27 @@ class ChainNode2(nodeId: NodeIdToken, keyPair: KeyPair, knownKeys: Set[PublicKey
   val logIdNodes: String = "_$nodes$_"
   val logIdKnownChains: String = "_$known-chains$_"
 
+  private val chainEndpoints = new java.util.concurrent.ConcurrentHashMap[ChainRef, ReplicationEndpoint]().asScala
+
+  def chainRefs() = chainEndpoints.keys.toSet
+  protected def getLog(chainRef: ChainRef) = chainEndpoints.get(chainRef).map(_.logs(chainRef.sig))
+
+  protected def createEventLog(crs: Set[ChainRef]): Map[ChainRef, ActorRef] = {
+    if (crs.isEmpty) Map.empty
+    else {
+      val existingCrs = chainRefs & crs //.map(cr => (cr, chainEndpoints.get(cr)))
+      val newCrs = chainRefs -- crs
+      val endpoint = new ReplicationEndpoint(id = nodeId.sig + "-" + UUID.randomUUID().toString, logNames = newCrs.map(_.sig),
+        logFactory = logId => LeveldbEventLog.props(logId, nodeId.sig),
+        connections = connectTo.map(ep => ReplicationConnection(ep._1, ep._2)))
+      newCrs.foreach(chainEndpoints.put(_, endpoint))
+      (existingCrs | newCrs).map(cr => (cr, getLog(cr).get)).toMap
+    }
+
+    //system.actorOf(LeveldbEventLog.props(id, nodeId))
+  }
+
+
   case class ChainView(chainDef: ChainDefToken, nodeId: NodeIdToken, status: ChainStatus)
   case class NodeView(nodeId: NodeIdToken, chains: Map[ChainRef, ChainView])
 
@@ -56,7 +80,6 @@ class ChainNode2(nodeId: NodeIdToken, keyPair: KeyPair, knownKeys: Set[PublicKey
   case class NodeUpdated(nodeId: NodeId, pub: PubKey) extends JwtPayload.Asym
   type NodeUpdatedToken = TypedJwtToken[NodeUpdated]
 
-  protected def createEventLog(id: String, nodeId: String): ActorRef = system.actorOf(LeveldbEventLog.props(id, nodeId))
 
   protected val endpoint = new ReplicationEndpoint(id = nodeId.sig, logNames = Set(logIdNodes, logIdKnownChains),
     logFactory = logId => LeveldbEventLog.props(logId, nodeId.sig),

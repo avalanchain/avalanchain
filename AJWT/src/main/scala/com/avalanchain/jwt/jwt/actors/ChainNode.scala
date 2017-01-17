@@ -42,13 +42,6 @@ class ChainNode(val nodeName: String, val port: Int, keyPair: KeyPair, knownKeys
   val nodeIdToken: NodeIdToken = NodeIdToken(nodeName, localhost, port, keyPair.getPublic, keyPair.getPrivate)
 
   private val registry = actor("registry")(new ChainRegistryActor())
-  private val addr = actor("addr")(new Act {
-    become {
-      case "port" => sender() ! system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress.port
-    }
-  })
-
-  def localport(): Future[Int] = (addr ? "port").map(_.asInstanceOf[Option[Int]].get)
 
   def chains() = (registry ? GetChains).mapTo[Map[ChainRef, ChainDefToken]]
 
