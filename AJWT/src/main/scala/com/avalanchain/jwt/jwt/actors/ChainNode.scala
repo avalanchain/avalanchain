@@ -36,7 +36,7 @@ import scala.util.Try
 /**
   * Created by Yuriy Habarov on 21/05/2016.
   */
-class ChainNode(val nodeName: String, val port: Int, keyPair: KeyPair, knownKeys: Set[PublicKey]) extends ActorNode with CirceCodecs {
+class ChainNode(val nodeName: String, val port: Int, val keyPair: KeyPair, knownKeys: Set[PublicKey]) extends ActorNode with CirceCodecs {
 
   val publicKey = keyPair.getPublic
   val nodeIdToken: NodeIdToken = NodeIdToken(nodeName, localhost, port, keyPair.getPublic, keyPair.getPrivate)
@@ -61,17 +61,17 @@ class ChainNode(val nodeName: String, val port: Int, keyPair: KeyPair, knownKeys
       bot,
       "tick")
 
-  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
-    val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
-    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
-    chainDefToken
-  }
-
-  def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", "")): (ChainDefToken, ChainDef.Derived) = {
-    val chainDef = ChainDef.Derived(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
-    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
-    (chainDefToken, chainDef)
-  }
+//  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
+//    val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
+//    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+//    chainDefToken
+//  }
+//
+//  def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", "")): (ChainDefToken, ChainDef.Derived) = {
+//    val chainDef = ChainDef.Derived(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
+//    val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
+//    (chainDefToken, chainDef)
+//  }
 
   def newChain2(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
     (registry ? CreateChain(newChain(jwtAlgo, id, initValue))).mapTo[ChainCreationResult]
