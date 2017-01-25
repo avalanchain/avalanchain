@@ -36,7 +36,7 @@ import scala.util.Try
 /**
   * Created by Yuriy Habarov on 21/05/2016.
   */
-class ChainNode(val nodeName: String, val port: Int, val keyPair: KeyPair, knownKeys: Set[PublicKey]) extends ActorNode with CirceCodecs {
+class ChainNode(val nodeName: String, val port: Int, val keyPair: KeyPair, knownKeys: Set[PublicKey]) extends ActorNode {
 
   val publicKey = keyPair.getPublic
   val nodeIdToken: NodeIdToken = NodeIdToken(nodeName, localhost, port, keyPair.getPublic, keyPair.getPrivate)

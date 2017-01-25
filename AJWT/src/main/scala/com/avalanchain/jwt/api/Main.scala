@@ -242,6 +242,7 @@ object MainCmd extends App with CirceCodecs {
 
   object ActorNode extends ActorNode {
     override val port: Int = 2222
+    override val keyPair: KeyPair = CurveContext.currentKeys
   }
   import ActorNode._
 

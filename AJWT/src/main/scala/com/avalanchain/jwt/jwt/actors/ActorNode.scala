@@ -15,6 +15,7 @@ import akka.util.Timeout
 import com.avalanchain.jwt.basicChain.{Frame, _}
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor.{GetFrameSource, GetFrameTokenSource, GetJsonSource, JwtError, _}
 import com.avalanchain.jwt.jwt.actors.network.{NetworkMonitor, NodeStatus}
+import com.avalanchain.jwt.utils.CirceCodecs
 import com.typesafe.config.ConfigFactory
 import io.circe.Json
 
@@ -26,10 +27,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by Yuriy Habarov on 25/11/2016.
   */
-trait ActorNode {
+trait ActorNode extends CirceCodecs {
   val SystemName: String = "avalanchain"
 
-  private val myAddress = system.asInstanceOf[ExtendedActorSystem].provider.rootPath.address
   val localhost = InetAddress.getLocalHost.getHostAddress
 
   val port: Int
@@ -42,6 +42,8 @@ trait ActorNode {
   implicit val materializer = ActorMaterializer()(system)
   implicit val executor: ExecutionContext = system.dispatcher
   implicit val timeout = Timeout(5 seconds)
+
+  private val myAddress = system.asInstanceOf[ExtendedActorSystem].provider.rootPath.address
 
   case object GetNodePort
 

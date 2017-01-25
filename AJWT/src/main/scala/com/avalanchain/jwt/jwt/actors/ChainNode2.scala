@@ -42,7 +42,7 @@ import collection.JavaConverters._
   * Created by Yuriy Habarov on 21/05/2016.
   */
 class ChainNode2(nodeId: NodeIdToken, val keyPair: KeyPair, knownKeys: Set[PublicKey], connectTo: Set[(String, Int)], initialChainRefs: Set[ChainDefToken] = Set.empty)
-                (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]) extends ActorNode {
+                   /* (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef])*/ extends ActorNode {
 
   implicit val actorSystem = system
   val publicKey = keyPair.getPublic
@@ -90,32 +90,32 @@ class ChainNode2(nodeId: NodeIdToken, val keyPair: KeyPair, knownKeys: Set[Publi
 
   def getChain(chainRef: ChainRef) = getLog(chainRef).toRight(ChainNotFound(chainRef))
 
-  def sink(chainRef: ChainRef) = getChain(chainRef).map()
-    (registry ? GetJsonSink(chainRef)).mapTo[Either[ChainRegistryError, Sink[Json, NotUsed]]]
-
-  def source(chainRef: ChainRef, from: Position, to: Position) =
-    (registry ? GetJsonSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
-
-  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
-    (registry ? GetFrameSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
-
-  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
-    (registry ? GetFrameTokenSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
-
-  protected def tryGetLog(chainRef: ChainRef): Either[ChainRegistryError, (ChainDefToken, ActorRef)] = {
-    getLog(chainRef) match {
-      case None => Either.left(ChainNotFound(chainRef))
-      case Some(chainDefToken) => {
-        context.child(chainRef.sig) match {
-          case Some(actorRef) => Either.right(chainDefToken, actorRef)
-          case None => {
-            val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), chainRef.sig)
-            Either.right(chainDefToken, actorRef)
-          }
-        }
-      }
-    }
-  }
+//  def sink(chainRef: ChainRef) = getChain(chainRef).map()
+//    (registry ? GetJsonSink(chainRef)).mapTo[Either[ChainRegistryError, Sink[Json, NotUsed]]]
+//
+//  def source(chainRef: ChainRef, from: Position, to: Position) =
+//    (registry ? GetJsonSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
+//
+//  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
+//    (registry ? GetFrameSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
+//
+//  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
+//    (registry ? GetFrameTokenSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
+//
+//  protected def tryGetLog(chainRef: ChainRef): Either[ChainRegistryError, (ChainDefToken, ActorRef)] = {
+//    getLog(chainRef) match {
+//      case None => Either.left(ChainNotFound(chainRef))
+//      case Some(chainDefToken) => {
+//        context.child(chainRef.sig) match {
+//          case Some(actorRef) => Either.right(chainDefToken, actorRef)
+//          case None => {
+//            val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), chainRef.sig)
+//            Either.right(chainDefToken, actorRef)
+//          }
+//        }
+//      }
+//    }
+//  }
 
 ///////////////////////////////////////////////
 
