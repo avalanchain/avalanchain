@@ -371,7 +371,7 @@
                     }
                 },
                 ncyBreadcrumb: {
-                    label: 'Quoka Dashboard'
+                    label: 'Index Dashboard'
                 }
             })
             .state('quoka.trader', {
@@ -381,7 +381,7 @@
                     pageTitle: 'quoka trader'
                 },
                 ncyBreadcrumb: {
-                    label: 'Quoka Trader'
+                    label: 'Index Trader'
                 }
             })
     }
