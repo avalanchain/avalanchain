@@ -15,12 +15,14 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import cats.implicits._
 import com.avalanchain.jwt.KeysDto.PubKey
-import com.avalanchain.jwt.basicChain.{ChainRef, Frame, _}
+import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.NewChain
+import com.avalanchain.jwt.jwt.actors.ChainRegistryActor.JwtError.IncorrectJwtTokenFormat
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
+import com.rbmhtechnology.eventuate.adapter.stream.DurableEventSource
 import com.rbmhtechnology.eventuate.crdt.{MVRegisterService, ORSetService}
-import com.rbmhtechnology.eventuate.{ReplicationConnection, ReplicationEndpoint}
+import com.rbmhtechnology.eventuate.{DurableEvent, ReplicationConnection, ReplicationEndpoint}
 import com.rbmhtechnology.eventuate.log.leveldb.LeveldbEventLog
 import com.typesafe.config.ConfigFactory
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
@@ -88,19 +90,21 @@ class ChainNode2(nodeId: NodeIdToken, val keyPair: KeyPair, knownKeys: Set[Publi
   createEventLog(initialChainRefs)
   activate()
 
-  def getChain(chainRef: ChainRef) = getLog(chainRef).toRight(ChainNotFound(chainRef))
+  def getChain(chainRef: ChainRef) = getLog(chainRef).toRight(ChainNotFound(chainRef).asInstanceOf[ChainRegistryError])
 
-//  def sink(chainRef: ChainRef) = getChain(chainRef).map()
-//    (registry ? GetJsonSink(chainRef)).mapTo[Either[ChainRegistryError, Sink[Json, NotUsed]]]
-//
-//  def source(chainRef: ChainRef, from: Position, to: Position) =
-//    (registry ? GetJsonSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]]]
-//
-//  def sourceF(chainRef: ChainRef, from: Position, to: Position) =
-//    (registry ? GetFrameSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[Either[JwtError, Frame], NotUsed]]]
-//
-//  def sourceFT(chainRef: ChainRef, from: Position, to: Position) =
-//    (registry ? GetFrameTokenSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
+  def sink(chainRef: ChainRef) = getChain(chainRef).map(_.)
+    (registry ? GetJsonSink(chainRef)).mapTo[Either[ChainRegistryError, Sink[Json, NotUsed]]]
+
+  def source(chainRef: ChainRef, fromPos: Position, toPos: Position) : Either[ChainRegistryError, Source[Either[JwtError, Json], NotUsed]] =
+    sourceF(chainRef, fromPos, toPos).map(_.map(_.map(_.v)))
+
+
+  def sourceF(chainRef: ChainRef, fromPos: Position, toPos: Position) =
+    sourceFT(chainRef, fromPos, toPos).map(_.map(x => Either.fromOption[JwtError, Frame](x.payload, IncorrectJwtTokenFormat)))
+
+  def sourceFT(chainRef: ChainRef, from: Position, to: Position) : Either[ChainRegistryError, Source[FrameToken, NotUsed]] =
+    getChain(chainRef).map(cr => Source.fromGraph(DurableEventSource(cr._2)).map(_.payload.asInstanceOf[FrameToken]).mapMaterializedValue(_ => NotUsed))
+
 //
 //  protected def tryGetLog(chainRef: ChainRef): Either[ChainRegistryError, (ChainDefToken, ActorRef)] = {
 //    getLog(chainRef) match {

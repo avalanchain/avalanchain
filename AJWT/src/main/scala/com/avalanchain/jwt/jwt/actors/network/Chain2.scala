@@ -72,7 +72,7 @@ abstract class Chain (
   def source[T <: JwtPayload](implicit decoder: Decoder[T]) = sourceFrame.map(e => {
     val v = e.payload.get.v.as[T]
     v.right.toOption.get
-  }).mapMaterializedValue(_ => NotUsed.getInstance())
+  }).mapMaterializedValue(_ => NotUsed)
 
   private var currentFrame: Option[FrameToken] = None
   private var currentValue: Option[Json] = None

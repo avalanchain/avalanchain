@@ -263,7 +263,7 @@ object MainCmd extends App with CirceCodecs {
   dc.process()
 
   Source.fromGraph(DurableEventSource(nc.eventLog))
-    .runWith(Sink.foreach(e => println(s"aaa $e")))
+    .runWith(Sink.foreach(e => println(s"aaa ${e.payload}")))
 
   Source(List("A", "B", "C")).map(e => Cmd(toJson(s"""{ "e": "${e}" }"""))).runWith(nc.sink)
 }
