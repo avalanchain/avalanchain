@@ -16,7 +16,7 @@ import io.circe.{Decoder, Encoder}
   * Created by Yuriy on 22/11/2016.
   */
 @Path("admin")
-@Api(value = "/admin", produces = "application/json")
+@Api(value = "/Admin", produces = "application/json")
 class AdminService()
   extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {
 

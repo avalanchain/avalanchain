@@ -13,7 +13,7 @@ import akka.util.Timeout
 import com.avalanchain.jwt.basicChain.{Cmd, FrameToken}
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode
-import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
+import com.avalanchain.jwt.jwt.chat.ChatMsg
 import com.avalanchain.jwt.jwt.demo.account.AccountCommand.{Add, Block, Disable}
 import com.avalanchain.jwt.jwt.demo.account._
 import com.avalanchain.jwt.utils.CirceCodecs
@@ -31,7 +31,7 @@ import scala.concurrent.duration._
   * Created by Yuriy on 22/11/2016.
   */
 @Path("currency")
-@Api(value = "/currency", produces = "application/json")
+@Api(value = "/Currency", produces = "application/json")
 class CurrencyService(chainNode: ChainNode)(implicit actorSystem: ActorSystem, materializer: Materializer)
   extends Directives with CorsSupport with CirceSupport with CirceCodecs {
   import scala.concurrent.duration._

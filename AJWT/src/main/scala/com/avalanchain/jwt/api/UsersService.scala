@@ -19,7 +19,7 @@ import io.circe.{Decoder, Encoder}
   * Created by Yuriy on 22/11/2016.
   */
 @Path("/users")
-@Api(value = "/users", produces = "application/json")
+@Api(value = "/Users", produces = "application/json")
 class UsersService(getUsers: () => List[User], userExists: UserData => Boolean, addUser: UserData => User)
                   (implicit executionContext: ExecutionContext)
   extends Directives with CorsSupport /*with ACJsonSupport*/ with CirceSupport {

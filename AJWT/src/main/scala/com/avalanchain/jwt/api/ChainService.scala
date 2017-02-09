@@ -17,7 +17,7 @@ import io.swagger.annotations.{Api, ApiOperation, ApiResponse, ApiResponses}
   * Created by Yuriy on 22/11/2016.
   */
 @Path("chains")
-@Api(value = "/chains", produces = "application/json")
+@Api(value = "/Chains", produces = "application/json")
 class ChainService(chainNode: ChainNode)
   extends Directives with CirceCodecs with CorsSupport with CirceSupport {
   import scala.concurrent.duration._

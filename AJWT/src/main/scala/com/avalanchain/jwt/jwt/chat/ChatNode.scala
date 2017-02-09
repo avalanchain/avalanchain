@@ -10,7 +10,7 @@ import akka.stream.scaladsl.Source
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.actors.network.NewChain
-import com.avalanchain.jwt.jwt.demo.Demo.{ChatMsg, ChatMsgToken}
+import com.avalanchain.jwt.jwt.chat.ChatMsg._
 import com.avalanchain.jwt.utils.CirceCodecs
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._

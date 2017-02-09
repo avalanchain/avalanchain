@@ -23,7 +23,7 @@ import scala.util.{Failure, Success}
   * Created by Yuriy on 22/11/2016.
   */
 @Path("nodes")
-@Api(value = "/nodes", produces = "application/json")
+@Api(value = "/Nodes", produces = "application/json")
 class NodeService(chainNode: ChainNode, processStarter: () => Unit) (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef], materializer: ActorMaterializer, executor: ExecutionContext)
   extends Directives with CorsSupport with CirceSupport {
   import scala.concurrent.duration._

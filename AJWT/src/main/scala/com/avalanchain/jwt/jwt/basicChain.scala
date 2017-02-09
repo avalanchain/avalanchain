@@ -168,6 +168,10 @@ package object basicChain {
     def apply(name: String, host: String, port: Int, pub: PubKey, privateKey: PrivateKey): NodeIdToken =
       TypedJwtToken[NodeId](NodeId(name, host, port, pub), privateKey)
   }
+  final case class NodeRef(sig: String)
+  object NodeRef {
+    def apply[T <: NodeId](nodeId: TypedJwtToken[T]): NodeRef = new NodeRef(nodeId.sig)
+  }
 
   class Chain3(val chainDefToken: ChainDefToken, val keyPair: KeyPair,
                tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None)(implicit actorRefFactory: ActorRefFactory) {

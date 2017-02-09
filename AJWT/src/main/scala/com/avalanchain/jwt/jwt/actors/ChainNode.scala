@@ -18,7 +18,7 @@ import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.{GetNetworkMonitor, NewChain}
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
 import com.avalanchain.jwt.jwt.actors.network.{NetworkMonitor, NodeStatus}
-import com.avalanchain.jwt.jwt.chat.ChatNode
+import com.avalanchain.jwt.jwt.chat.{ChatClient, ChatNode}
 import com.avalanchain.jwt.jwt.demo.account.CurrencyNode
 import com.avalanchain.jwt.utils.CirceCodecs
 import com.typesafe.config.ConfigFactory
@@ -53,6 +53,10 @@ class ChainNode(val nodeName: String, val port: Int, val keyPair: KeyPair, known
       case "tick" => currencyNode.randomPayment()
     }
   })
+
+  val chatClient = actor("chatClient") {
+    new ChatClient(() => keyPair, NodeRef(nodeIdToken).sig)
+  }
 
   val cancellable =
     system.scheduler.schedule(

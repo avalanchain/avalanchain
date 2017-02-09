@@ -7,7 +7,7 @@ object AkkaConfigs {
   val PersLevelDb =
     """
       |akka {
-      |  version = 2.4.12
+      |  version = 2.5-M1
       |
       |  # Log level used by the configured loggers (see "loggers") as soon
       |  # as they have been started; before that, see "stdout-loglevel"
@@ -30,7 +30,7 @@ object AkkaConfigs {
   val PersInmem =
     """
       |akka {
-      |  version = 2.4.12
+      |  version = 2.5-M1
       |
       |  # Loggers to register at boot time (akka.event.Logging$DefaultLogger logs
       |  # to STDOUT)
@@ -68,7 +68,7 @@ object AkkaConfigs {
   val PersInmem2 =
     """
       |akka {
-      |  version = 2.4.12
+      |  version = 2.5-M1
       |
       |  # Log level used by the configured loggers (see "loggers") as soon
       |  # as they have been started; before that, see "stdout-loglevel"

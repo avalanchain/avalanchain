@@ -19,7 +19,6 @@ import akka.util.ByteString
 import com.avalanchain.jwt.basicChain.{JwtPayload, TypedJwtToken}
 import com.avalanchain.jwt.utils.CirceCodecs
 import com.typesafe.config.ConfigFactory
-import org.joda.time.DateTime
 import yahoofinance.YahooFinance
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._
