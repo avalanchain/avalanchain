@@ -20,7 +20,11 @@
         //         getData();
         // }, 3000);
 
-
+        $scope.$on("$destroy", function() {
+            if (angular.isDefined(vm.removeListener)) {
+                vm.removeListener(vm);
+            }
+        });
         var dataprev = [];
         $scope.current = {};
         // function getData() {

@@ -9,13 +9,6 @@
         var log = getLogFn(controllerId);
         var vm = this;
 
-        // dataservice.getData().then(function(data) {
-        //     vm.chat = data.chat;
-        //     vm.messages = vm.chat.messages;
-        //     vm.users = vm.chat.users;
-        //     vm.lastMessage = new Date();
-        //     vm.lastMessage = vm.chat.lastMessage
-        // });
         dataservice.getChat(vm);
         vm.users = [];
         vm.users.push({
@@ -35,6 +28,10 @@
             }
 
         };
+
+        $scope.$on("$destroy", function() {
+            vm.removeListener(vm);
+        });
 
 
 

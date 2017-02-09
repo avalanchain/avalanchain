@@ -37,19 +37,16 @@
         return service;
 
         function getChat(vm) {
-            vm.messages = [];
-
-            vm.lastMessage = new Date();
-
-            var names = ['you', 'server'];
-            var sides = ['right', 'left'];
             if(vm){
+                if(!vm.id)
+                    vm.id = getId();
+                vm.messages = [];
+                if(data.messages)
+                    vm.messages = angular.copy(data.messages);
+                vm.lastMessage = new Date();
+                var sides = ['right', 'left'];
                 vm.newMesData = function(mes) {
                     vm.messages = vm.messages || [];
-                    // var same = vm.chat.messages.filter(function (nd) {
-                    //     return nd.data.address.port == info.NodeUp.address.port
-                    // });
-                    //if(same.length == 0){
                     vm.messages.push({
                         id: getId(),
                         name: mes.nodeName,
@@ -60,15 +57,15 @@
                     })
                     vm.lastMessage = new Date();
                     //}
-                    data.messages = vm.messages;
-                    data.nodesLoaded=true;
-                };
+                    //data.messages = vm.messages;
 
+                };
+                //data.nodesLoaded=true;
                 vm.removeListener = function() {
                     websocketservice.mlisteners.removeListener(vm);
                 };
                 websocketservice.mlisteners.addListener(vm);
-                vm.messages = data.messages;
+                //vm.messages = data.messages;
             }
         }
         
@@ -92,6 +89,8 @@
         function getAccounts(vm) {
             var accounts = [];
             if(vm){
+                if(!vm.id)
+                    vm.id = getId();
                 vm.accountData = function(accounts) {
                     vm.accounts = vm.accounts || [];
                     for (var pr in accounts) {
@@ -204,6 +203,8 @@
 
         function getTransactions(vm) {
             if(vm){
+                if(!vm.id)
+                    vm.id = getId();
                 vm.transactionData = function(transaction) {
                     vm.transactions = vm.transactions || [];
                     // var same = vm.nodes.filter(function (nd) {
@@ -290,6 +291,8 @@
 
         function getNodes(vm) {
             if(vm){
+                if(!vm.id)
+                    vm.id = getId();
                 vm.nodeData = function(info) {
                     if(!info.NodeUp){
                         return;
@@ -446,6 +449,8 @@
         }
 
         function getYahoo(vm) {
+            if(!vm.id)
+                vm.id = getId();
             vm.newData = function(info) {
                 vm.yahoodata = vm.yahoodata || [];
                 if (vm.yahoodata.length > 16) {
@@ -455,6 +460,9 @@
             };
             //vm.nodes = data.yahoo;
             websocketservice.ylisteners.addListener(vm);
+            vm.removeListener = function() {
+                websocketservice.ylisteners.removeListener(vm);
+            };
         }
 
         //  var data = {};

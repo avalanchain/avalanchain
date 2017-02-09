@@ -17,7 +17,7 @@
             });
             this.stream.onClose(function(event) {
                 console.log('connection closed', event);
-                reopenConn(this.url);
+               // reopenConn(this.url);
             });
             this.stream.onError(function(event) {
                 console.log('connection Error', event);
@@ -27,8 +27,9 @@
         Listeners.prototype = {
             addListener: function (l) { this.listeners.push(l); },
             removeListener: function(l) {
-                this.listeners.pop(l);
-            },
+                this.listeners = this.listeners.filter(function (item) {
+                return item.id != l.id;
+            }); },
             onMessage: function (l){
 
             }

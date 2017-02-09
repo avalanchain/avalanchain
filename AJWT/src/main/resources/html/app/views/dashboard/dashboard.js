@@ -95,6 +95,7 @@
         $scope.$on("$destroy", function() {
             if (angular.isDefined(vm.Timer)) {
                 $interval.cancel(vm.Timer);
+                    vm.removeListener(vm);
             }
         });
         function updCurrency() {

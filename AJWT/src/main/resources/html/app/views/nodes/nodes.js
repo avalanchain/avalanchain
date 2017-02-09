@@ -24,7 +24,7 @@
 
         $scope.$on("$destroy", function() {
             if (angular.isDefined(vm.removeListener)) {
-                vm.removeListener();
+                vm.removeListener(vm);
             }
         });
         // vm.newData = function(info) {
