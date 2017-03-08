@@ -11,7 +11,7 @@ import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.actor.ActorPublisher
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.actors.ActorNode
-import com.avalanchain.jwt.jwt.actors.network.{DerivedChain, NewChain, NodeStatus}
+import com.avalanchain.jwt.jwt.actors.network.{DerivedChain, LevelDBLogFactory, NewChain, NodeStatus}
 import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
 import com.avalanchain.jwt.utils.CirceCodecs
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventProcessor._
@@ -30,6 +30,7 @@ import akka.http.scaladsl.server.{Directive0, Route}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
+import com.avalanchain.jwt.utils._
 import com.avalanchain.jwt.basicChain.ChainDefToken
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.account.principals.{User, UserData}
@@ -222,14 +223,14 @@ object MainRnd extends Main(0) with App
 object MainCmd extends App with CirceCodecs {
   val keyPair = CurveContext.currentKeys
 
-  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
+  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = None) = {
     val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     chainDefToken
   }
 
   def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512): (ChainDefToken, ChainDef.Derived) = {
-    val chainDef = ChainDef.Derived(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, parentRef,
+    val chainDef = ChainDef.Derived(jwtAlgo, randomId, keyPair.getPublic, ResourceGroup.ALL, parentRef,
       ChainDerivationFunction.Map("function(a) { return { b: a.e + ' Hello!' }; }"))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     (chainDefToken, chainDef)
@@ -247,6 +248,8 @@ object MainCmd extends App with CirceCodecs {
   import ActorNode._
 
   private val nodeIdToken: NodeIdToken = NodeIdToken("AC", "localhost", port, keyPair.getPublic, keyPair.getPrivate)
+  implicit val logFactory = new LevelDBLogFactory(nodeIdToken, ActorNode.system)
+
   val nc = new NewChain(nodeIdToken, newChainDefToken, keyPair)
   val dc = new DerivedChain(nodeIdToken, derivedChainTuple._1, keyPair, derivedChainTuple._2, nc.eventLog)
 

@@ -5,16 +5,16 @@ import java.security.KeyPair
 import java.util.UUID
 
 import akka.NotUsed
-import akka.actor.ActorDSL._
-import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, ExtendedActorSystem, Props}
+import akka.actor.{Actor, ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, ExtendedActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
+import com.avalanchain.jwt.utils._
 import com.avalanchain.jwt.basicChain.{Frame, _}
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor.{GetFrameSource, GetFrameTokenSource, GetJsonSource, JwtError, _}
-import com.avalanchain.jwt.jwt.actors.network.{NetworkMonitor, NodeStatus}
+import com.avalanchain.jwt.jwt.actors.network.{ChainLogFactory, LevelDBLogFactory, NetworkMonitor, NodeStatus}
 import com.avalanchain.jwt.utils.CirceCodecs
 import com.typesafe.config.ConfigFactory
 import io.circe.Json
@@ -32,9 +32,14 @@ trait ActorNode extends CirceCodecs {
 
   val localhost = InetAddress.getLocalHost.getHostAddress
 
-  val port: Int
-  val keyPair: KeyPair
+  def port: Int
+  def keyPair: KeyPair
+  val publicKey = keyPair.getPublic
+  protected val privateKey = keyPair.getPrivate
 
+  val nodeIdToken: NodeIdToken = NodeIdToken("AC", localhost, port, publicKey, privateKey)
+
+  println(s"Port - ${port}")
   implicit val system = ActorSystem(SystemName,
     ConfigFactory.parseString(s"akka.remote.netty.tcp.host = ${localhost}")
       .withFallback(ConfigFactory.parseString(s"akka.remote.netty.tcp.port = $port"))
@@ -42,26 +47,28 @@ trait ActorNode extends CirceCodecs {
   implicit val materializer = ActorMaterializer()(system)
   implicit val executor: ExecutionContext = system.dispatcher
   implicit val timeout = Timeout(5 seconds)
+  implicit val logFactory = new LevelDBLogFactory(nodeIdToken, system)
 
   private val myAddress = system.asInstanceOf[ExtendedActorSystem].provider.rootPath.address
 
   case object GetNodePort
 
-  private val addr = actor("addr")(new Act {
-    become {
+  private val addr = system.actorOf(Props(new Actor {
+    def receive = {
       case GetNodePort => sender() ! system.asInstanceOf[ExtendedActorSystem].provider.getDefaultAddress.port
     }
-  })
+  }), "addr")
 
   def localport(): Future[Int] = (addr ? GetNodePort).map(_.asInstanceOf[Option[Int]].get)
 
-  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
+  // TODO: Drop the methods
+  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = randomId, initValue: Option[Json] = None) = {
     val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     chainDefToken
   }
 
-  def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", "")): (ChainDefToken, ChainDef.Derived) = {
+  def derivedChain(parentRef: ChainRef, jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = randomId): (ChainDefToken, ChainDef.Derived) = {
     val chainDef = ChainDef.Derived(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, parentRef, ChainDerivationFunction.Map("function(a) { return { b: a.e + 'aaa' }; }"))
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     (chainDefToken, chainDef)

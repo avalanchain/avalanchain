@@ -1,5 +1,9 @@
 package com.avalanchain.jwt
 
+import java.util.UUID
+
+import com.avalanchain.jwt.basicChain.Id
+
 /**
   * Created by Yuriy on 10/05/2016.
   */
@@ -18,4 +22,6 @@ package object utils {
     }
     implicit def not (b: Boolean) = !b
   }
+
+  def randomId(): Id = UUID.randomUUID().toString.replace("-", "")
 }

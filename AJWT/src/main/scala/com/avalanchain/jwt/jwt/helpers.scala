@@ -5,7 +5,6 @@ import java.util.UUID
 
 import akka.NotUsed
 import akka.util.Timeout
-import akka.actor.ActorDSL._
 import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal

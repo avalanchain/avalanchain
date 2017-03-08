@@ -4,15 +4,14 @@ import java.security.{KeyPair, PublicKey}
 import java.util.UUID
 
 import akka.NotUsed
-import akka.util.Timeout
-import akka.actor.ActorDSL._
-import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, ExtendedActorSystem, Props}
+import akka.actor.{Actor, ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, ExtendedActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.pattern.{ask, pipe}
 import akka.stream.actor.ActorPublisher
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import cats.implicits._
+import com.avalanchain.jwt.utils._
 import com.avalanchain.jwt.basicChain.{Frame, _}
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.{GetNetworkMonitor, NewChain}
@@ -20,7 +19,6 @@ import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
 import com.avalanchain.jwt.jwt.actors.network.{NetworkMonitor, NodeStatus}
 import com.avalanchain.jwt.jwt.chat.{ChatClient, ChatNode}
 import com.avalanchain.jwt.jwt.demo.account.CurrencyNode
-import com.avalanchain.jwt.utils.CirceCodecs
 import com.typesafe.config.ConfigFactory
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._
@@ -38,25 +36,20 @@ import scala.util.Try
   */
 class ChainNode(val nodeName: String, val port: Int, val keyPair: KeyPair, knownKeys: Set[PublicKey]) extends ActorNode {
 
-  val publicKey = keyPair.getPublic
-  val nodeIdToken: NodeIdToken = NodeIdToken(nodeName, localhost, port, keyPair.getPublic, keyPair.getPrivate)
-
-  private val registry = actor("registry")(new ChainRegistryActor())
+  private val registry = system.actorOf(Props(new ChainRegistryActor()), "registry")
 
   def chains() = (registry ? GetChains).mapTo[Map[ChainRef, ChainDefToken]]
 
   val chatNode = new ChatNode(nodeIdToken, keyPair, cn => newChain(JwtAlgo.ES512, cn))
   val currencyNode = new CurrencyNode(nodeIdToken, keyPair, cn => newChain(JwtAlgo.ES512, cn))
 
-  private val bot = actor("bot")(new Act {
-    become {
+  private val bot = system.actorOf(Props(new Actor {
+    def receive = {
       case "tick" => currencyNode.randomPayment()
     }
-  })
+  }), "bot")
 
-  val chatClient = actor("chatClient") {
-    new ChatClient(() => keyPair, NodeRef(nodeIdToken).sig)
-  }
+  val chatClient = system.actorOf(Props(new ChatClient(() => keyPair, NodeRef(nodeIdToken).sig)), "chatClient")
 
   val cancellable =
     system.scheduler.schedule(
@@ -95,7 +88,7 @@ class ChainNode(val nodeName: String, val port: Int, val keyPair: KeyPair, known
     (registry ? GetFrameTokenSource(chainRef, from, to)).mapTo[Either[ChainRegistryError, Source[FrameToken, NotUsed]]]
 
   def monitorSource() = {
-    val monitorRef = actor("monitor" + (UUID.randomUUID().toString.replace("-", "")))(new NetworkMonitor())
+    val monitorRef = system.actorOf(Props(new NetworkMonitor()), "monitor" + randomId)
     Source.fromPublisher[NodeStatus](ActorPublisher(monitorRef))
   }
 

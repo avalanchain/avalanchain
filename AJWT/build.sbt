@@ -15,7 +15,7 @@ resolvers += Resolver.bintrayRepo("hseeberger", "maven")
 
 
 libraryDependencies ++= {
-  val akkaVersion = "2.5-M1"
+  val akkaVersion = "2.5-M2"
   val akkaHttpVersion = "10.0.3"
   val akkaHttpJsonVersion = "1.12.0"
   val eventuateVersion = "0.8.1"
@@ -39,7 +39,7 @@ libraryDependencies ++= {
     "com.typesafe.akka" %% "akka-stream-testkit"                        % akkaVersion,
     "com.typesafe.akka" %% "akka-testkit"                               % akkaVersion % "test",
     "com.typesafe.akka" %% "akka-distributed-data"                      % akkaVersion,
-    "com.typesafe.akka" %% "akka-typed-experimental"                    % akkaVersion,
+    "com.typesafe.akka" %% "akka-typed"                                 % akkaVersion,
     "com.typesafe.akka" %% "akka-persistence-query"                     % akkaVersion,
 
     "com.typesafe.akka" %% "akka-http-core"                             % akkaHttpVersion,

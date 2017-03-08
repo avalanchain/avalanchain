@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.NotUsed
 import akka.util.Timeout
-import akka.actor.ActorDSL._
 import akka.actor.{ActorContext, ActorLogging, ActorRef, ActorRefFactory, ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.pattern.{ask, pipe}
@@ -20,6 +19,7 @@ import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ChainNode.NewChain
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor.JwtError.IncorrectJwtTokenFormat
 import com.avalanchain.jwt.jwt.actors.ChainRegistryActor._
+import com.rbmhtechnology.eventuate.EndpointFilters._
 import com.rbmhtechnology.eventuate.adapter.stream.{DurableEventSource, DurableEventWriter}
 import com.rbmhtechnology.eventuate.crdt.{MVRegisterService, ORSetService}
 import com.rbmhtechnology.eventuate.{DurableEvent, ReplicationConnection, ReplicationEndpoint}
@@ -33,7 +33,6 @@ import io.circe.generic.auto._
 
 import scala.collection.mutable
 
-//import scala.collection._
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,12 +42,11 @@ import collection.JavaConverters._
 /**
   * Created by Yuriy Habarov on 21/05/2016.
   */
-class ChainNode2(nodeId: NodeIdToken, val keyPair: KeyPair, knownKeys: Set[PublicKey], connectTo: Set[(String, Int)], initialChainRefs: Set[ChainDefToken] = Set.empty)
+class ChainNode2(nodeId: NodeIdToken, val keyPair: KeyPair, knownKeys: Set[PublicKey], connectTo: Set[NodeIdToken], initialChainRefs: Set[ChainDefToken] = Set.empty)
                    /* (implicit encoder: Encoder[ChainDef], decoder: Decoder[ChainDef])*/ extends ActorNode {
 
   implicit val actorSystem = system
-  val publicKey = keyPair.getPublic
-  val port = nodeId.payload.get.port
+  def port = nodeId.payload.get.port
   val nodeRef = NodeRef(nodeId)
 
   val logIdNodes: String = "_$nodes$_"
@@ -69,7 +67,10 @@ class ChainNode2(nodeId: NodeIdToken, val keyPair: KeyPair, knownKeys: Set[Publi
       val newCrs = chainRefs -- crs
       val endpoint = new ReplicationEndpoint(id = nodeRef.sig + "-" + UUID.randomUUID().toString, logNames = newCrs.map(_.sig),
         logFactory = logId => LeveldbEventLog.props(logId, nodeRef.sig),
-        connections = connectTo.map(ep => ReplicationConnection(ep._1, ep._2)))
+        connections = connectTo.map(ep => ReplicationConnection(ep.payload.get.host, ep.payload.get.port)),
+        NoFilters,
+        SystemName
+      )
       if (activated.get()) endpoint.activate()
       newCrs.foreach(cr => chainEndpoints.put(cr, (crsm.get(cr).get, endpoint)))
       (existingCrs | newCrs).map(cr => (cr, getLog(cr).get)).toMap

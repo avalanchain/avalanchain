@@ -35,8 +35,6 @@ import scala.concurrent.Future
 implicit val system: ActorSystem = ActorSystem("ac", ConfigFactory.parseString(AkkaConfigs.PersInmem2))
 implicit val mat: Materializer = ActorMaterializer()
 
-import akka.actor.ActorDSL._
-
 //val a = actor(new Act {
 //  become {
 //    case "hello" ⇒ sender() ! "hi"

@@ -1,7 +1,6 @@
 import java.util.UUID
 
-import akka.actor.ActorDSL.actor
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Props}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.chat.ChatClient
@@ -26,15 +25,11 @@ def start(port: Int, user: String) = {
   implicit val mat: Materializer = ActorMaterializer()
 
 
-  val chatClient = actor("chatClient") {
-    new ChatClient(() => CurveContext.savedKeys(), user + " Node")
-  }
+  val chatClient = system.actorOf(Props(new ChatClient(() => CurveContext.savedKeys(), user + " Node")), "chatClient")
 
   chatClient ! GetParticipantsAll
 
-  (chatClient ! CreateParticipant(user)
-
-  chatClient ! GetParticipantsAll
+  chatClient ! CreateParticipant(user)
 
   chatClient
 }
@@ -46,8 +41,9 @@ val chatClient2 = start(2552, "Smith")
 val participants = Await.result(chatClient1 ? GetParticipantsAll, 5 seconds).asInstanceOf[Participants]
 
 chatClient1 ! CreateChatChannel("priv room", participants.participants)
+chatClient2 ! CreateChatChannel("pub room", participants.participants)
 
-chatClient2 ? GetChatChannelsAll
+//chatClient2 ? GetChatChannelsAll
 
 val chatChannels = Await.result(chatClient1 ? GetChatChannelsAll, 5 seconds).asInstanceOf[ChatChannels]
 val chatChannel = chatChannels.channels.head
@@ -56,4 +52,11 @@ chatClient1 ! SendMsg(chatChannel._1, participants.participants.head, "Hello")
 
 chatClient2 ! SendMsg(chatChannel._1, participants.participants.head, "Yes")
 
+for (i <- 1 to 5000) {
+  chatClient1 ! SendMsg(chatChannel._1, participants.participants.head, "Hello-" + i)
+  chatClient2 ! SendMsg(chatChannel._1, participants.participants.head, "Yes-" + i)
+}
+
 val messages = Await.result(chatClient1 ? GetMessages(chatChannel._1), 5 seconds).asInstanceOf[ChatMessages]
+
+messages.msgs.size

@@ -10,8 +10,8 @@ import akka.cluster.Cluster
 import akka.cluster.ddata._
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain.{Id, Position}
-import com.avalanchain.jwt.jwt.chat.ChatMsg
 import com.avalanchain.jwt.jwt.chat.ChatMsg.ChatMsgToken
+import com.avalanchain.jwt.jwt.chat.ChatMsg
 import com.avalanchain.jwt.utils.CirceCodecs
 
 
@@ -26,7 +26,7 @@ object ChatClient extends CirceCodecs {
 
   final case class ChatParticipant(id: Id, name: String)
 
-  final case class ChatChannel (val id: Id, val name: String)
+  final case class ChatChannel (id: Id, name: String)
 //  final case class ChatChannelState (channel: ChatChannel, val participants: Set[ChatParticipant])
 
   sealed trait ChatAdminMsg //{ val channelId: Id }
@@ -67,6 +67,8 @@ class ChatClient(keyPair: () => KeyPair, nodeName: String) extends Actor with Ac
   import akka.cluster.ddata.Replicator._
   import com.avalanchain.jwt.jwt.chat.ChatClient.ChatAdminMsg._
 
+  private final case class GetMessageCtx(channel: ChatChannel, replyTo: ActorRef)
+
   val replicator = DistributedData(context.system).replicator
   implicit val cluster = Cluster(context.system)
 
@@ -96,18 +98,18 @@ class ChatClient(keyPair: () => KeyPair, nodeName: String) extends Actor with Ac
 
   def getMessages: Receive = {
     case GetMessages(channel: ChatChannel) =>
-      replicator ! Get(ChatChannelsMessagesKey(channel.id), readMajority, Some(("GMsg", channel, sender())))
+      replicator ! Get(ChatChannelsMessagesKey(channel.id), readMajority, Some(GetMessageCtx(channel, sender())))
 
-    case g @ GetSuccess(key: GSetKey[ChatMsg], Some(("GMsg", channel: ChatChannel, replyTo: ActorRef))) =>
+    case g @ GetSuccess(key: GSetKey[ChatMsg], Some(GetMessageCtx(channel, replyTo))) =>
       val data = g.get(key)
       replyTo ! ChatMessages(channel, data.elements)
 
-    case NotFound(key: GSetKey[ChatMsg], Some(("GMsg", channel: ChatChannel, replyTo: ActorRef))) =>
+    case NotFound(key: GSetKey[ChatMsg], Some(GetMessageCtx(channel, replyTo))) =>
       replyTo ! ChatMessages(channel, Set.empty)
 
-    case GetFailure(key: GSetKey[ChatMsg], Some(("GMsg", channel: ChatChannel, replyTo: ActorRef))) =>
+    case GetFailure(key: GSetKey[ChatMsg], Some(GetMessageCtx(channel, replyTo))) =>
       // ReadMajority failure, try again with local read
-      replicator ! Get(key, ReadLocal, Some(("GMsg", channel, replyTo)))
+      replicator ! Get(key, ReadLocal, Some(GetMessageCtx(channel, replyTo)))
   }
 
   def getParticipantsAll: Receive = {
@@ -116,7 +118,7 @@ class ChatClient(keyPair: () => KeyPair, nodeName: String) extends Actor with Ac
 
     case g @ GetSuccess(ChatParticipantsKey, Some(replyTo: ActorRef)) =>
       val data = g.get(ChatParticipantsKey)
-      replyTo ! Participants(data.elements.toSet)
+      replyTo ! Participants(data.elements)
 
     case NotFound(ChatParticipantsKey, Some(replyTo: ActorRef)) =>
       replyTo ! Participants(Set.empty)

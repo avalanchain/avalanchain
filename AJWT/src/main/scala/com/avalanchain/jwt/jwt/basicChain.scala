@@ -56,8 +56,8 @@ package object basicChain {
 
   sealed trait JwtAlgo
   object JwtAlgo {
-    final case object HS512 extends JwtAlgo { override def toString = "HS512" }
-    final case object ES512 extends JwtAlgo { override def toString = "ES512" }
+    final case object HS512 extends JwtAlgo
+    final case object ES512 extends JwtAlgo
   }
 
   sealed trait ChainDef extends JwtPayload.Asym { val algo: JwtAlgo; val id: Id; val pub: PubKey; val rg: ResourceGroup }
@@ -249,7 +249,7 @@ package object basicChain {
       newChain
     }
 
-    def newChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))): Chain3 =
+    def newChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json]): Chain3 =
       addChainDef(ChainDef.New(jwtAlgo, id, publicKey, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}"))))
 
     def nestedChain(jwtAlgo: JwtAlgo, id: Id = UUID.randomUUID().toString.replace("-", ""), parentChainRef: ChainRef, pos: Position): Chain3 =

@@ -6,8 +6,8 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import java.util.concurrent.atomic.AtomicReference
-import collection.JavaConverters._
 
+import collection.JavaConverters._
 import scala.concurrent.duration._
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -16,7 +16,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.CurveContext
-import com.avalanchain.jwt.jwt.actors.network.NewChain
+import com.avalanchain.jwt.jwt.actors.network.{ChainLogFactory, NewChain}
 import com.avalanchain.jwt.jwt.demo.account.AccountCommand._
 import com.avalanchain.jwt.utils.{CirceCodecs, CirceSimpleCodecs}
 import com.rbmhtechnology.eventuate.DurableEvent
@@ -105,7 +105,8 @@ package object account {
 //    }
 //  }
 
-  class CurrencyNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => ChainDefToken)(implicit actorSystem: ActorSystem, materializer: Materializer)
+  class CurrencyNode(nodeId: NodeIdToken, keyPair: KeyPair, chainFactory: String => ChainDefToken)
+                    (implicit actorSystem: ActorSystem, materializer: Materializer, logFactory: ChainLogFactory)
     extends CirceCodecs {
 
     val accountChainDefToken = chainFactory("__accounts__")

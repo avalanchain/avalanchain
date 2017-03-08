@@ -32,13 +32,33 @@ import akka.NotUsed
   * Created by Yuriy Habarov on 26/11/2016.
   */
 
+class LevelDBLogFactory(nodeId: NodeIdToken, implicit val actorSystem: ActorSystem) extends ChainLogFactory {
+  private def sha(text: String) = {
+    val md = MessageDigest.getInstance("SHA-256");
+    md.update(text.getBytes("UTF-8"))
+    Base64.getEncoder.encodeToString(md.digest)
+  }
+
+  private def createLog(id: String, tag: String = ""): ActorRef = {
+    val idCoded = sha(id)
+    val nodeCoded = sha(nodeId.sig + tag)
+    val actorRef = actorSystem.actorOf(LeveldbEventLog.props(idCoded, nodeCoded))
+    println(s"Log created: '$idCoded' for node '$nodeCoded'")
+    actorRef
+  }
+
+  def chainLog(chainDefToken: ChainDefToken) = createLog(ChainRef(chainDefToken).sig)
+
+  def commandLog(chainDefToken: ChainDefToken) = createLog(ChainRef(chainDefToken).sig, "COM")
+}
 
 abstract class Chain (
-  val nodeId: NodeIdToken,
+//  val nodeId: NodeIdToken,
   val chainDefToken: ChainDefToken,
   val keyPair: KeyPair,
-  protected val commandLogName: Option[String],
-  protected val commandLogRef: Option[ActorRef],
+  //val logFactory: ChainLogFactory,
+  val commandLog: ActorRef,
+  val eventLog: ActorRef,
   implicit val actorSystem: ActorSystem,
   implicit val materializer: Materializer) {
 
@@ -47,23 +67,8 @@ abstract class Chain (
   var statusInternal: ChainStatus = ChainStatus.Created
   def status = statusInternal
 
-  def sha(text: String) = {
-    val md = MessageDigest.getInstance("SHA-256");
-    md.update(text.getBytes("UTF-8"))
-    Base64.getEncoder.encodeToString(md.digest)
-  }
-
   protected def newId() = UUID.randomUUID().toString.replace("-", "")
-  protected def createLog(id: String = chainRef.sig): ActorRef = {
-    val idCoded = sha(id)
-    val nodeCoded = sha(nodeId.sig)
-    val actorRef = actorSystem.actorOf(LeveldbEventLog.props(idCoded, nodeCoded))
-    println(s"Log created: '$idCoded' for node '$nodeCoded'")
-    actorRef
-  }
 
-  protected val commandLog = Seq(commandLogRef, commandLogName.map(createLog(_))).filter(_.nonEmpty).head
-  val eventLog = createLog()
   protected val initialVal = parse("{}").getOrElse(Json.Null)
   protected val initialState = ChainState(None, new FrameRef(chainRef.sig), -1, initialVal)
   def sourceDES = Source.fromGraph(DurableEventSource(eventLog))
@@ -102,10 +107,9 @@ abstract class Chain (
   def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken])
 
   def process() =
-    commandLog.map(
-      cl => Source.fromGraph(DurableEventSource(cl))
-        .via(statefulProcessor(newId, eventLog)(initialState)(processingLogic))
-        .runWith(Sink.ignore))
+    Source.fromGraph(DurableEventSource(commandLog))
+      .via(statefulProcessor(newId, eventLog)(initialState)(processingLogic))
+      .runWith(Sink.ignore)
 
 }
 //object Chain {
@@ -113,11 +117,11 @@ abstract class Chain (
 //}
 
 class NewChain(nodeId: NodeIdToken, chainDefToken: ChainDefToken, keyPair: KeyPair)
-               (implicit actorSystem: ActorSystem, materializer: Materializer)
-  extends Chain(nodeId, chainDefToken, keyPair, Some(ChainRef(chainDefToken).sig + "COM"), None, actorSystem, materializer) {
+               (implicit actorSystem: ActorSystem, materializer: Materializer, logFactory: ChainLogFactory)
+  extends Chain(chainDefToken, keyPair, logFactory.commandLog(chainDefToken), logFactory.chainLog(chainDefToken), actorSystem, materializer) {
 
 
-  def sink = Flow[Cmd].map(DurableEvent(_)).via(DurableEventWriter(newId, commandLog.get)).to(Sink.ignore)
+  def sink = Flow[Cmd].map(DurableEvent(_)).via(DurableEventWriter(newId, commandLog)).to(Sink.ignore)
 
   override def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken]) = {
     event.payload match {
@@ -126,14 +130,13 @@ class NewChain(nodeId: NodeIdToken, chainDefToken: ChainDefToken, keyPair: KeyPa
   }
 }
 
-
 class DerivedChain(nodeId: NodeIdToken, chainDefToken: ChainDefToken, keyPair: KeyPair, derived: Derived, parentLogRef: ActorRef)
-                   (implicit actorSystem: ActorSystem, materializer: Materializer)
-  extends Chain(nodeId, chainDefToken, keyPair, None, Some(parentLogRef), actorSystem, materializer) {
+                   (implicit actorSystem: ActorSystem, materializer: Materializer, logFactory: ChainLogFactory)
+  extends Chain(chainDefToken, keyPair, logFactory.commandLog(chainDefToken), parentLogRef, actorSystem, materializer) {
 
   val func: (Json, Json) => Seq[Json] =
     derived.cdf match {
-      case Copy => (_, e) => Seq(e) // TODO: Deal with failures explicitely
+      case Copy => (_, e) => Seq(e) // TODO: Deal with failures explicitly
       case ChainDerivationFunction.Map(f) => (_, e) => Seq(ScriptFunction(f)(e))
       case Filter(f) => (_, e) => if (ScriptPredicate(f)(e)) Seq(e) else Seq()
       //case Fold(f, init) => source.map(_.fold(init)((acc, e) => ScriptFunction2(f)(acc, e)).to(PersistentSink[Json](chainDefToken)))
