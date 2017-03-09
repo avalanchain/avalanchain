@@ -7,7 +7,7 @@
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
 
-        this.info = 'Index trader';
+        this.info = 'quoka trader';
         this.helloText = 'Welcome in Avalanchain';
         this.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         $scope.datayahoo = [];
@@ -136,7 +136,7 @@
         activate();
         function activate() {
             common.activateController([getData()], controllerId)
-                .then(function () { log('Activated Index Trader') });//log('Activated Admin View');
+                .then(function () { log('Activated Quoka Trader') });//log('Activated Admin View');
         }
     };
 

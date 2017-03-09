@@ -7,7 +7,7 @@
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
-        vm.info = 'Index Dashboard';
+        vm.info = 'Quoka Dashboard';
         vm.helloText = 'Welcome in Avalanchain';
         vm.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         var currencies = dataservice.commondata().currencies();
@@ -347,7 +347,7 @@
 
         function activate() {
             common.activateController([getMessageCount()], controllerId)
-                .then(function () { log('Activated Index Dashboard') });//log('Activated Admin View');
+                .then(function () { log('Activated Quoka Dashboard') });//log('Activated Admin View');
         }
 
         $scope.$watch('yourItems', function (newVal, oldVal) {

@@ -13,8 +13,8 @@
 
         $scope.currencies = [{
             id: 0,
-            currency: 'IDX',
-            name: 'INDEX'
+            currency: 'QOK',
+            name: 'QUOKA'
         },{
             id: 1,
             currency: 'USD',

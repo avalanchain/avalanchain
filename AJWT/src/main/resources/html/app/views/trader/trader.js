@@ -7,7 +7,7 @@
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
 
-        this.info = 'Index trader';
+        this.info = 'quoka trader';
         this.helloText = 'Welcome in Avalanchain';
         this.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         $scope.datayahoo = [];
