@@ -12,7 +12,7 @@ import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain.{Id, Position}
 import com.avalanchain.jwt.jwt.chat.ChatMsg.ChatMsgToken
 import com.avalanchain.jwt.jwt.chat.ChatMsg
-import com.avalanchain.jwt.utils.CirceCodecs
+import com.avalanchain.jwt.utils._
 
 
 /**
@@ -77,7 +77,7 @@ class ChatClient(keyPair: () => KeyPair, nodeName: String) extends Actor with Ac
   //def ChatChannelsMessagesKey(id: Id) = GSetKey[ChatMsgToken](s"ChatMessages:$id")
   def ChatChannelsMessagesKey(id: Id) = GSetKey[ChatMsg](s"ChatMessages:$id")
 
-  def newId() = UUID.randomUUID().toString.replace("-", "")
+  def newId() = randomId
 
   def receive = getParticipantsAll
     .orElse[Any, Unit](createParticipant)

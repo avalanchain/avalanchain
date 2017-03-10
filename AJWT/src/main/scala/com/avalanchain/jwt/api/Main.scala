@@ -223,8 +223,8 @@ object MainRnd extends Main(0) with App
 object MainCmd extends App with CirceCodecs {
   val keyPair = CurveContext.currentKeys
 
-  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = None) = {
-    val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
+  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512) = {
+    val chainDef: ChainDef = ChainDef.New(jwtAlgo, randomId, keyPair.getPublic, ResourceGroup.ALL)
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     chainDefToken
   }

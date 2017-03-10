@@ -52,10 +52,10 @@ libraryDependencies ++= {
     "org.iq80.leveldb"            % "leveldb"                           % "0.7",
     "org.fusesource.leveldbjni"   % "leveldbjni-all"                    % "1.8",
 
-    "com.github.dnvriend" %% "akka-persistence-inmemory"                % "1.3.14",
+    "com.github.dnvriend" %% "akka-persistence-inmemory"                % "2.5.0.0-M2",
     "com.github.dnvriend" %% "akka-persistence-journal-writer"          % "0.0.2",
 
-    "org.scalatest"     %% "scalatest"                                  % "2.2.5" % "test",
+    "org.scalatest"     %% "scalatest"                                  % "3.0.1" % "test",
     "ch.qos.logback"    % "logback-classic"                             % "1.1.3",
     "io.swagger"        % "swagger-core"                                % "1.5.12",
     "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.9.1",

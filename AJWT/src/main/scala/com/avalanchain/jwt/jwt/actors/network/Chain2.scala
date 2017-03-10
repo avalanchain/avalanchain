@@ -6,6 +6,7 @@ import java.util.UUID
 import akka.actor.{ActorRef, ActorRefFactory, ActorSystem}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
+import com.avalanchain.jwt.utils._
 import com.avalanchain.jwt.basicChain.ChainDef.{Derived, Fork, New}
 import com.avalanchain.jwt.basicChain.ChainDerivationFunction._
 import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
@@ -64,13 +65,13 @@ abstract class Chain (
 
   if (chainDefToken.payload.isEmpty) throw new RuntimeException(s"Inconsistent ChainDefToken: '$chainDefToken'")
   val chainRef = ChainRef(chainDefToken)
-  var statusInternal: ChainStatus = ChainStatus.Created
+  var statusInternal: ChainStatus = ChainStatus.Active
   def status = statusInternal
 
-  protected def newId() = UUID.randomUUID().toString.replace("-", "")
+  protected def newId() = randomId
 
   protected val initialVal = parse("{}").getOrElse(Json.Null)
-  protected val initialState = ChainState(None, new FrameRef(chainRef.sig), -1, initialVal)
+  protected val initialState = ChainState(chainDefToken, statusInternal, None, new FrameRef(chainRef.sig), -1, initialVal)
   def sourceDES = Source.fromGraph(DurableEventSource(eventLog))
   def sourceFrame = sourceDES.map(_.payload.asInstanceOf[FrameToken])
   def sourceJson = sourceFrame.map(_.payloadJson)
@@ -101,7 +102,7 @@ abstract class Chain (
       case HS512 => TypedJwtToken[FSym](FSym(chainRef, newPos, state.lastRef, v), state.lastRef.sig).asInstanceOf[FrameToken]
       case ES512 => TypedJwtToken[FAsym](FAsym(chainRef, newPos, state.lastRef, v, keyPair.getPublic), keyPair.getPrivate).asInstanceOf[FrameToken]
     }
-    (ChainState(Some(token), FrameRef(token), newPos, v), Seq(token))
+    (ChainState(chainDefToken, statusInternal, Some(token), FrameRef(token), newPos, v), Seq(token))
   }
 
   def processingLogic(state: ChainState, event: DurableEvent): (ChainState, Seq[FrameToken])

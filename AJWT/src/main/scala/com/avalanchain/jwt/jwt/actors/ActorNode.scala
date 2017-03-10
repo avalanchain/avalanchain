@@ -62,8 +62,8 @@ trait ActorNode extends CirceCodecs {
   def localport(): Future[Int] = (addr ? GetNodePort).map(_.asInstanceOf[Option[Int]].get)
 
   // TODO: Drop the methods
-  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = randomId, initValue: Option[Json] = None) = {
-    val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
+  def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = randomId) = {
+    val chainDef: ChainDef = ChainDef.New(jwtAlgo, id, keyPair.getPublic, ResourceGroup.ALL)
     val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
     chainDefToken
   }

@@ -157,7 +157,7 @@ class ChainRegistryActor() extends PersistentActor with ActorLogging {
     state.get(chainRef) match {
       case None => Either.left(ChainNotFound(chainRef))
       case Some(chainDefToken) => {
-        context.child(chainRef.sig) match {
+        context.child(chainRef) match {
           case Some(actorRef) => Either.right(chainDefToken, actorRef)
           case None => {
             val actorRef = context.actorOf(ChainPersistentActor.props(chainDefToken), chainRef.sig)

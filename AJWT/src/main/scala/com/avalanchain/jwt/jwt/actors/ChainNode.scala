@@ -70,8 +70,8 @@ class ChainNode(val nodeName: String, val port: Int, val keyPair: KeyPair, known
 //    (chainDefToken, chainDef)
 //  }
 
-  def newChain2(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = UUID.randomUUID().toString.replace("-", ""), initValue: Option[Json] = Some(Json.fromString("{}"))) = {
-    (registry ? CreateChain(newChain(jwtAlgo, id, initValue))).mapTo[ChainCreationResult]
+  def newChain2(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = randomId) = {
+    (registry ? CreateChain(newChain(jwtAlgo, id))).mapTo[ChainCreationResult]
   }
 
   def getChain(chainRef: ChainRef) = (registry ? GetChainByRef(chainRef)).mapTo[Either[ChainRegistryError, (ChainDefToken, ActorRef)]]

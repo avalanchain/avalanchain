@@ -35,10 +35,10 @@ class ChainPersistentActor(val chainDefToken: ChainDefToken, val snapshotInterva
 
   override def persistenceId = chainRef.sig
 
-  private var state: ChainState = ChainState(None, new FrameRef(chainRef.sig), -1, parse("{}").getOrElse(Json.Null)) // pid expected to be chainRef
+  private var state: ChainState = ChainState(chainDefToken, ChainStatus.Active, None, new FrameRef(chainRef.sig), -1, parse("{}").getOrElse(Json.Null)) // pid expected to be chainRef
 
   private def applyToken(frameToken: FrameToken): ChainState = {
-    ChainState(Some(frameToken), FrameRef(frameToken), frameToken.payload.get.pos, frameToken.payload.get.v)
+    ChainState(chainDefToken, ChainStatus.Active, Some(frameToken), FrameRef(frameToken), frameToken.payload.get.pos, frameToken.payload.get.v)
   }
 
   private def updateState(chainState: ChainState): Unit = {

@@ -13,6 +13,7 @@ import akka.pattern.{ask, pipe}
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import cats.implicits._
+import com.avalanchain.jwt.utils._
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain._
 import com.avalanchain.jwt.jwt.CurveContext
@@ -65,7 +66,7 @@ class ChainNode2(nodeId: NodeIdToken, val keyPair: KeyPair, knownKeys: Set[Publi
       val crs = crsm.keys.toSet
       val existingCrs = chainRefs & crs
       val newCrs = chainRefs -- crs
-      val endpoint = new ReplicationEndpoint(id = nodeRef.sig + "-" + UUID.randomUUID().toString, logNames = newCrs.map(_.sig),
+      val endpoint = new ReplicationEndpoint(id = nodeRef.sig + "-" + randomId, logNames = newCrs.map(_.sig),
         logFactory = logId => LeveldbEventLog.props(logId, nodeRef.sig),
         connections = connectTo.map(ep => ReplicationConnection(ep.payload.get.host, ep.payload.get.port)),
         NoFilters,
