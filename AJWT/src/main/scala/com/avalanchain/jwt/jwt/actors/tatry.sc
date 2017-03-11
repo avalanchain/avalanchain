@@ -1,9 +1,20 @@
+import java.security.KeyPair
+
 import akka.typed._
 import akka.typed.ScalaDSL._
 import akka.typed.AskPattern._
 import akka.util.Timeout
+import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 import com.avalanchain.jwt.basicChain._
-import io.circe.{DecodingFailure, Json}
+import cats.implicits._
+import io.circe._
+import io.circe.syntax._
+import io.circe.parser._
+import io.circe.generic.JsonCodec
+import io.circe.generic.auto._
+import pdi.jwt.{Jwt, JwtAlgorithm, JwtBase64}
+import pdi.jwt.exceptions.JwtLengthException
+import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -14,22 +25,49 @@ implicit val timeout = Timeout(2 seconds)
 ////// Chain Registry
 
 object ChainRegistry {
+  class Chain2(val chainDefToken: ChainDefToken, val keyPair: KeyPair,
+               tokenStorage: FrameTokenStorage, currentState: Option[ChainState] = None) {
+    if (chainDefToken.payload.isEmpty) throw new RuntimeException(s"Inconsistent ChainDefToken: '$chainDefToken'")
+    val chainRef = ChainRef(chainDefToken)
+    def status = ChainStatus.Active
+
+    //    def pos: Position = state.pos
+    //    def current: Option[FrameToken] = state.frame
+
+    private var state = currentState.getOrElse(ChainState(chainDefToken, status, None, new FrameRef(chainRef.sig), -1, parse("{}").getOrElse(Json.Null)))
+
+    def add(v: Json) = {
+      val newPos = state.pos + 1
+      val frameToken: TypedJwtToken[Frame] = chainDefToken.payload.get.algo match {
+        case HS512 => TypedJwtToken[FSym](FSym(chainRef, newPos, state.lastRef, v), state.lastRef.sig).asInstanceOf[TypedJwtToken[Frame]]
+        case ES512 => TypedJwtToken[FAsym](FAsym(chainRef, newPos, state.lastRef, v, keyPair.getPublic), keyPair.getPrivate).asInstanceOf[TypedJwtToken[Frame]]
+      }
+      tokenStorage.add(frameToken).map(_ => {
+        state = ChainState(chainDefToken, status, Some(frameToken), FrameRef(frameToken), newPos, v)
+      })
+    }
+  }
+
+
   sealed trait Command
 
   sealed trait AdminCommand extends Command
   object AdminCommand {
     final case class CreateChain(chainDefToken: ChainDefToken, replyTo: ActorRef[ChainCreationResult]) extends AdminCommand
-    final case class GetChainByRef(chainRef: ChainRef, replyTo: ActorRef[ChainDefToken]) extends AdminCommand
-    final case class GetChainState(chainRef: ChainRef, replyTo: ActorRef[ChainState]) extends AdminCommand
-    final case class GetChainStatus(chainRef: ChainRef, replyTo: ActorRef[ChainStatus]) extends AdminCommand
-    final case class GetChains(replyTo: ActorRef[ChainDefToken]) extends AdminCommand
+    final case class PauseChain(chainDefToken: ChainDefToken, replyTo: ActorRef[ChainCreationResult]) extends AdminCommand
+    final case class ResumeChain(chainDefToken: ChainDefToken, replyTo: ActorRef[ChainCreationResult]) extends AdminCommand
+    final case class DeleteChain(chainDefToken: ChainDefToken, replyTo: ActorRef[ChainCreationResult]) extends AdminCommand
+    final case class GetChainByRef(chainRef: ChainRef, replyTo: ActorRef[Option[ChainDefToken]]) extends AdminCommand
+    final case class GetChainState(chainRef: ChainRef, replyTo: ActorRef[Option[ChainState]]) extends AdminCommand
+    final case class GetChainStatus(chainRef: ChainRef, replyTo: ActorRef[Option[ChainStatus]]) extends AdminCommand
+    final case class GetChains(replyTo: ActorRef[Vector[ChainDefToken]]) extends AdminCommand
   }
 
   val adminCommand: Behavior[AdminCommand] =
     ContextAware[AdminCommand] { ctx =>
       import AdminCommand._
       import ChainCreationResult._
-      val chains = mutable.HashMap.empty[ChainRef, ChainDefToken]
+      val chains = mutable.HashMap.empty[ChainRef, Chain2]
 
       Static {
         case CreateChain (chainDefToken, replyTo) =>
@@ -41,7 +79,14 @@ object ChainRegistry {
               ChainAlreadyExists(chainDefToken)
             }
           replyTo ! reply
-
+        case GetChainByRef (chainRef, replyTo) =>
+          val reply =
+            if (chains(chainRef) ChainAlreadyExists(chainDefToken)
+            else {
+              chains += (chainRef -> chainDefToken)
+              ChainAlreadyExists(chainDefToken)
+            }
+          replyTo ! reply
 
 //        case GetSession(screenName, client) =>
 //          sessions ::= client
