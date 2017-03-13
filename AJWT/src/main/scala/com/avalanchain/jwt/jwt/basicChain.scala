@@ -29,6 +29,7 @@ import scala.concurrent.duration._
 package object basicChain {
   type Id = String
   type Position = Int
+//  type HSig = String
   type JsonStr = String
 
   sealed trait JwtPayload
@@ -221,7 +222,7 @@ package object basicChain {
       Success(())
     }
 
-    // Do not use. Don't work properly.
+    // Do not use. Doesn't work properly.
     override def get(frameRef: FrameRef): Option[FrameToken] = tokens.get(frameRef)
     def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
       Source.fromIterator(() => buffer.toIterator)
