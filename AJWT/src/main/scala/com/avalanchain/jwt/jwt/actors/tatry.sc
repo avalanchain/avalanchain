@@ -1,3 +1,4 @@
+import java.net.InetAddress
 import java.security.KeyPair
 import java.util.concurrent.ConcurrentHashMap
 
@@ -17,7 +18,6 @@ import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtBase64}
 import pdi.jwt.exceptions.JwtLengthException
-import com.avalanchain.jwt.basicChain.JwtAlgo.{ES512, HS512}
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -28,6 +28,18 @@ import scala.collection.immutable.Map
 import scala.collection._
 import scala.collection.convert.decorateAsScala._
 import java.util.concurrent.ConcurrentHashMap
+
+import com.rbmhtechnology.eventuate.EndpointFilters._
+import com.rbmhtechnology.eventuate.adapter.stream.{DurableEventSource, DurableEventWriter}
+//import com.rbmhtechnology.eventuate.crdt.{MVRegisterService, ORSetService}
+import com.rbmhtechnology.eventuate.{DurableEvent, ReplicationConnection, ReplicationEndpoint}
+import com.rbmhtechnology.eventuate.log.leveldb.LeveldbEventLog
+import com.typesafe.config.ConfigFactory
+import io.circe.{Decoder, DecodingFailure, Encoder, Json}
+import io.circe.syntax._
+import io.circe.parser._
+import io.circe.generic.JsonCodec
+import io.circe.generic.auto._
 
 import com.avalanchain.jwt.KeysDto.PubKey
 import com.avalanchain.jwt.basicChain.ChainStatus._
@@ -45,15 +57,14 @@ trait FrameTokenStorage2 {
 class MapFrameTokenStorage extends FrameTokenStorage2 {
   private var tokens = new ConcurrentHashMap[FrameRef, FrameToken].asScala
   private val buffer = new mutable.ArrayBuffer[FrameToken](1024)
-  def frameTokens = tokens
 
-  override def add(frameToken: FrameToken): Either[String, FrameRef] = {
+  def add(frameToken: FrameToken): Either[String, FrameRef] = {
     tokens += (FrameRef(frameToken) -> frameToken)
     buffer += frameToken
     Right(FrameRef(frameToken))
   }
 
-  override def get(frameRef: FrameRef): Option[FrameToken] = tokens.get(frameRef)
+  def get(frameRef: FrameRef): Option[FrameToken] = tokens.get(frameRef)
 
   def getPage(fromPos: Position, size: Short): Vector[FrameToken] = {
     if (fromPos > buffer.size || size < 0) Vector.empty[FrameToken]
@@ -76,6 +87,42 @@ class MapFrameTokenStorage extends FrameTokenStorage2 {
     }
   }
 }
+
+//class FrameTokenLog extends FrameTokenStorage2 {
+//  val localhost = InetAddress.getLocalHost.getHostAddress
+//
+////  private var tokens = new ConcurrentHashMap[FrameRef, FrameToken].asScala
+////  private val buffer = new mutable.ArrayBuffer[FrameToken](1024)
+//
+////  override def add(frameToken: FrameToken): Either[String, FrameRef] = {
+////    tokens += (FrameRef(frameToken) -> frameToken)
+////    buffer += frameToken
+////    Right(FrameRef(frameToken))
+////  }
+//
+//  //override def get(frameRef: FrameRef): Option[FrameToken] = tokens.get(frameRef)
+//
+////  def getPage(fromPos: Position, size: Short): Vector[FrameToken] = {
+////    if (fromPos > buffer.size || size < 0) Vector.empty[FrameToken]
+////    else {
+////      val (s, l) =
+////        if (fromPos >= 0) {
+////          val start = fromPos
+////          val len = Math.max(Math.min(fromPos + size, buffer.size) - fromPos, 0)
+////          (start, len)
+////        }
+////        else {
+////          val start = 0
+////          val adjustedSize = fromPos + size // as fromPos is negative adjustedSize will be always positive
+////          val len = Math.min(adjustedSize, buffer.size)
+////          (start, len)
+////        }
+////      val array = new Array[FrameToken](l)
+////      buffer.copyToArray(array, s, l)
+////      array.toVector
+////    }
+////  }
+//}
 
 class Chain2(val keyPair: KeyPair, val chainDefToken: ChainDefToken, initialState: Option[ChainState] = None, val tokenStorage: FrameTokenStorage2 = new MapFrameTokenStorage()) {
   if (chainDefToken.payload.isEmpty) throw new RuntimeException(s"Inconsistent ChainDefToken: '$chainDefToken'")
@@ -114,12 +161,22 @@ object ChainRegistry {
     final case class InternalError(details: String) extends ChainError
   }
 
-  sealed trait DataCommand extends Command
-  object DataCommand {
-    import DataReply._
-    final case class Post(j: Json, replyTo: ActorRef[Either[ChainError, PostResult]]) extends DataCommand
-    final case class GetPage(fromPos: Position, size: Short, replyTo: ActorRef[Either[ChainError, Vector[FrameToken]]]) extends DataCommand
-    final case class GetBySig(sig: FrameRef, replyTo: ActorRef[Either[ChainError, Option[FrameToken]]]) extends DataCommand
+  sealed trait ChainCommand extends Command
+  object ChainCommand {
+    sealed trait ChainDataCommand extends ChainCommand
+    object ChainDataCommand {
+      import DataReply._
+      final case class Post(j: Json, replyTo: ActorRef[Either[ChainError, PostResult]]) extends ChainDataCommand
+      final case class GetPage(fromPos: Position, size: Short, replyTo: ActorRef[Either[ChainError, Vector[FrameToken]]]) extends ChainDataCommand
+      final case class GetBySig(sig: FrameRef, replyTo: ActorRef[Either[ChainError, Option[FrameToken]]]) extends ChainDataCommand
+    }
+
+    sealed trait ChainInfoCommand extends ChainCommand
+    object ChainInfoCommand {
+      final case class GetChainDef(replyTo: ActorRef[Option[ChainDefToken]]) extends ChainInfoCommand
+      final case class GetChainState(replyTo: ActorRef[Option[ChainState]]) extends ChainInfoCommand
+      final case class GetChainStatus(replyTo: ActorRef[Option[ChainStatus]]) extends ChainInfoCommand
+    }
   }
 
   sealed trait DataReply
@@ -135,11 +192,12 @@ object ChainRegistry {
 
   sealed trait AdminCommandResult
   object AdminCommandResult {
-    sealed trait ChainCreationResult extends AdminCommandResult { val chainDefToken: ChainDefToken }
+    sealed trait ChainCreationResult extends AdminCommandResult
     object ChainCreationResult {
-      sealed trait ChainCreationSuccess extends ChainCreationResult { val chainDefToken: ChainDefToken }
-      final case class ChainCreated(chainDefToken: ChainDefToken, replyTo: ActorRef[DataCommand]) extends ChainCreationSuccess
-      final case class ChainAlreadyExists(chainDefToken: ChainDefToken, replyTo: ActorRef[DataCommand]) extends ChainCreationSuccess
+      import AdminCommand._
+      sealed trait ChainCreationSuccess extends ChainCreationResult { val replyTo: ActorRef[ChainCommand] }
+      final case class ChainCreated(replyTo: ActorRef[ChainCommand]) extends ChainCreationSuccess
+      final case class ChainAlreadyExists(replyTo: ActorRef[ChainCommand]) extends ChainCreationSuccess
 
       sealed trait ChainCreationError extends ChainCreationResult
       final case class GeneralChainError(chainDefToken: ChainDefToken, error: ChainError) extends ChainCreationError
@@ -152,7 +210,7 @@ object ChainRegistry {
 
     final case class KnownNodes(nodes: Set[NodeInfo]) extends AdminCommandResult
     final case class KnownPubKeys(nodes: Set[PubKey]) extends AdminCommandResult
-    final case class GetChainsResult(chains: Vector[(ChainDefToken, ChainState)]) extends AdminCommandResult
+    final case class GetChainsResult(chains: Vector[(ChainState, ActorRef[ChainCommand])]) extends AdminCommandResult
 
   }
 
@@ -160,10 +218,15 @@ object ChainRegistry {
   sealed trait AdminCommand extends Command
   object AdminCommand {
     import AdminCommandResult._
-    final case class CreateChain(chainDefToken: ChainDefToken, replyTo: ActorRef[ChainCreationResult]) extends AdminCommand
-    final case class PauseChain(chainRef: ChainRef, reason: String, replyTo: ActorRef[Either[ChainError, Succeeded]]) extends AdminCommand
-    final case class ResumeChain(chainRef: ChainRef, replyTo: ActorRef[Either[ChainError, Succeeded]]) extends AdminCommand
-    final case class DeleteChain(chainRef: ChainRef, reason: String, replyTo: ActorRef[Either[ChainError, Succeeded]]) extends AdminCommand
+    sealed trait ChainRegistryCommand extends AdminCommand
+    object ChainRegistryCommand {
+      final case class CreateChain(chainDefToken: ChainDefToken, replyTo: ActorRef[ChainCreationResult]) extends ChainRegistryCommand
+      final case class PauseChain(chainRef: ChainRef, reason: String, replyTo: ActorRef[Either[ChainError, Succeeded]]) extends ChainRegistryCommand
+      final case class ResumeChain(chainRef: ChainRef, replyTo: ActorRef[Either[ChainError, Succeeded]]) extends ChainRegistryCommand
+      final case class DeleteChain(chainRef: ChainRef, reason: String, replyTo: ActorRef[Either[ChainError, Succeeded]]) extends ChainRegistryCommand
+      final case class GetChain(chainRef: ChainRef, replyTo: ActorRef[Either[ChainError, ActorRef[ChainCommand]]]) extends ChainRegistryCommand
+      final case class GetChains(replyTo: ActorRef[GetChainsResult]) extends ChainRegistryCommand
+    }
 
     sealed trait NodeCommand extends AdminCommand
     object NodeCommand {
@@ -171,36 +234,29 @@ object ChainRegistry {
       final case class GetKnownPubKeys(replyTo: ActorRef[KnownPubKeys]) extends AdminCommand
       final case class AddNode(replyTo: ActorRef[KnownPubKeys]) extends AdminCommand
     }
-
-    final case class GetChain(chainRef: ChainRef, replyTo: ActorRef[Either[ChainError, ActorRef[DataCommand]]]) extends AdminCommand
-    final case class GetChains(replyTo: ActorRef[GetChainsResult]) extends AdminCommand
-    final case class GetChainDef(chainRef: ChainRef, replyTo: ActorRef[Option[ChainDefToken]]) extends AdminCommand
-    final case class GetChainState(chainRef: ChainRef, replyTo: ActorRef[Option[ChainState]]) extends AdminCommand
-    final case class GetChainStatus(chainRef: ChainRef, replyTo: ActorRef[Option[ChainStatus]]) extends AdminCommand
   }
 
+  def chainCommand(keyPair: KeyPair, chainDefToken: ChainDefToken): Behavior[ChainCommand] = ()
 
-  def adminCommand(keyPair: KeyPair, knownPubKeys: Set[PubKey]): Behavior[AdminCommand] =
+  import AdminCommand._
+  def chainRegistryCommand(keyPair: KeyPair, knownPubKeys: Set[PubKey]): Behavior[ChainRegistryCommand] =
     ContextAware[AdminCommand] { ctx =>
-      import AdminCommand._
+      import AdminCommand.ChainRegistryCommand._
       import AdminCommandResult._
       import AdminCommandResult.ChainCreationResult._
       import ChainError._
 
-      val chains = mutable.HashMap.empty[ChainRef, Chain2]
-      //val subscribers = mutable.HashMap.empty[ChainRef, Chain2]
-      val nodes = mutable.Set.empty[NodeInfo]
+      def getChain(chainRef: ChainRef) = ctx.child(chainRef.sig).asInstanceOf[Option[ActorRef[ChainCommand]]]
+      def getChainEither(chainRef: ChainRef) = getChain(chainRef).toRight(ChainNotDefined(chainRef: ChainRef))
+      def getChains() = ctx.children.map(_.asInstanceOf[ActorRef[ChainCommand]])
 
       Static {
         case CreateChain (chainDefToken, replyTo) =>
           val chainRef: ChainRef = chainDefToken
           val reply =
-            (chains get chainRef) match {
-              case Some(chain) => ChainAlreadyExists(chainDefToken, ctx.spawn(dataCommand(chain), chainRef.sig))
-              case None =>
-                val chain = new Chain2(keyPair, chainDefToken)
-                chains += (chainRef -> chain)
-                ChainAlreadyExists(chainDefToken, ctx.spawn(dataCommand(chain), chainRef.sig))
+            getChain(chainRef) match {
+              case Some(actor) => ChainAlreadyExists(actor)
+              case None => ChainCreated(ctx.spawn(chainCommand(keyPair, chainDefToken), chainRef.sig))
             }
           replyTo ! reply
         case PauseChain(chainRef, reason, replyTo) =>
@@ -209,18 +265,96 @@ object ChainRegistry {
           replyTo ! chains.get(chainRef).map(c => {c.resume(); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
         case DeleteChain(chainRef, reason, replyTo) =>
           replyTo ! chains.get(chainRef).map(c => {c.delete(reason); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
-        case GetChain(chainRef, replyTo) =>
-          replyTo ! ctx.child(chainRef.sig).map(_.asInstanceOf[ActorRef[DataCommand]]).toRight(ChainNotDefined(chainRef: ChainRef))
-
-        case NodeCommand.GetKnownNodes(replyTo: ActorRef[KnownNodes]) => KnownNodes(nodes.toSet)
-        case NodeCommand.GetKnownPubKeys(replyTo: ActorRef[KnownPubKeys]) => KnownPubKeys(knownPubKeys ++ nodes.flatMap(_.pubKeys)) // TODO: Add more keys lifecycle logic
-
-        case GetChainDef (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.chainDefToken)
-        case GetChainState (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.state)
-        case GetChainStatus (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.status)
-        case GetChains (replyTo) => replyTo ! GetChainsResult(chains.values.map(c => (c.chainDefToken, c.state)).toVector)
+        case GetChain(chainRef, replyTo) => replyTo ! getChainEither(chainRef)
+        case GetChains (replyTo) =>
+          Source.fromIterator(() => getChains().iterator).mapAsyncUnordered(c => c ? GetChainState)
+          replyTo ! GetChainsResult(chains.values.map(c => (c.chainDefToken, c.state)).toVector)
       }
     }
+
+//  def adminCommand(keyPair: KeyPair, knownPubKeys: Set[PubKey]): Behavior[AdminCommand] =
+//    ContextAware[AdminCommand] { ctx =>
+//      import AdminCommand._
+//      import AdminCommandResult._
+//      import AdminCommandResult.ChainCreationResult._
+//      import ChainError._
+//
+//      val chains = mutable.HashMap.empty[ChainRef, Chain2]
+//      //val subscribers = mutable.HashMap.empty[ChainRef, Chain2]
+//      val nodes = mutable.Set.empty[NodeInfo]
+//
+//      Static {
+//        case CreateChain (chainDefToken, replyTo) =>
+//          val chainRef: ChainRef = chainDefToken
+//          val reply =
+//            (chains get chainRef) match {
+//              case Some(chain) => ChainAlreadyExists(chainDefToken, ctx.spawn(dataCommand(chain), chainRef.sig))
+//              case None =>
+//                val chain = new Chain2(keyPair, chainDefToken)
+//                chains += (chainRef -> chain)
+//                ChainAlreadyExists(chainDefToken, ctx.spawn(dataCommand(chain), chainRef.sig))
+//            }
+//          replyTo ! reply
+//        case PauseChain(chainRef, reason, replyTo) =>
+//          replyTo ! chains.get(chainRef).map(c => {c.suspend(reason); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
+//        case ResumeChain(chainRef, replyTo) =>
+//          replyTo ! chains.get(chainRef).map(c => {c.resume(); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
+//        case DeleteChain(chainRef, reason, replyTo) =>
+//          replyTo ! chains.get(chainRef).map(c => {c.delete(reason); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
+//        case GetChain(chainRef, replyTo) =>
+//          replyTo ! ctx.child(chainRef.sig).map(_.asInstanceOf[ActorRef[ChainDataCommand]]).toRight(ChainNotDefined(chainRef: ChainRef))
+//
+//        case NodeCommand.GetKnownNodes(replyTo: ActorRef[KnownNodes]) => KnownNodes(nodes.toSet)
+//        case NodeCommand.GetKnownPubKeys(replyTo: ActorRef[KnownPubKeys]) => KnownPubKeys(knownPubKeys ++ nodes.flatMap(_.pubKeys)) // TODO: Add more keys lifecycle logic
+//
+//        case GetChainDef (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.chainDefToken)
+//        case GetChainState (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.state)
+//        case GetChainStatus (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.status)
+//        case GetChains (replyTo) => replyTo ! GetChainsResult(chains.values.map(c => (c.chainDefToken, c.state)).toVector)
+//      }
+//    }
+//
+//  def adminCommand(keyPair: KeyPair, knownPubKeys: Set[PubKey]): Behavior[AdminCommand] =
+//    ContextAware[AdminCommand] { ctx =>
+//      import AdminCommand._
+//      import AdminCommandResult._
+//      import AdminCommandResult.ChainCreationResult._
+//      import ChainError._
+//
+//      val chains = mutable.HashMap.empty[ChainRef, Chain2]
+//      //val subscribers = mutable.HashMap.empty[ChainRef, Chain2]
+//      val nodes = mutable.Set.empty[NodeInfo]
+//
+//      Static {
+//        case CreateChain (chainDefToken, replyTo) =>
+//          val chainRef: ChainRef = chainDefToken
+//          val reply =
+//            (chains get chainRef) match {
+//              case Some(chain) => ChainAlreadyExists(chainDefToken, ctx.spawn(dataCommand(chain), chainRef.sig))
+//              case None =>
+//                val chain = new Chain2(keyPair, chainDefToken)
+//                chains += (chainRef -> chain)
+//                ChainAlreadyExists(chainDefToken, ctx.spawn(dataCommand(chain), chainRef.sig))
+//            }
+//          replyTo ! reply
+//        case PauseChain(chainRef, reason, replyTo) =>
+//          replyTo ! chains.get(chainRef).map(c => {c.suspend(reason); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
+//        case ResumeChain(chainRef, replyTo) =>
+//          replyTo ! chains.get(chainRef).map(c => {c.resume(); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
+//        case DeleteChain(chainRef, reason, replyTo) =>
+//          replyTo ! chains.get(chainRef).map(c => {c.delete(reason); Succeeded()}).toRight(ChainNotDefined(chainRef: ChainRef))
+//        case GetChain(chainRef, replyTo) =>
+//          replyTo ! ctx.child(chainRef.sig).map(_.asInstanceOf[ActorRef[ChainDataCommand]]).toRight(ChainNotDefined(chainRef: ChainRef))
+//
+//        case NodeCommand.GetKnownNodes(replyTo: ActorRef[KnownNodes]) => KnownNodes(nodes.toSet)
+//        case NodeCommand.GetKnownPubKeys(replyTo: ActorRef[KnownPubKeys]) => KnownPubKeys(knownPubKeys ++ nodes.flatMap(_.pubKeys)) // TODO: Add more keys lifecycle logic
+//
+//        case GetChainDef (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.chainDefToken)
+//        case GetChainState (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.state)
+//        case GetChainStatus (chainRef, replyTo) => replyTo ! chains.get(chainRef).map(_.status)
+//        case GetChains (replyTo) => replyTo ! GetChainsResult(chains.values.map(c => (c.chainDefToken, c.state)).toVector)
+//      }
+//    }
 
   def dataCommand(chain: Chain2): Behavior[DataCommand] = {
     import DataCommand._

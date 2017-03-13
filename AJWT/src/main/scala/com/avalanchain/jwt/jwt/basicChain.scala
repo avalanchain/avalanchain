@@ -155,7 +155,7 @@ package object basicChain {
     final case class Suspended(reason: String) extends ChainStatus
     final case class Deleted(reason: String) extends ChainStatus
   }
-  final case class ChainState(chainDef: ChainDefToken, status: ChainStatus, frame: Option[FrameToken], lastRef: FrameRef, pos: Position, lastValue: Json)
+  final case class ChainState(chainDefToken: ChainDefToken, status: ChainStatus, frame: Option[FrameToken], lastRef: FrameRef, pos: Position, lastValue: Json)
 
   trait FrameTokenStorage {
     def add(frameToken: FrameToken): Try[Unit]
