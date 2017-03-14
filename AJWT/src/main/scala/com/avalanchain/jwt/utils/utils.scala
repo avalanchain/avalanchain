@@ -3,6 +3,9 @@ package com.avalanchain.jwt
 import java.util.UUID
 
 import com.avalanchain.jwt.basicChain.Id
+import io.circe.Json
+import io.circe.parser._
+import cats.implicits._
 
 /**
   * Created by Yuriy on 10/05/2016.
@@ -24,4 +27,6 @@ package object utils {
   }
 
   def randomId(): Id = UUID.randomUUID().toString.replace("-", "")
+
+  val EmptyJson = parse("{}").getOrElse(Json.Null)
 }
