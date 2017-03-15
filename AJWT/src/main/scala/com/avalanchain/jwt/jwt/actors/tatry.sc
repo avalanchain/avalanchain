@@ -288,6 +288,7 @@ object ChainRegistry {
   import AdminCommandResult.ChainCreationResult._
   def chainCreationResult(chainCommandHandler: ActorRef[ChainCommand] => Unit, errorHandler: ChainCreationError => Unit): Behavior[ChainCreationResult] =
     ContextAware[ChainCreationResult] { ctx =>
+
       Static {
         case ChainCreated(replyTo: ActorRef[ChainCommand]) => chainCommandHandler(replyTo)
         case ChainAlreadyExists(replyTo: ActorRef[ChainCommand]) => chainCommandHandler(replyTo)

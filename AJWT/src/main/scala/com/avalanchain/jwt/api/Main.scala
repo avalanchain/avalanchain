@@ -90,10 +90,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
   def addUserInfo(user: UserData): User = {
     val infos = userInfos()
     implicit val userEncoder: RowEncoder[UserData] = RowEncoder.caseEncoder(0, 1, 2, 3, 4)(UserData.unapply)
-//    new File(rawDataFile.toAbsolutePath().toString() + "2").delete()
-//    val out = new java.io.File(rawDataFile.toAbsolutePath().toString())
-//    val writer = out.asCsvWriter[UserInfo](',', List("username", "firstname", "lastname", "email", "ip_address"))
-//    writer.write(user :: infos).close()
+
     User(UUID.randomUUID(), user)
   }
 
@@ -221,7 +218,7 @@ object MainRnd extends Main(0) with App
 
 
 object MainCmd extends App with CirceCodecs {
-  val keyPair = CurveContext.currentKeys
+  def keyPair() = CurveContext.currentKeys
 
   def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512) = {
     val chainDef: ChainDef = ChainDef.New(jwtAlgo, randomId, keyPair.getPublic, ResourceGroup.ALL)
@@ -242,8 +239,8 @@ object MainCmd extends App with CirceCodecs {
   val derivedChainTuple = derivedChain(ChainRef(newChainDefToken))
 
   object ActorNode extends ActorNode {
-    override val port: Int = 2222
-    override val keyPair: KeyPair = CurveContext.currentKeys
+    override def port: Int = 2222
+    override def keyPair: KeyPair = CurveContext.currentKeys
   }
   import ActorNode._
 
@@ -259,14 +256,18 @@ object MainCmd extends App with CirceCodecs {
 //  val printNCF = nc.sourceFrame.runForeach(frm => println(s"NewChain F: $frm"))
 //  val printDCF = dc.sourceFrame.runForeach(frm => println(s"DerivedChain F: $frm"))
 //
-  val printNC = nc.sourceJson.runForeach(frm => println(s"NewChain: $frm"))
-  val printDC = dc.sourceJson.runForeach(frm => println(s"DerivedChain: $frm"))
+//  val printNC = nc.sourceJson.runForeach(frm => println(s"NewChain: $frm"))
+//  val printDC = dc.sourceJson.runForeach(frm => println(s"DerivedChain: $frm"))
 
   nc.process()
-  dc.process()
+//  dc.process()
 
-  Source.fromGraph(DurableEventSource(nc.eventLog))
-    .runWith(Sink.foreach(e => println(s"aaa ${e.payload}")))
+//  Source.fromGraph(DurableEventSource(nc.eventLog))
+//    .runWith(Sink.foreach(e => println(s"aaa ${e.payload}")))
 
-  Source(List("A", "B", "C")).map(e => Cmd(toJson(s"""{ "e": "${e}" }"""))).runWith(nc.sink)
+//  Source(List("A", "B", "C", "D", "E")).map(e => Cmd(toJson(s"""{ "e": "${e}" }"""))).runWith(nc.sink)
+
+  val startMillis = System.currentTimeMillis()
+  val print1000s = nc.sourceJson.runFold(0)((acc, frm) => { if (acc % 1000 == 0) println(s"Processed: $acc, ${System.currentTimeMillis() - startMillis}"); acc + 1 })
+  Source(0 until 1000000).map(e => Cmd(toJson(s"""{ "e": "E ${e}" }"""))).runWith(nc.sink)
 }
