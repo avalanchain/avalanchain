@@ -272,15 +272,17 @@ object ChainRegistry {
       }
     }
 
-  def adminCommand(keyPair: KeyPair, knownPubKeys: Set[PubKey]): Behavior[AdminCommand] =
+  def adminCommand(keyPair: KeyPair, knownPubKeys: Set[PubKey], nodeIdToken: NodeIdToken): Behavior[AdminCommand] =
     ContextAware[AdminCommand] { ctx =>
       import ChainCommand._
-      val data = ctx.spawn(chainRegistryCommand(keyPair), "registry")
-      val nodes = ctx.spawn(nodeAdminCommand(knownPubKeys), "nodes")
+      val chainRegistry = ctx.spawn(chainRegistryCommand(keyPair), "chainRegistryCommand")
+      val nodeAdmin = ctx.spawn(nodeAdminCommand(knownPubKeys), "nodeAdminCommand")
+      val node = ctx.spawn(nodeCommand(nodeIdToken), "nodeCommand")
 
       Static {
-        case c: ChainRegistryCommand => data ! c
-        case c: NodeAdminCommand => nodes ! c
+        case c: ChainRegistryCommand => chainRegistry ! c
+        case c: NodeAdminCommand => nodeAdmin ! c
+        case c: NodeCommand => node ! c
       }
     }
 
@@ -375,9 +377,13 @@ object ChainRegistry {
 
 ////////////////////////////////////////
 
+final case class TestMsg(msg: String)
+
 import ChainRegistry._
 import AdminCommand.ChainRegistryCommand._
-def main(keyPair: KeyPair): Behavior[akka.NotUsed] =
+import ChainCommand.ChainDataCommand._
+import AdminCommandResult.ChainCreationResult._
+def main(keyPair: KeyPair, i: Int, cycles: Int): Behavior[akka.NotUsed] =
   Full {
     case Sig(ctx, PreStart) =>
       def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, id: Id = randomId) = {
@@ -387,16 +393,52 @@ def main(keyPair: KeyPair): Behavior[akka.NotUsed] =
       }
       def newNodeId(i: Int) = NodeIdToken("Node" + i, "127.0.0.1", 2550 + i, keyPair.getPublic, keyPair.getPrivate)
       val knownPubKeys = Set.empty[PubKey]
-      val chains = ctx.spawn(adminCommand(keyPair, knownPubKeys), "chains")
-      val nodeId = newNodeId(1)
-      chains ! CreateChain(newChain(), )
+      val chains = ctx.spawn(adminCommand(keyPair, knownPubKeys, newNodeId(1)), "chains")
+      val chainCommandRefs = mutable.Set.empty[ActorRef[ChainCommand]]
 
-      def addParticipant(name: String) = {
-        val partRef = ctx.spawn(participant(name), name)
-        ctx.watch(partRef)
-        chatRoomRef ! ChatRoom.GetSession(name, partRef)
+      def msgReplyPrint() = {
+        import DataReply._
+        val eitherSucceeded: Behavior[Either[ChainError, PostResult]] = Static {
+          case Right(s) => println(s"Message sending: $s")
+          case Left(e) => println(s"Message sending failed with error: $e")
+        }
+        ctx.spawnAnonymous(eitherSucceeded)
       }
-      addParticipant("User 1")
+      def msgReply100k(cycles: Int, chainCommandActorRef: ActorRef[ChainCommand]) = {
+        import DataReply._
+        var counter = 0
+        val startMillis = System.currentTimeMillis()
+
+        def sendMsg(handler: ActorRef[Either[ChainError, PostResult]]) = chainCommandActorRef ! Post(TestMsg("testmsg").asJson, handler)
+        val eitherSucceeded: Behavior[Either[ChainError, PostResult]] = Static {
+          case Right(s) => {
+            counter += 1
+            if (counter < cycles) { sendMsg(ctx.child("handler").get.asInstanceOf[ActorRef[Either[ChainError, PostResult]]]) }
+            else println(s"All $cycles processed, in: ${System.currentTimeMillis() - startMillis} ms")
+          }
+          case Left(e) => println(s"Message sending failed with error: $e")
+        }
+        val handler = ctx.spawn(eitherSucceeded, "handler")
+        sendMsg(handler)
+      }
+      val createdChain =
+        ctx.spawn(chainCreationResult(
+          chainCommandActorRef => {
+            println(s"Chain created: $chainCommandActorRef")
+            //chainCommandActorRef ! Post(TestMsg("testmsg").asJson, msgReply())
+            msgReply100k(cycles, chainCommandActorRef)
+          },
+          chainCreationError => println(s"Chain creation failed with error: $chainCreationError")), "createdChain")
+      val nodeId = newNodeId(i)
+
+      chains ! CreateChain(newChain(), createdChain)
+
+//      def addParticipant(name: String) = {
+//        val partRef = ctx.spawn(participant(name), name)
+//        ctx.watch(partRef)
+//        chatRoomRef ! ChatRoom.GetSession(name, partRef)
+//      }
+//      addParticipant("User 1")
 
       Same
     case Sig(_, Terminated(ref)) =>
@@ -404,5 +446,7 @@ def main(keyPair: KeyPair): Behavior[akka.NotUsed] =
   }
 
 val keyPair = CurveContext.currentKeys
-val system2 = ActorSystem("ChatRoomDemo", main(keyPair))
-Await.result(system2.whenTerminated, 100.second)
+val system2 = ActorSystem("AC", main(keyPair, 1, 1000000))
+//Await.result(system2.whenTerminated, 100.second)
+
+system2.printTree
