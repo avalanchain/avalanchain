@@ -1,0 +1,10 @@
+type project
+id Avalanchain
+authors Yuriy Habarov
+copyright Copyright 2016
+tags
+    avalanchain fsharp
+summary
+    Avalanchain F# library for .NET
+description
+    Avalanchain F# library for .NET
