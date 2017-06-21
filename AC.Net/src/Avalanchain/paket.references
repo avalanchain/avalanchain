@@ -1,5 +1,6 @@
 Newtonsoft.Json
 System.Collections.Immutable
+FSharp.Control.AsyncSeq
 Akka
 Akka.TestKit.Xunit2
 Akka.Remote

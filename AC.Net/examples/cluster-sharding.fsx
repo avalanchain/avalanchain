@@ -1,33 +1,33 @@
 open System
 open System.IO
 #if INTERACTIVE
-let cd = Path.Combine(__SOURCE_DIRECTORY__, "../src/Akkling.Cluster.Sharding/bin/Release")
+let cd = Path.Combine(__SOURCE_DIRECTORY__, "../bin/Avalanchain")
 System.IO.Directory.SetCurrentDirectory(cd)
 #endif
 
-#r "../src/Akkling.Cluster.Sharding/bin/Release/System.Collections.Immutable.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akka.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Hyperion.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Newtonsoft.Json.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/FSharp.PowerPack.Linq.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/DotNetty.Common.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/DotNetty.Buffers.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/DotNetty.Codecs.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/DotNetty.Handlers.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/DotNetty.Transport.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/FsPickler.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Google.ProtocolBuffers.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Google.ProtocolBuffers.Serialization.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akka.Remote.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Google.ProtocolBuffers.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akka.Persistence.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akka.Cluster.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akka.Cluster.Tools.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akka.Cluster.Sharding.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akka.Serialization.Hyperion.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akkling.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akkling.Persistence.dll"
-#r "../src/Akkling.Cluster.Sharding/bin/Release/Akkling.Cluster.Sharding.dll"
+#r "../bin/Avalanchain/System.Collections.Immutable.dll"
+#r "../bin/Avalanchain/Akka.dll"
+#r "../bin/Avalanchain/Hyperion.dll"
+#r "../bin/Avalanchain/Newtonsoft.Json.dll"
+#r "../bin/Avalanchain/FSharp.PowerPack.Linq.dll"
+#r "../bin/Avalanchain/DotNetty.Common.dll"
+#r "../bin/Avalanchain/DotNetty.Buffers.dll"
+#r "../bin/Avalanchain/DotNetty.Codecs.dll"
+#r "../bin/Avalanchain/DotNetty.Handlers.dll"
+#r "../bin/Avalanchain/DotNetty.Transport.dll"
+#r "../bin/Avalanchain/FsPickler.dll"
+#r "../bin/Avalanchain/Google.ProtocolBuffers.dll"
+#r "../bin/Avalanchain/Google.ProtocolBuffers.Serialization.dll"
+#r "../bin/Avalanchain/Akka.Remote.dll"
+#r "../bin/Avalanchain/Google.ProtocolBuffers.dll"
+#r "../bin/Avalanchain/Akka.Persistence.dll"
+#r "../bin/Avalanchain/Akka.Cluster.dll"
+#r "../bin/Avalanchain/Akka.Cluster.Tools.dll"
+#r "../bin/Avalanchain/Akka.Cluster.Sharding.dll"
+#r "../bin/Avalanchain/Akka.Serialization.Hyperion.dll"
+#r "../bin/Avalanchain/Akkling.dll"
+#r "../bin/Avalanchain/Akkling.Persistence.dll"
+#r "../bin/Avalanchain/Akkling.Cluster.Sharding.dll"
 
 
 open Akka.Actor

@@ -13,6 +13,7 @@ nuget FAKE
 nuget FSharp.Formatting 
 nuget FsCheck 
 nuget FsCheck.Xunit 
+nuget FSharp.Control.AsyncSeq
 nuget Newtonsoft.Json >= 9.0
 nuget Octokit 
 nuget SourceLink 
