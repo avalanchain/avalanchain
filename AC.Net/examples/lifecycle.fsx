@@ -1,10 +1,10 @@
-#r "../src/Akkling/bin/Release/Akka.dll"
-#r "../src/Akkling/bin/Release/Hyperion.dll"
-#r "../src/Akkling/bin/Release/Newtonsoft.Json.dll"
-#r "../src/Akkling/bin/Release/FSharp.PowerPack.dll"
-#r "../src/Akkling/bin/Release/FSharp.PowerPack.Linq.dll"
-#r "../src/Akkling/bin/Release/Akkling.dll"
-#r "../src/Akkling/bin/Release/System.Collections.Immutable.dll"
+#r "../bin/Avalanchain/Akka.dll"
+#r "../bin/Avalanchain/Hyperion.dll"
+#r "../bin/Avalanchain/Newtonsoft.Json.dll"
+#r "../bin/Avalanchain/FSharp.PowerPack.dll"
+#r "../bin/Avalanchain/FSharp.PowerPack.Linq.dll"
+#r "../bin/Avalanchain/Akkling.dll"
+#r "../bin/Avalanchain/System.Collections.Immutable.dll"
 
 open System
 open Akkling

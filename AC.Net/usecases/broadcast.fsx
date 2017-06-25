@@ -1,3 +1,5 @@
+module Avalanchain
+
 open System
 open System.IO
 #if INTERACTIVE
@@ -35,10 +37,15 @@ open Akkling
 open Akkling.DistributedData
 open Akkling.DistributedData.Consistency
 
-type Endpoint = {
-    IP: string
-    Port: uint16
-}
+    
+module Network =
+    type Endpoint = {
+        IP: string
+        Port: uint16
+    }
+
+open Network
+
 let setupNode endpoint (seedNodes: Endpoint list) =
     let systemName = "ac"
     let seedNodes = seedNodes 
@@ -48,33 +55,33 @@ let setupNode endpoint (seedNodes: Endpoint list) =
     sprintf """
     akka {
             actor {
-              provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
-              serializers {
+            provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
+            serializers {
                 hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
-              }
-              serialization-bindings {
+            }
+            serialization-bindings {
                 "System.Object" = hyperion
-              }
             }
-          remote {
+            }
+        remote {
             helios.tcp {
-              public-hostname = "%s"
-              hostname = "%s"
-              port = %d
-              maximum-frame-size = 4000000b
+            public-hostname = "%s"
+            hostname = "%s"
+            port = %d
+            maximum-frame-size = 40000000b
             }
-          }
-          cluster {
+        }
+        cluster {
             auto-down-unreachable-after = 5s
             seed-nodes = %s
             distributed-data {
                 max-delta-elements = 10000
             }
-          }
-          persistence {
+        }
+        persistence {
             journal.plugin = "akka.persistence.journal.inmem"
             snapshot-store.plugin = "akka.persistence.snapshot-store.local"
-          }
+        }
         }
     """ endpoint.IP endpoint.IP endpoint.Port seedNodes
     |> Configuration.parse
@@ -93,13 +100,13 @@ type Broadcaster<'T> (system, uid, initList: 'T list, doLog) =
         let! reply = (retype replicator) <? update (fun (set: ORSet<'T>) -> set ++ data) writeLocal initSet key
         match reply.Value with
         | UpdateSuccess(k, v) ->    if doLog then printfn "State modified for uid '%A'" k
-                                    return (v |> unbox |> Some)
+                                    return Some ()
         | DataDeleted k ->          printfn "State already deleted: '%A'" k
                                     return None
         | UpdateTimeout k ->        printfn "Update of value for the uid '%A' timed out" k
                                     return None
     }
-    member __.Add value: Async<'T option> = updateState key value
+    member __.Add value: Async<unit option> = updateState key value
         // async {
         // let! reply = (retype replicator) <? get readLocal key
         // match reply.Value with
@@ -124,55 +131,7 @@ type Broadcaster<'T> (system, uid, initList: 'T list, doLog) =
 
 let broadcaster<'T> node uid = Broadcaster<'T>(node, uid, [], false)
     
-
-let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
-let endpoint2 = { IP = "127.0.0.1"; Port = 5001us }
-let endpoint3 = { IP = "127.0.0.1"; Port = 5002us }
-let node1 = setupNode endpoint1 [endpoint1; endpoint2]
-Threading.Thread.Sleep 5000
-let node2 = setupNode endpoint2 [endpoint1; endpoint2]
-Threading.Thread.Sleep 2000
-let node3 = setupNode endpoint3 [endpoint1; endpoint2]
-
-let keyUID = (1).ToString()
-let b1_uid1 = keyUID |> broadcaster<string> node1
-let b2_uid1 = keyUID |> broadcaster<string> node2
-let b3_uid1 = keyUID |> broadcaster<string> node3
-
-let inserts max (broadcaster: Broadcaster<string>) = asyncSeq {
-    for i in 1 .. max do
-        let v = sprintf "value: %s" (i.ToString())
-        // printfn "Sent %s" v
-        yield broadcaster.Add v
-} 
-
-let printAsync av = async { let! vo = av; 
-                            printfn "Added: %s" (match vo with Some v -> v | None -> "<<Error>>") }
-
-let read f (broadcaster: Broadcaster<string>) = 
-    async {
-        let! vo = broadcaster.Read()
-        match vo with
-        | Some v -> f v
-        | None -> ()
-    }
-    |> Async.RunSynchronously
-
-let printCount (broadcaster: Broadcaster<string>) = read (fun v -> printfn "Size: %d" v.Count) broadcaster
-let printState (broadcaster: Broadcaster<string>) = read (fun v -> printfn "Value: %A" v) broadcaster
-
-
-#time;;
-
-inserts 100000 b1_uid1
-|> AsyncSeq.iterAsync (Async.Ignore)
-|> Async.RunSynchronously
-
-
-printState b1_uid1
-printState b2_uid1
-printState b3_uid1
-
-printCount b1_uid1
-printCount b2_uid1
-printCount b3_uid1
+type HashedValue = {
+    value: string
+    hash: string
+}

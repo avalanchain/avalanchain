@@ -22,3 +22,6 @@ Akkling.Cluster.Sharding
 Akkling.TestKit
 Akkling.DistributedData
 Akkling.Streams
+
+Edge.js
+jose-jwt

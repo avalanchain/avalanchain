@@ -68,6 +68,24 @@
   -->
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
+    <Content Include="edge\double_edge.js">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="edge\edge.js">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="edge\x64\edge_nativeclr.node">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="edge\x64\node.dll">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="edge\x86\edge_nativeclr.node">
+      <Paket>True</Paket>
+    </Content>
+    <Content Include="edge\x86\node.dll">
+      <Paket>True</Paket>
+    </Content>
     <Compile Include="AssemblyInfo.fs" />
     <None Include="paket.references" />
     <None Include="Avalanchain.fsproj.paket.template" />
@@ -321,6 +339,17 @@
     </When>
   </Choose>
   <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2')">
+      <ItemGroup>
+        <Reference Include="EdgeJs">
+          <HintPath>..\..\packages\Edge.js\lib\net40\EdgeJs.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2')">
       <ItemGroup>
         <Reference Include="FsCheck">
@@ -439,6 +468,20 @@
       <ItemGroup>
         <Reference Include="Hyperion">
           <HintPath>..\..\packages\Hyperion\lib\net45\Hyperion.dll</HintPath>
+          <Private>True</Private>
+          <Paket>True</Paket>
+        </Reference>
+      </ItemGroup>
+    </When>
+  </Choose>
+  <Choose>
+    <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v4.0' Or $(TargetFrameworkVersion) == 'v4.5' Or $(TargetFrameworkVersion) == 'v4.5.1' Or $(TargetFrameworkVersion) == 'v4.5.2')">
+      <ItemGroup>
+        <Reference Include="System.Web.Extensions">
+          <Paket>True</Paket>
+        </Reference>
+        <Reference Include="jose-jwt">
+          <HintPath>..\..\packages\jose-jwt\lib\net40\jose-jwt.dll</HintPath>
           <Private>True</Private>
           <Paket>True</Paket>
         </Reference>

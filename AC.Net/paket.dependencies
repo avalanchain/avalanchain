@@ -43,5 +43,7 @@ nuget Akkling.TestKit prerelease
 nuget Akkling.DistributedData prerelease
 nuget Akkling.Streams prerelease
 
+nuget Edge.js
+nuget jose-jwt
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx
