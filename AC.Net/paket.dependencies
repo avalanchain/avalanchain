@@ -45,5 +45,9 @@ nuget Akkling.Streams prerelease
 
 nuget Edge.js
 nuget jose-jwt
+nuget Jint
+
+nuget Inferno
+nuget BouncyCastle
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx
