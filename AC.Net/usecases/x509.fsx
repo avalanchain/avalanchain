@@ -16,6 +16,8 @@ open System.Security.Cryptography
 open SecurityDriven.Inferno
 open SecurityDriven.Inferno.Extensions
 
+#time
+
 let dsaKeyPrivate = CngKeyExtensions.CreateNewDsaKey()
 let dsaKeyPrivateBlob = dsaKeyPrivate.GetPrivateBlob()
 let dsaKeyPublicBlob = dsaKeyPrivate.GetPublicBlob()
@@ -23,7 +25,19 @@ let dsaKeyPublic: CngKey = dsaKeyPublicBlob.ToPublicKeyFromBlob()
 
 use ecdsa = new ECDsaCng(dsaKeyPrivate) 
 ecdsa.HashAlgorithm <- CngAlgorithm.Sha384 // generate DSA signature with private key
-// let signature = ecdsa.SignData(data);
+
+let rnd = Random();
+
+let upperBound = 1000
+let data = [| for i in 0 .. upperBound - 1 -> 
+                let d = Array.create<byte> 100 0uy
+                rnd.NextBytes(d)
+                d |]
+
+let sigs = [| for i in 0 .. upperBound - 1 -> ecdsa.SignData(data.[i]) |]
+let verfs = [| for i in 0 .. upperBound - 1 -> ecdsa.VerifyData(data.[i], sigs.[i]) |]
+
+
 
 // let kpg = RsaKeyPairGenerator()
 // kpg.Init(KeyGenerationParameters(SecureRandom(CryptoApiRandomGenerator()), 1024))
@@ -39,6 +53,7 @@ gen.SetIssuerDN(certName)
 gen.SetNotAfter(DateTime.Now.AddYears(100))
 gen.SetNotBefore(DateTime.Now.Subtract(TimeSpan(7, 0, 0, 0)))
 gen.SetSignatureAlgorithm("SHA384withECDSA")
+
 
 open System.IO
 let generateKeys (keySize: uint32): AsymmetricCipherKeyPair =
@@ -67,10 +82,6 @@ let toPem (key: AsymmetricKeyParameter) =
 let generatePKeys (intSize: uint32) =
     //Generating p-128 keys 128 specifies strength
     let keyPair = generateKeys(intSize)
-    let textWriter = new StringWriter()
-    let pemWriter = Org.BouncyCastle.OpenSsl.PemWriter(textWriter)
-    pemWriter.WriteObject(keyPair.Private)
-    pemWriter.Writer.Flush()
 
     let privateKey = keyPair.Private |> toPem
     let privateKeyParam = keyPair.Private :?> ECPrivateKeyParameters
@@ -98,4 +109,11 @@ let friendlyName = cert.IssuerDN.ToString()
 let entry = X509CertificateEntry(cert)
 store.SetCertificateEntry(friendlyName, entry)
 store.SetKeyEntry(friendlyName, AsymmetricKeyEntry(bcKeys.Private), [| entry |])
-store.Save(IO.File.OpenWrite("X509.store"), Seq.toArray "A password here", SecureRandom(CryptoApiRandomGenerator()))
+let storeFile = IO.File.OpenWrite("X509.store")
+store.Save(storeFile, Seq.toArray "A password here", SecureRandom(CryptoApiRandomGenerator()))
+storeFile.Close()
+
+
+let store2 = Pkcs12Store()
+store.Load(IO.File.OpenRead("X509.store"), Seq.toArray "A password here")
+store.GetCertificateChain friendlyName

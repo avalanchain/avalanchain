@@ -108,6 +108,7 @@ NUGET
       FsCheck.Xunit
       System.Collections.Immutable (>= 1.1.36)
     BouncyCastle (1.8.1)
+    dlech.Chaos.NaCl (0.1)
     DotNetty.Buffers (0.4.4)
       DotNetty.Common (>= 0.4.4) - restriction: || (&& (== net40) (>= net45)) (&& (== net40) (>= netstandard13)) (== net45) (== net451) (== net452)
     DotNetty.Codecs (0.4.4)
