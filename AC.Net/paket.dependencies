@@ -43,9 +43,12 @@ nuget Akkling.TestKit prerelease
 nuget Akkling.DistributedData prerelease
 nuget Akkling.Streams prerelease
 
+nuget FSharp.Interop.Dynamic
 nuget Edge.js
 nuget jose-jwt
 nuget Jint
+nuget Microsoft.FSharpLu
+nuget Microsoft.FSharpLu.Json
 
 nuget Inferno
 nuget BouncyCastle

@@ -1,6 +1,8 @@
 Newtonsoft.Json
 System.Collections.Immutable
 FSharp.Control.AsyncSeq
+FSharp.Interop.Dynamic
+
 Akka
 Akka.TestKit.Xunit2
 Akka.Remote
@@ -26,6 +28,8 @@ Akkling.Streams
 Edge.js
 jose-jwt
 Jint
+Microsoft.FSharpLu
+Microsoft.FSharpLu.Json
 
 Inferno
 BouncyCastle
