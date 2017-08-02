@@ -1,4 +1,4 @@
-framework: net40, net45, net451, net452
+framework: net452, netstandard1.5
 redirects: on
 
 source https://nuget.org/api/v2
@@ -11,8 +11,6 @@ nuget System.Collections.Immutable >= 1.3
 nuget Google.ProtocolBuffers 
 nuget FAKE 
 nuget FSharp.Formatting 
-nuget FsCheck 
-nuget FsCheck.Xunit 
 nuget FSharp.Control.AsyncSeq
 nuget Newtonsoft.Json >= 9.0
 nuget Octokit 
@@ -21,19 +19,19 @@ nuget xunit.assert = 2.0.0
 nuget xunit.runner.console 
 nuget xunit.runner.visualstudio
 
-nuget Akka >= 1.2
-nuget Akka.Streams >= 1.2
+nuget Akka >= 1.2 prerelease
+nuget Akka.Streams >= 1.2 prerelease
 nuget Akka.Persistence prerelease 
 nuget Akka.Persistence.Sqlite prerelease 
 nuget Akka.Persistence.Sql.Common prerelease 
 nuget Akka.Persistence.Query prerelease 
 nuget Akka.Persistence.Query.Sql prerelease 
-nuget Akka.Remote >= 1.2
-nuget Akka.TestKit >= 1.2
-nuget Akka.TestKit.Xunit2 
-nuget Akka.Cluster >= 1.2
+nuget Akka.Remote >= 1.2 prerelease
+nuget Akka.TestKit >= 1.2 prerelease
+nuget Akka.TestKit.Xunit2 prerelease
+nuget Akka.Cluster >= 1.2 prerelease
 nuget Akka.Cluster.Sharding >= 1.2 prerelease
-nuget Akka.Cluster.Tools >= 1.2 
+nuget Akka.Cluster.Tools >= 1.2 prerelease
 nuget Akka.DistributedData >= 1.2 prerelease
 
 nuget Akkling prerelease

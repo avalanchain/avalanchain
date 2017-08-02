@@ -1,6 +1,7 @@
 #r "../packages/BouncyCastle/lib/BouncyCastle.Crypto.dll"
 
 open System
+open System.IO
 open Org.BouncyCastle.Asn1.X509
 open Org.BouncyCastle.Crypto
 open Org.BouncyCastle.Crypto.Parameters
@@ -15,7 +16,7 @@ open Org.BouncyCastle.X509
 
 let gen = X509V3CertificateGenerator()
 let certName = X509Name("CN=PickAName")
-let serialNo = BigInteger.ProbablePrime(120, new Random())
+let serialNo = BigInteger.ProbablePrime(120, Random())
 
 gen.SetSerialNumber(serialNo)
 gen.SetSubjectDN(certName)
@@ -25,7 +26,6 @@ gen.SetNotBefore(DateTime.Now.Subtract(TimeSpan(7, 0, 0, 0)))
 gen.SetSignatureAlgorithm("SHA384withECDSA")
 
 
-open System.IO
 let generateKeys (keySize: uint32): AsymmetricCipherKeyPair =
     //using ECDSA algorithm for the key generation
     let gen = Org.BouncyCastle.Crypto.Generators.ECKeyPairGenerator("ECDSA")

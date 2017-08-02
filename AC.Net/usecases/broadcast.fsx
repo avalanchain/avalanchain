@@ -54,7 +54,7 @@ let setupNode endpoint (seedNodes: Endpoint list) =
     printfn "%s" seedNodes
     sprintf """
     akka {
-            actor {
+        actor {
             provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
             serializers {
                 hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
@@ -62,7 +62,7 @@ let setupNode endpoint (seedNodes: Endpoint list) =
             serialization-bindings {
                 "System.Object" = hyperion
             }
-            }
+        }
         remote {
             helios.tcp {
             public-hostname = "%s"

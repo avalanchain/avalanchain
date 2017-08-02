@@ -133,15 +133,15 @@ let sha (s: string) =
 // for i in 0 .. 999999 do sha "Hello world" |> ignore
 
 
-let mapper = {  new IJsonMapper with
-                member __.Serialize o = Microsoft.FSharpLu.Json.Compact.serialize o
-                member __.Parse<'T> (json: string) = Microsoft.FSharpLu.Json.Compact.deserialize<obj> json :?> 'T  // TODO: Add try
-            }
+// let mapper = {  new IJsonMapper with
+//                 member __.Serialize o = Microsoft.FSharpLu.Json.Compact.serialize o
+//                 member __.Parse<'T> (json: string) = Microsoft.FSharpLu.Json.Compact.deserialize<obj> json :?> 'T  // TODO: Add try
+//             }
 
-type JsonMapper() =
-    interface IJsonMapper with
-        member __.Serialize o = Microsoft.FSharpLu.Json.Compact.serialize o
-        member __.Parse<'T> (json: string) = Microsoft.FSharpLu.Json.Compact.deserialize<obj> json :?> 'T // TODO: Add try
+// type JsonMapper() =
+//     interface IJsonMapper with
+//         member __.Serialize o = Microsoft.FSharpLu.Json.Compact.serialize o
+//         member __.Parse<'T> (json: string) = Microsoft.FSharpLu.Json.Compact.deserialize<obj> json :?> 'T // TODO: Add try
 
 // Jose.JWT.DefaultSettings.JsonMapper = mapper
 
@@ -169,7 +169,7 @@ let chain (chainDef: ChainDef) =
     ChainDefToken(chainDef, dsaKeyPrivate)
 
 let cdToken = chain chainDef
-cdToken.Payload
+// cdToken.Payload
 
 let chainDef2 = {
     algo = Asym(ES512)
@@ -181,5 +181,7 @@ let chainDef2 = {
 
 
 let cdTokenDerived = chain chainDef2
-cdTokenDerived.Payload
+// cdTokenDerived.Payload
 
+
+for i in 0 .. 999 do chain chainDef |> ignore
