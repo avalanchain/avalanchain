@@ -10,6 +10,7 @@ module x509 =
     open Org.BouncyCastle.Math
     open Org.BouncyCastle.Crypto.Prng
     open Org.BouncyCastle.Crypto.Generators
+    open Org.BouncyCastle.Crypto.Operators
     open Org.BouncyCastle.Pkcs
     open Org.BouncyCastle.X509
 
@@ -23,7 +24,6 @@ module x509 =
     gen.SetIssuerDN(certName)
     gen.SetNotAfter(DateTime.Now.AddYears(100))
     gen.SetNotBefore(DateTime.Now.Subtract(TimeSpan(7, 0, 0, 0)))
-    gen.SetSignatureAlgorithm("SHA384withECDSA")
 
 
     let generateKeys (keySize: uint32): AsymmetricCipherKeyPair =
@@ -49,6 +49,13 @@ module x509 =
         pemWriter.Writer.Flush()
         pemWriter.ToString()
 
+    type ECKeys(keyPair: AsymmetricCipherKeyPair) = 
+        member __.KeyPair = keyPair
+        member __.PrivateKey = keyPair.Private :?> ECPrivateKeyParameters
+        member __.PublicKey = keyPair.Public :?> ECPublicKeyParameters
+        member __.PrivateKeyPem = __.PrivateKey |> toPem
+        member __.PublicKeyPem = __.PublicKey |> toPem
+
     let generatePKeys (intSize: uint32) =
         //Generating p-384 keys 384 specifies strength
         let keyPair = generateKeys(intSize)
@@ -58,11 +65,11 @@ module x509 =
         let publicKeyParam = keyPair.Public :?> ECPublicKeyParameters
         let publicKey = keyPair.Public |> toPem
 
-        printfn "Private Key: '%s'" privateKey // TODO: Remove this
-        printfn "Private Key Param: '%s'" (privateKeyParam.D.ToString())
-        printfn "Public Key: '%s'" publicKey // TODO: Remove this
-        printfn "Public Key Param X: '%s'" (publicKeyParam.Q.X.ToBigInteger().ToString())
-        printfn "Public Key Param Y '%s'" (publicKeyParam.Q.Y.ToBigInteger().ToString())
+        // printfn "Private Key: '%s'" privateKey // TODO: Remove this
+        // printfn "Private Key Param: '%s'" (privateKeyParam.D.ToString())
+        // printfn "Public Key: '%s'" publicKey // TODO: Remove this
+        // printfn "Public Key Param X: '%s'" (publicKeyParam.Q.X.ToBigInteger().ToString())
+        // printfn "Public Key Param Y '%s'" (publicKeyParam.Q.Y.ToBigInteger().ToString())
         keyPair
 
 
@@ -72,7 +79,9 @@ module x509 =
 
     gen.SetPublicKey(bcKeys.Public)
 
-    let cert = gen.Generate(bcKeys.Private)
+    let signatureFactory = Asn1SignatureFactory("SHA384withECDSA", bcKeys.Private, SecureRandom(CryptoApiRandomGenerator()))
+
+    let cert = gen.Generate(signatureFactory)
 
     let store = Pkcs12Store()
     let friendlyName = cert.IssuerDN.ToString()
