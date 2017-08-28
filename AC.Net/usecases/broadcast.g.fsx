@@ -54,7 +54,7 @@ let setupNode endpoint (seedNodes: Endpoint list) =
     printfn "%s" seedNodes
     sprintf """
     akka {
-        actor {
+            actor {
             provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
             serializers {
                 hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
@@ -62,7 +62,7 @@ let setupNode endpoint (seedNodes: Endpoint list) =
             serialization-bindings {
                 "System.Object" = hyperion
             }
-        }
+            }
         remote {
             helios.tcp {
             public-hostname = "%s"
@@ -91,13 +91,13 @@ type Broadcaster<'T> (system, uid, initList: 'T list, doLog) =
     let cluster = Cluster.Get system
     let replicator = getReplicator system
     // some helper functions
-    let (++) set e = ORSet.add cluster e set
+    let (++) set e = GSet.add e set
     let toSet initSet = List.fold (++) initSet
     // initialize set
-    let initSet = initList |> toSet ORSet.empty
-    let key = ORSet.key uid 
+    let initSet = initList |> toSet GSet.empty
+    let key = GSet.key uid 
     let updateState key (data: 'T) = async {
-        let! reply = (retype replicator) <? update (fun (set: ORSet<'T>) -> set ++ data) writeLocal initSet key
+        let! reply = (retype replicator) <? update (fun (set: GSet<'T>) -> set ++ data) writeLocal initSet key
         match reply.Value with
         | UpdateSuccess(k, v) ->    if doLog then printfn "State modified for uid '%A'" k
                                     return Some ()
@@ -110,7 +110,7 @@ type Broadcaster<'T> (system, uid, initList: 'T list, doLog) =
         // async {
         // let! reply = (retype replicator) <? get readLocal key
         // match reply.Value with
-        // | GetSuccess(k, (data : ORSet<'T>), _) -> return! updateState key (valueList |> toSet data)
+        // | GetSuccess(k, (data : GSet<'T>), _) -> return! updateState key (valueList |> toSet data)
         // | NotFound k -> return! updateState key (valueList |> toSet initSet)
         // | DataDeleted k -> printfn "Data for key '%A' has been deleted" k; return None
         // | GetFailure(k, _) -> printfn "Data for key '%A' didn't received in time" k; return None
@@ -119,8 +119,8 @@ type Broadcaster<'T> (system, uid, initList: 'T list, doLog) =
     member __.Read(): Async<IImmutableSet<'T> option> = async {
         let! reply = (retype replicator) <? get readLocal key
         match reply.Value with
-        | GetSuccess(k, (data : ORSet<'T>), _) -> 
-            let value = data |> ORSet.value
+        | GetSuccess(k, (data : GSet<'T>), _) -> 
+            let value = data |> GSet.value
             // printfn "Data for key %A: %A" k value
             return (value |> Some)
 

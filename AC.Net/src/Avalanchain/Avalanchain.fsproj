@@ -88,6 +88,7 @@
       <Paket>True</Paket>
     </Content>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="JsHelpers.fs" />
     <Compile Include="x509.fs" />
     <Compile Include="jwt.fs" />
     <None Include="paket.references" />

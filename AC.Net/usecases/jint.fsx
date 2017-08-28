@@ -69,6 +69,39 @@ let funcMap =
 engine.Execute("""retJson""").GetCompletionValue()
 
 
+let funcFilter func1 = 
+    engine.
+        SetValue("par0", json).
+        Execute("""var func = """ + func1 +
+                """;
+                var json = JSON.parse(par0);
+                var ret = (function(j) { return func(j); })(json);
+                ret""").
+            GetCompletionValue().AsBoolean()
+
+engine.Execute("""retJson""").GetCompletionValue()
+
+let funcFold func2 (parValueJson: string) (parStateJson: string) = 
+    engine.
+        SetValue("parValueJson", parValueJson).
+        SetValue("parStateJson", parStateJson).
+        Execute("""var func = """ + func2 +
+                """;
+                var parValue = JSON.parse(parValueJson);
+                var parState = JSON.parse(parStateJson);
+                var newState = (function(v, s) { return func(v, s); })(parValue, parState);
+                var newStateJson = JSON.stringify(newState);
+                // log(newStateJson);
+                // log(JSON.stringify(parState));
+                var ret = newStateJson == JSON.stringify(parState) ? { changed: false, newState: null } : { changed: true, newState: newStateJson }; 
+                JSON.stringify(ret)""").
+            GetCompletionValue().AsString()
+
+let foldTest = funcFold "function (v, s) { return {value: s.value + v.value}; }" """{ "value": 5 }""" """{ "value": 10 }""" 
+let foldTest2 = funcFold "function (v, s) { return {value: s.value}; }" """{"value":5}""" """{"value":10}""" 
+
+engine.Execute("""retJson""").GetCompletionValue()
+
 // for i in 0 .. 999 do 
 //     engine.Execute(@"
 //       function hello() { 

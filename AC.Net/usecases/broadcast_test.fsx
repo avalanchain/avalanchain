@@ -1,5 +1,4 @@
-
-#load "broadcast.fsx"
+#load "broadcast.g.fsx"
 
 open System
 open System.Collections.Immutable

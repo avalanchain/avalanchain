@@ -7,6 +7,31 @@ open SecurityDriven.Inferno.Extensions
 
 #time
 
+let sha256 min max = 
+    let sha = SHA256Managed.Create()
+    for i in min .. max do
+        let v = sprintf "value: %s" (i.ToString())
+        let hash = sha.ComputeHash(Text.ASCIIEncoding.UTF8.GetBytes v) |> Convert.ToBase64String
+        hash |> ignore
+
+let sha512 min max = 
+    let sha = SHA512Managed.Create()
+    for i in min .. max do
+        let v = sprintf "value: %s" (i.ToString())
+        let hash = sha.ComputeHash(Text.ASCIIEncoding.UTF8.GetBytes v) |> Convert.ToBase64String
+        hash |> ignore
+
+let sha384 min max = 
+    let sha = SHA384Managed.Create()
+    for i in min .. max do
+        let v = sprintf "value: %s" (i.ToString())
+        let hash = sha.ComputeHash(Text.ASCIIEncoding.UTF8.GetBytes v) |> Convert.ToBase64String
+        hash |> ignore
+
+sha256 0 9999
+sha384 0 9999
+sha512 0 9999
+
 let dsaKeyPrivate = CngKeyExtensions.CreateNewDsaKey()
 let dsaKeyPrivateBlob = dsaKeyPrivate.GetPrivateBlob()
 let dsaKeyPublicBlob = dsaKeyPrivate.GetPublicBlob()

@@ -9,6 +9,7 @@ open Org.BouncyCastle.Security
 open Org.BouncyCastle.Math
 open Org.BouncyCastle.Crypto.Prng
 open Org.BouncyCastle.Crypto.Generators
+open Org.BouncyCastle.Crypto.Operators
 open Org.BouncyCastle.Pkcs
 open Org.BouncyCastle.X509
 
@@ -23,7 +24,6 @@ gen.SetSubjectDN(certName)
 gen.SetIssuerDN(certName)
 gen.SetNotAfter(DateTime.Now.AddYears(100))
 gen.SetNotBefore(DateTime.Now.Subtract(TimeSpan(7, 0, 0, 0)))
-gen.SetSignatureAlgorithm("SHA384withECDSA")
 
 
 let generateKeys (keySize: uint32): AsymmetricCipherKeyPair =
@@ -72,7 +72,10 @@ let bcKeys = generatePKeys 384u
 
 gen.SetPublicKey(bcKeys.Public)
 
-let cert = gen.Generate(bcKeys.Private)
+let signatureFactory = Asn1SignatureFactory("SHA384WITHECDSA", bcKeys.Private, SecureRandom(CryptoApiRandomGenerator()))
+//gen.SetSignatureAlgorithm("SHA384WITHECDSA")
+
+let cert = gen.Generate(signatureFactory)
 
 let store = Pkcs12Store()
 let friendlyName = cert.IssuerDN.ToString()
@@ -86,4 +89,6 @@ storeFile.Close()
 
 let store2 = Pkcs12Store()
 store.Load(IO.File.OpenRead("X509.store"), Seq.toArray "A password here")
-store.GetCertificateChain friendlyName
+let certChain = store.GetCertificateChain friendlyName
+
+let firstCert = certChain.[0].Certificate // :> X509Certificate

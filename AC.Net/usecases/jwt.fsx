@@ -47,6 +47,8 @@ let payload = [ "sub", "mr.x@contoso.com" |> box
 
 let token = Jose.JWT.Encode(payload, dsaKeyPrivate, JwsAlgorithm.ES384)
 
+// for i in 0 .. 9999 do Jose.JWT.Encode(payload, dsaKeyPrivate, JwsAlgorithm.ES384) |> ignore
+
 let headers1 = [
     "keyid", box "1"
     "pos", box "20" ] |> Map.ofList
@@ -73,9 +75,12 @@ type TokenHeader = {
 }
 
 type JwtAlgoSym =
+| HS256
+| HS384
 | HS512
 
 type JwtAlgoAsym =
+| ES256
 | ES384
 | ES512
 
