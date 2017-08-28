@@ -1,0 +1,35 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "1.6.0",
+    "tasks": [
+        {
+            "taskName": "restore PaymentNet",
+            "command": "dotnet",
+            "type": "shell",
+            "args": [
+                "restore",
+                "PaymentNet.fsproj"
+            ],
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "taskName": "build PaymentNet",
+            "command": "dotnet",
+            "type": "shell",
+            "group": "build",
+            "args": [
+                "build",
+                "PaymentNet.fsproj"
+            ],
+            "dependsOn": "restore PaymentNet",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}
