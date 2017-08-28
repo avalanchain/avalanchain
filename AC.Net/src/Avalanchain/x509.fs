@@ -14,14 +14,17 @@ module x509 =
     open Org.BouncyCastle.Pkcs
     open Org.BouncyCastle.X509
 
+    open System.Security.Cryptography
+    open System.Security.Cryptography.X509Certificates
 
     let gen = X509V3CertificateGenerator()
     let certName = X509Name("CN=Avalanchain")
+    let issuerDN = X509Name("CN=Avalanchain")
     let serialNo = BigInteger.ProbablePrime(120, Random())
 
     gen.SetSerialNumber(serialNo)
     gen.SetSubjectDN(certName)
-    gen.SetIssuerDN(certName)
+    gen.SetIssuerDN(issuerDN)
     gen.SetNotAfter(DateTime.Now.AddYears(100))
     gen.SetNotBefore(DateTime.Now.Subtract(TimeSpan(7, 0, 0, 0)))
 
@@ -58,28 +61,16 @@ module x509 =
 
     let generatePKeys (intSize: uint32) =
         //Generating p-384 keys 384 specifies strength
-        let keyPair = generateKeys(intSize)
-
-        let privateKey = keyPair.Private |> toPem
-        let privateKeyParam = keyPair.Private :?> ECPrivateKeyParameters
-        let publicKeyParam = keyPair.Public :?> ECPublicKeyParameters
-        let publicKey = keyPair.Public |> toPem
-
-        // printfn "Private Key: '%s'" privateKey // TODO: Remove this
-        // printfn "Private Key Param: '%s'" (privateKeyParam.D.ToString())
-        // printfn "Public Key: '%s'" publicKey // TODO: Remove this
-        // printfn "Public Key Param X: '%s'" (publicKeyParam.Q.X.ToBigInteger().ToString())
-        // printfn "Public Key Param Y '%s'" (publicKeyParam.Q.Y.ToBigInteger().ToString())
-        keyPair
+        generateKeys(intSize) |> ECKeys
 
 
     //let bcKeys = Org.BouncyCastle.Security.DotNetUtilities.GetKeyPair(generatePKeys())
     // Org.BouncyCastle.Crypto.Asn1.CreateKey(SubjectPublicKeyInfo.GetInstance(Asn1Object.FromByteArray(keyInfoData)))
     let bcKeys = generatePKeys 384u
 
-    gen.SetPublicKey(bcKeys.Public)
+    gen.SetPublicKey(bcKeys.KeyPair.Public)
 
-    let signatureFactory = Asn1SignatureFactory("SHA384withECDSA", bcKeys.Private, SecureRandom(CryptoApiRandomGenerator()))
+    let signatureFactory = Asn1SignatureFactory("SHA384withECDSA", bcKeys.KeyPair.Private, SecureRandom(CryptoApiRandomGenerator()))
 
     let cert = gen.Generate(signatureFactory)
 
@@ -87,7 +78,7 @@ module x509 =
     let friendlyName = cert.IssuerDN.ToString()
     let entry = X509CertificateEntry(cert)
     store.SetCertificateEntry(friendlyName, entry)
-    store.SetKeyEntry(friendlyName, AsymmetricKeyEntry(bcKeys.Private), [| entry |])
+    store.SetKeyEntry(friendlyName, AsymmetricKeyEntry(bcKeys.KeyPair.Private), [| entry |])
     let storeFile = IO.File.OpenWrite("X509.store")
     store.Save(storeFile, Seq.toArray "A password here", SecureRandom(CryptoApiRandomGenerator()))
     storeFile.Close()
@@ -95,4 +86,8 @@ module x509 =
 
     let store2 = Pkcs12Store()
     store.Load(IO.File.OpenRead("X509.store"), Seq.toArray "A password here")
-    store.GetCertificateChain friendlyName
+    let entries = store.GetCertificateChain friendlyName 
+    let chain = X509Chain()
+    for ce in entries do 
+    
+        chain.Build(X509Certificate2(ce.Certificate)) |> ignore
