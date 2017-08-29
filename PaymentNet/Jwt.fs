@@ -58,7 +58,8 @@ module Jwt =
     | FilterFold of filter: Func1 * folder: Func2
     | GroupBy of groupper: Func1 * max: uint32
 
-    type ChainRef = Sig of string
+    type TokenRef = Sig of string
+    type ChainRef = TokenRef
 
     [<RequireQualifiedAccess>] 
     type ChainType = 
@@ -83,14 +84,18 @@ module Jwt =
         compression: Compression 
     }
 
-    type ChainDefToken(chainDef: ChainDef, privateKey: CngKey) =
+
+    type ECToken<'T>(o: 'T, privateKey: CngKey) =
         let token = 
-            let payload = chainDef |> FSharpLu.Json.Compact.serialize
+            let payload = o |> FSharpLu.Json.Compact.serialize
             Jose.JWT.Encode(payload, privateKey, JwsAlgorithm.ES384)
         member __.Token = token
         member __.Ref = token.Split([|'.'|], 4) |> Array.last |> sha |> Sig
         member __.Payload = Jose.JWT.Decode(token, privateKey)
-                            |> FSharpLu.Json.Compact.deserialize<ChainDef>
+                            |> FSharpLu.Json.Compact.deserialize<obj> :?> 'T
+
+    type ChainDefToken(chainDef: ChainDef, privateKey: CngKey) = 
+        inherit ECToken<ChainDef>(chainDef, privateKey)
 
     let chainDef = {
         algo = Sym(HS512)

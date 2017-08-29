@@ -33,12 +33,18 @@ module x509 =
         let keyPair = gen.GenerateKeyPair()
         keyPair
 
-    let internal toPem (key: AsymmetricKeyParameter) = 
+    let internal toPem<'T> (o: 'T) = 
         use textWriter = new StringWriter()
         let pemWriter = Org.BouncyCastle.OpenSsl.PemWriter(textWriter)
-        pemWriter.WriteObject(key)
+        pemWriter.WriteObject(o)
         pemWriter.Writer.Flush()
-        pemWriter.ToString()
+        textWriter.ToString()
+
+    let internal fromPem pem = 
+        use textReader = new StringReader (pem)
+        let pemReader = Org.BouncyCastle.OpenSsl.PemReader (textReader)
+        let pemObject = pemReader.ReadPemObject()
+        pemObject
 
     let privateKey (keyPair: AsymmetricCipherKeyPair) = keyPair.Private |> toPem
     let privateKeyParam (keyPair: AsymmetricCipherKeyPair) = keyPair.Private :?> ECPrivateKeyParameters
@@ -51,9 +57,7 @@ module x509 =
         // printfn "Public Key Param X: '%s'" (publicKeyParam.Q.X.ToBigInteger().ToString())
         // printfn "Public Key Param Y '%s'" (publicKeyParam.Q.Y.ToBigInteger().ToString())
 
-    let keyPair = generateKeys()
-
-    let private generateCertificate name (keyPair: AsymmetricCipherKeyPair) = 
+    let generateCertificate name (keyPair: AsymmetricCipherKeyPair) = 
         let gen = X509V3CertificateGenerator()
         let certName = X509Name("CN=PickAName")
         let serialNo = BigInteger.ProbablePrime(120, Random())
@@ -66,7 +70,6 @@ module x509 =
         gen.SetPublicKey(keyPair.Public)
 
         let signatureFactory = Asn1SignatureFactory("SHA384WITHECDSA", keyPair.Private, SecureRandom.GetInstance("SHA256PRNG"))
-        //gen.SetSignatureAlgorithm("SHA384WITHECDSA")
 
         let cert = gen.Generate(signatureFactory)
         cert
