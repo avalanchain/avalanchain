@@ -59,7 +59,7 @@ module x509 =
 
     let generateCertificate name (keyPair: AsymmetricCipherKeyPair) = 
         let gen = X509V3CertificateGenerator()
-        let certName = X509Name("CN=PickAName")
+        let certName = X509Name("CN=" + name)
         let serialNo = BigInteger.ProbablePrime(120, Random())
 
         gen.SetSerialNumber(serialNo)
@@ -69,24 +69,41 @@ module x509 =
         gen.SetNotBefore(DateTime.Now.Subtract(TimeSpan(7, 0, 0, 0)))
         gen.SetPublicKey(keyPair.Public)
 
-        let signatureFactory = Asn1SignatureFactory("SHA384WITHECDSA", keyPair.Private, SecureRandom.GetInstance("SHA256PRNG"))
+        let signatureFactory = Asn1SignatureFactory("SHA384WITHECDSA", keyPair.Private, SecureRandom.GetInstance("SHA384PRNG"))
 
         let cert = gen.Generate(signatureFactory)
         cert
 
-    let storeCertificate friendlyName password cert (keyPair: AsymmetricCipherKeyPair) = 
-        let store = Pkcs12Store()
+    let toPkcs12 friendlyName password cert (keyPair: AsymmetricCipherKeyPair) = 
+        let builder = new Pkcs12StoreBuilder()
+        let store = builder.SetUseDerEncoding(true).Build()
         let entry = X509CertificateEntry(cert)
         store.SetCertificateEntry(friendlyName, entry)
         store.SetKeyEntry(friendlyName, AsymmetricKeyEntry(keyPair.Private), [| entry |])
-        use storeFile = IO.File.OpenWrite("X509.store")
-        store.Save(storeFile, Seq.toArray password, SecureRandom.GetInstance("SHA256PRNG"))
+        use stream = new MemoryStream()
+        store.Save(stream, null, SecureRandom.GetInstance("SHA384PRNG"))
+        stream.Seek(0L, SeekOrigin.Begin) |> ignore
+        stream.ToArray() |> Pkcs12Utilities.ConvertToDefiniteLength
 
-
-    let loadCertificate friendlyName password =
+    let fromPkcs12 friendlyName password (bytes: byte[]) =
         let store = Pkcs12Store()
-        store.Load(IO.File.OpenRead("X509.store"), Seq.toArray password)
+        store.Load(new MemoryStream(bytes), null)
         let certChain = store.GetCertificateChain friendlyName
-
         let firstCert = certChain.[0].Certificate
         firstCert
+
+    let storeCertificate fileName friendlyName password cert (keyPair: AsymmetricCipherKeyPair) = 
+        let bytes = toPkcs12 friendlyName password cert keyPair
+        use storeFile = IO.File.OpenWrite(fileName)
+        storeFile.Write(bytes, 0, bytes.Length)
+
+    let loadCertificateFile fileName =
+        let file = IO.File.OpenRead(fileName)
+        use stream = new MemoryStream()
+        file.CopyTo stream
+        stream.ToArray()
+
+    let loadCertificate fileName friendlyName password =
+        fromPkcs12 friendlyName password (loadCertificateFile fileName)
+
+    
