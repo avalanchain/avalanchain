@@ -43,7 +43,7 @@ let main argv =
     let cert3 = toPkcs12 friendlyName password cert keyPair
     printfn "Cert3 %A" (cert3)
 
-    let cert4 = new X509Certificate2(cert3, password, X509KeyStorageFlags.PersistKeySet ||| X509KeyStorageFlags.MachineKeySet ||| X509KeyStorageFlags.Exportable)
+    let cert4 = new X509Certificate2(cert3, password)
     printfn "Cert4 %A" (cert4)
     printfn "Cert4.HasPrivateKey %A" (cert4.HasPrivateKey)
     printfn "Cert4.Pub %A" ((cert4.GetECDsaPublicKey() :?> ECDsaCng).Key.Export(CngKeyBlobFormat.EccPublicBlob))
