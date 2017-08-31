@@ -4,6 +4,7 @@ open System
 open System.Security.Cryptography
 open System.Security.Cryptography.X509Certificates
 open avalanchain.Common.x509
+open avalanchain.Common.Jwt
 
 open Org.BouncyCastle.Pkcs
 open Org.BouncyCastle.Crypto.Parameters
@@ -50,16 +51,28 @@ let main argv =
     printfn "Cert4.Pub %A" ((cert4.GetECDsaPublicKey() :?> ECDsaCng).Key.Export(CngKeyBlobFormat.EccFullPublicBlob))
     printfn "Cert4.Pub %A" ((cert4.GetECDsaPublicKey() :?> ECDsaCng).Key.Export(CngKeyBlobFormat.GenericPublicBlob))
     printfn "Cert4.Params %A" ((cert4.GetKeyAlgorithmParametersString()))
-    //printfn "Cert4.Priv %A" (cert4.GetECDsaPrivateKey())
+    let privK = (cert4.GetECDsaPrivateKey() :?> ECDsaCng)
+    // privK.ExportPolicy <- CngExportPolicies.AllowPlaintextExport
+    printfn "Cert4.Priv %A" (privK)
 
-    let bcPKInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(keyPair.Private).GetDerEncoded()
-    printfn "Cert4.Priv %A" (bcPKInfo)
+    let encoded = Jose.JWT.Encode("ASDFGGH", privK.Key, Jose.JwsAlgorithm.ES384)
+    printfn "encoded: %s" encoded
+
+    // printfn "validated: %s" (Jose.JWT.(encoded, privK.Key, Jose.JwsAlgorithm.ES384
+    printfn "decoded: %s" (Jose.JWT.Decode(encoded, privK.Key, Jose.JwsAlgorithm.ES384))
+
+    let key2 = CngKey.Create(CngAlgorithm.ECDsaP384)
+    printfn "decoded: %s" (Jose.JWT.Decode(encoded, key2, Jose.JwsAlgorithm.ES384))
+
+
+    // let bcPKInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(keyPair.Private).GetDerEncoded()
+    // printfn "Cert4.Priv %A" (bcPKInfo)
 
     let eccKeys (keyPair: Org.BouncyCastle.Crypto.AsymmetricCipherKeyPair) = 
         let d = (keyPair.Private :?> ECPrivateKeyParameters).D.ToByteArray() |> Array.skip 1
         let pubKey = keyPair |> publicKeyParam
         let x = pubKey.Q.AffineXCoord.ToBigInteger().ToByteArray()
-        let y = pubKey.Q.AffineXCoord.ToBigInteger().ToByteArray()
+        let y = Array.concat [[| 0uy |]; (pubKey.Q.AffineXCoord.ToBigInteger().ToByteArray())]
         printfn "%A" ((keyPair.Private :?> ECPrivateKeyParameters).D)
         printfn "%A" (pubKey.Q.AffineXCoord.ToBigInteger())
         printfn "%A" (pubKey.Q.AffineYCoord.ToBigInteger())
@@ -71,14 +84,9 @@ let main argv =
     
     printfn "cng: %A" (eccKeys keyPair)
 
-    X509CertificateBuilder
+    let ecc = ecc384Keys()
+    printfn "Ecc %A" (ecc)
 
-    //let cngKeyPrivate = CngKey.Import((keyPair.Private :?> ECPrivateKeyParameters).D, CngKeyBlobFormat.Pkcs8PrivateBlob)
-    //printfn "cngKeyPrivate %A" (cngKeyPrivate)
-
-    //let pa = {}
-
-    //let pat = ECToken(pa, )
 
     Console.ReadLine() |> ignore
 
