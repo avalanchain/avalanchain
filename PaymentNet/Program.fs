@@ -40,11 +40,10 @@ let main argv =
     let fileName = "X509.store"
     let friendlyName = "cert1Store"
     let password = "password"
-    storeCertificate fileName friendlyName password cert keyPair
-    let cert3 = loadCertificate fileName friendlyName password 
+    let cert3 = toPkcs12 friendlyName password cert keyPair
     printfn "Cert3 %A" (cert3)
 
-    let cert4 = new X509Certificate2(loadCertificateFile fileName, password)
+    let cert4 = new X509Certificate2(cert3, password, X509KeyStorageFlags.PersistKeySet ||| X509KeyStorageFlags.MachineKeySet ||| X509KeyStorageFlags.Exportable)
     printfn "Cert4 %A" (cert4)
     printfn "Cert4.HasPrivateKey %A" (cert4.HasPrivateKey)
     printfn "Cert4.Pub %A" ((cert4.GetECDsaPublicKey() :?> ECDsaCng).Key.Export(CngKeyBlobFormat.EccPublicBlob))
@@ -81,8 +80,10 @@ let main argv =
         //Security.Cryptography.EccKey.New(x, y, d, CngKeyUsages.Signing)
         CngKey.Create(CngAlgorithm.ECDsaP384)
         
-    
-    printfn "cng: %A" (eccKeys keyPair)
+    let ecdsa = (new ECDsaCng(ECCurve.NamedCurves.nistP384)) 
+    printfn "cng: %A" ((ecdsa))
+
+    //X509CertificateBuilder
 
     let ecc = ecc384Keys()
     printfn "Ecc %A" (ecc)
