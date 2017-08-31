@@ -160,6 +160,22 @@
                     text: 'Accounts'
                 }
             })
+            .state('dashboards.dashboard_investor', {
+            url: "/dashboard_investor",
+            templateUrl: "/app/views/dashboard/dashboard_investor.html",
+            data: {
+                pageTitle: 'dashboard_investor'
+            },
+            resolve: {
+                loadPlugin: function($ocLazyLoad) {
+                    return $ocLazyLoad.load([flot]);
+                }
+            },
+            ncyBreadcrumb: {
+                label: 'Dashboard',
+                text: 'Accounts'
+            }
+        })
             .state('index.chat', {
                 url: "/chat",
                 templateUrl: "/app/views/chat/chat.html",

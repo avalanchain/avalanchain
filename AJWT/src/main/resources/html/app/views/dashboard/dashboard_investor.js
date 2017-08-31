@@ -1,13 +1,13 @@
 ﻿(function () {
     'use strict';
-    var controllerId = 'Dashboard_2';
-    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice','$scope','$uibModal','$rootScope', dashboard_2]);
+    var controllerId = 'dashboard_investor';
+    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice','$scope','$uibModal','$rootScope', dashboard_investor]);
 
-    function dashboard_2(common, dataservice, $scope, $uibModal, $rootScope) {
+    function dashboard_investor(common, dataservice, $scope, $uibModal, $rootScope) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
-        vm.info = 'Dashboard 2';
+        vm.info = 'dashboard_investor';
         vm.helloText = 'Welcome in Avalanchain';
         vm.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         var currencies = dataservice.commondata().currencies();
