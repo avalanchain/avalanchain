@@ -43,6 +43,7 @@ let main argv =
     let cert3 = toPkcs12 friendlyName password cert keyPair
     printfn "Cert3 %A" (cert3)
 
+
     let cert4 = new X509Certificate2(cert3, password)
     printfn "Cert4 %A" (cert4)
     printfn "Cert4.HasPrivateKey %A" (cert4.HasPrivateKey)
@@ -50,38 +51,51 @@ let main argv =
     printfn "Cert4.Pub %A" ((cert4.GetECDsaPublicKey() :?> ECDsaCng).Key.Export(CngKeyBlobFormat.EccFullPublicBlob))
     printfn "Cert4.Pub %A" ((cert4.GetECDsaPublicKey() :?> ECDsaCng).Key.Export(CngKeyBlobFormat.GenericPublicBlob))
     printfn "Cert4.Params %A" ((cert4.GetKeyAlgorithmParametersString()))
-    let privK = (cert4.GetECDsaPrivateKey() :?> ECDsaCng)
-    // privK.ExportPolicy <- CngExportPolicies.AllowPlaintextExport
-    printfn "Cert4.Priv %A" (privK)
+    
+    printfn "asdsada"
 
-    let encoded = Jose.JWT.Encode("ASDFGGH", privK.Key, Jose.JwsAlgorithm.ES384)
-    printfn "encoded: %s" encoded
+    // let pkcs8Blob = PrivateKeyInfoFactory.CreatePrivateKeyInfo(keyPair.Private).GetDerEncoded()
+    // let importedKey = CngKey.Import(pkcs8Blob, CngKeyBlobFormat.Pkcs8PrivateBlob, CngProvider.MicrosoftSoftwareKeyStorageProvider)
+    // printfn "importedKey: %A" importedKey
 
-    // printfn "validated: %s" (Jose.JWT.(encoded, privK.Key, Jose.JwsAlgorithm.ES384
-    printfn "decoded: %s" (Jose.JWT.Decode(encoded, privK.Key, Jose.JwsAlgorithm.ES384))
+    // let privK = (cert4.GetECDsaPrivateKey() :?> ECDsaCng)
+    // // privK.ExportPolicy <- CngExportPolicies.AllowPlaintextExport
+    // printfn "Cert4.Priv %A" (privK)
 
-    let key2 = CngKey.Create(CngAlgorithm.ECDsaP384)
-    printfn "decoded: %s" (Jose.JWT.Decode(encoded, key2, Jose.JwsAlgorithm.ES384))
+    // let encoded = Jose.JWT.Encode("ASDFGGH", privK.Key, Jose.JwsAlgorithm.ES384)
+    // printfn "encoded: %s" encoded
+
+    // // printfn "validated: %s" (Jose.JWT.(encoded, privK.Key, Jose.JwsAlgorithm.ES384
+    // printfn "decoded: %s" (Jose.JWT.Decode(encoded, privK.Key, Jose.JwsAlgorithm.ES384))
+
+    //// let key2 = CngKey.Create(CngAlgorithm.ECDsaP384)
+    //// printfn "decoded: %s" (Jose.JWT.Decode(encoded, key2, Jose.JwsAlgorithm.ES384))
 
 
     // let bcPKInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(keyPair.Private).GetDerEncoded()
     // printfn "Cert4.Priv %A" (bcPKInfo)
 
     let eccKeys (keyPair: Org.BouncyCastle.Crypto.AsymmetricCipherKeyPair) = 
-        let d = (keyPair.Private :?> ECPrivateKeyParameters).D.ToByteArray() |> Array.skip 1
+        let d = (keyPair.Private :?> ECPrivateKeyParameters).D.ToByteArray()
         let pubKey = keyPair |> publicKeyParam
         let x = pubKey.Q.AffineXCoord.ToBigInteger().ToByteArray()
-        let y = Array.concat [[| 0uy |]; (pubKey.Q.AffineXCoord.ToBigInteger().ToByteArray())]
+        let y = pubKey.Q.AffineYCoord.ToBigInteger().ToByteArray()
         printfn "%A" ((keyPair.Private :?> ECPrivateKeyParameters).D)
         printfn "%A" (pubKey.Q.AffineXCoord.ToBigInteger())
         printfn "%A" (pubKey.Q.AffineYCoord.ToBigInteger())
         printfn "%d %d %d" x.Length y.Length d.Length
         
         //Security.Cryptography.EccKey.New(x, y, d, CngKeyUsages.Signing)
-        CngKey.Create(CngAlgorithm.ECDsaP384)
-        
-    let ecdsa = (new ECDsaCng(ECCurve.NamedCurves.nistP384)) 
-    printfn "cng: %A" ((ecdsa))
+        //CngKey.Create(CngAlgorithm.ECDsaP384)
+        let ecParameters = ECParameters()
+        ecParameters.Curve = ECCurve.NamedCurves.nistP384
+
+        ECDsaCng.Create(ECParameters())
+
+
+    //let ecdsa = (new ECDsaCng(ECCurve.NamedCurves.nistP384)) 
+    let ecdsa = eccKeys(keyPair)
+    printfn "ecdsa: %A" ((ecdsa))
 
     //X509CertificateBuilder
 

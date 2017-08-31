@@ -19,6 +19,8 @@ module x509 =
         let keySize = 384
         //using ECDSA algorithm for the key generation
         let gen = Org.BouncyCastle.Crypto.Generators.ECKeyPairGenerator("ECDSA")
+        let curve25519 = Org.BouncyCastle.Crypto.EC.CustomNamedCurves.GetByName("curve25519")
+        printfn "curve25519: %A" curve25519
 
         //Creating Random
         let secureRandom = SecureRandom()
