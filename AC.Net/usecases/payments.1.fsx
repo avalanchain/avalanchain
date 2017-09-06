@@ -3,7 +3,6 @@
 #r "../packages/jose-jwt/lib/net40/jose-jwt.dll"
 #r "../packages/Newtonsoft.Json/lib/net45/Newtonsoft.Json.dll"
 #r "../packages/Microsoft.FSharpLu.Json/lib/net452/Microsoft.FSharpLu.Json.dll"
-#r "../packages/FSharpx.Collections/lib/net40/FSharpx.Collections.dll"
 
 
 #time
@@ -144,14 +143,12 @@ module Credentials =
         abstract SigningKey: unit -> PrivateKey
         abstract SigningKeys: unit -> PrivateKey[]
 
-module Chains = 
+module Chain = 
     type ChainRef = Ref // TODO: Change
-    // type ChainType = Simple | Blocked // Simple chains are optimized for latency, Blocked - for scalability
     type ChainDef = { 
         Ref: ChainRef 
         Uid: Uid
         MaxBlockSize: uint32
-        // ChainType: ChainType
     }
 
     type [<Interface>] IChainedToken = 
@@ -171,54 +168,44 @@ module Chains =
 
     type ChainBlock = {
         ChainRef: ChainRef
-        Parent: Ref
-        BlockPos: BlockPos
         From: Pos
+        BlockPos: BlockPos
         Tokens: ImmutableArray<Token>
         //BlockToken: Token
     }
-        with member __.Size = __.Tokens.Length |> uint32
+        with member __.Size = __.Tokens.Length
 
     type TopBlock = {
         ChainRef: ChainRef
-        Parent: Ref
         From: Pos
         BlockPos: BlockPos
         PendingTokens: Token list
-        Size: uint32
     }
     with 
-        //member __.Size = __.PendingTokens |> List.length |> uint32 // TODO: Refactor this for performance
-        member __.Add token = { __ with PendingTokens = token :: __.PendingTokens; Size = __.Size + 1u}
+        member __.Size = __.PendingTokens |> List.length |> uint32 // TODO: Refactor this for performance
+        member __.Add token = { __ with PendingTokens = token :: __.PendingTokens }
         member __.Tokens with get() = (__.PendingTokens |> List.rev).ToImmutableArray()
-        static member New chainRef parent blockPos fromPos = {  ChainRef = chainRef
-                                                                Parent = parent
-                                                                From = { Pos = fromPos }  
-                                                                BlockPos = { BlockPos = blockPos }
-                                                                PendingTokens = [] 
-                                                                Size = 0u }
+        static member New chainRef fromPos = {  ChainRef = chainRef
+                                                From = { Pos = fromPos }  
+                                                BlockPos = { BlockPos = 0u }
+                                                PendingTokens = [] }
 
     type ChainBlockRef = Ref
-    type ChainBlockToken = {
-        Ref: ChainBlockRef
-        Token: Token
-    }
     type ChainSpine = {
         ChainRef: ChainRef
-        Blocks: ImmutableArray<ChainBlockRef * BlockPos * Pos * uint32>
+        Blocks: ImmutableArray<ChainBlockRef>
     }
-    with member __.Add blockRef = { __ with Blocks = __.Blocks.Add blockRef } 
+    with member Add 
 
     type [<Interface>] IBlockLoader = 
         abstract LoadBlocks: blockRefs: ChainBlockRef -> ImmutableArray<ChainBlock>
 
 
 
-    type ChainData = {
+    type Chain = {
         ChainDef: ChainDef
         Spine: ChainSpine
         Blocks: Map<BlockPos, ChainBlock>
-        BlockTokens: ImmutableArray<ChainBlockToken>
         TopBlock: TopBlock
     }
     with 
@@ -227,99 +214,33 @@ module Chains =
         static member New chainDef = {  ChainDef = chainDef
                                         Spine = { ChainRef = chainDef.Ref; Blocks = ImmutableArray.Create() }
                                         Blocks = Map.empty
-                                        BlockTokens = ImmutableArray.Create()
-                                        TopBlock = TopBlock.New chainDef.Ref chainDef.Ref 0u 0UL }
+                                        TopBlock = TopBlock.New chainDef.Ref 0UL }
 
-    type ChainEvent =
-    | Received of chainRef: ChainRef * tokenRef: Ref
-    | AssignedBlock of chainRef: ChainRef * tokenRef: Ref
-    | ConfirmedInBlock of chainRef: ChainRef * tokenRef: Ref * blockRef: ChainBlockRef
-
-    type Chain(initial: ChainData, deref: Token -> Ref, blockTokenizer: ChainBlock -> ChainBlockToken, dispatcher: ChainEvent -> unit) =
-        let mutable chain = initial
-        new (chainDef: ChainDef, deref: Token -> Ref, blockTokenizer: ChainBlock -> ChainBlockToken, dispatcher: ChainEvent -> unit) = 
-            Chain(ChainData.New chainDef, deref, blockTokenizer, dispatcher)
-        member __.Chain with get() = chain
+    type ChainManager(initialChain: Chain, blockRefCalc: ChainBlock -> ChainBlockRef) =
+        let mutable chain = initialChain
         member __.Add token = 
-            let tokenRef = token |> deref
-            Received(chain.Ref, tokenRef) |> dispatcher 
-            let newChain, newBlockTokens =    
-                if int(chain.TopBlock.Size) < int(chain.ChainDef.MaxBlockSize) - 1 then 
-                    { chain with TopBlock = chain.TopBlock.Add token }, ImmutableArray.Empty
-                else
-                    let tokens = chain.TopBlock.Tokens.Add token
-                    let newBlock = {ChainRef = chain.Ref
-                                    Parent = chain.TopBlock.Parent
-                                    From = chain.TopBlock.From
-                                    BlockPos = chain.TopBlock.BlockPos
-                                    Tokens = tokens } 
-                    let blockToken = blockTokenizer newBlock
-                    { chain with    Blocks = chain.Blocks.Add(newBlock.BlockPos, newBlock)
-                                    BlockTokens = chain.BlockTokens.Add blockToken
-                                    Spine = chain.Spine.Add (blockToken.Ref, newBlock.BlockPos, newBlock.From, newBlock.Size) 
-                                    TopBlock = TopBlock.New chain.Ref blockToken.Ref (newBlock.BlockPos.BlockPos + 1u) (newBlock.From.Pos + uint64(newBlock.Size)) }, tokens
-            AssignedBlock(chain.Ref, tokenRef) |> dispatcher
-            chain <- newChain
-            for bt in newBlockTokens do ConfirmedInBlock(chain.Ref, tokenRef, bt |> deref) |> dispatcher 
-        member __.TokenPage (from: Pos) (size: uint32) = 
-            // chain.Spine.Blocks 
-            // |> Seq.filter (fun (cbr, p, s) -> p.Pos + uint64(s) < from.Pos)
-            // |> 
-                let blocksMap = chain.Blocks
-                let blocks = chain.Spine.Blocks 
-                                |> Seq.filter (fun (cbr, bp, p, s) -> p.Pos + uint64(s) >= from.Pos)
-                                |> Seq.collect (fun (cbr, bp, p, s) -> blocksMap.[bp].Tokens |> Seq.mapi (fun i t -> t, p.Pos + uint64(i)))
+            chain <-    if chain.TopBlock.Size < chain.ChainDef.MaxBlockSize then { chain with TopBlock = chain.TopBlock.Add token }
 
-                let topBlock = 
-                    let topFrom = chain.TopBlock.From.Pos
-                    chain.TopBlock.PendingTokens |> Seq.mapi (fun i t -> t, topFrom + uint64(i))
-                Seq.append blocks topBlock
-                |> Seq.skipWhile(fun (t, i) -> i < from.Pos)
-                |> Seq.takeWhile(fun (t, i) -> i < from.Pos + uint64(size))
+                        else
+                            let newBloclk = {   ChainRef = chain.Ref
+                                                From = chain.TopBlock.From
+                                                BlockPos = chain.TopBlock.BlockPos
+                                                Tokens = chain.TopBlock.Tokens } 
+                            { chain with    Blocks = chain.Blocks.Add(newBloclk.BlockPos, newBloclk)
+                                            Spine = chain.Spine.}
 
-        //     Seq.append (chain.Spine.Blocks ) chain.TopBlock.
+    // type Chain (def: ChainDef, spine: ChainSpine, pendingRequsts: , blockLoader: IBlockLoader) =
+    //     let blocks = ConcurrentDictionary<BlockPos, ChainBlock>()
+    //     let mutable topBlock = 
+    //     member __.Def = def
+    //     member __.Ref = def.Ref
+    //     member __.Blocks = blocks.Values.ToImmutableArray()
+    //     member __.PendingRequests = 
+    //     member __.AddBlock block = blocks.AddOrUpdate (block.BlockPos, (fun bp -> block), (Func<_,_,_>(fun bp b -> block))) |> ignore
+    //     member __.DropBlocks (bps: BlockPos seq) = for bp in bps do blocks.TryRemove(bp) |> ignore
+    //     member __.LastBlock with get() = if blocks.Count > 0 then blocks.Values |> Seq.maxBy (fun cb -> cb.BlockPos.BlockPos) |> Some else None
+    //     member __.IsFullChain() = blocks |> Seq.mapi(fun i kv -> i = int(kv.Value.BlockPos.BlockPos)) |> Seq.forall id
 
-
-
-let chainDef: Chains.ChainDef = {
-    Ref = Ref "chain1"
-    Uid = Guid.NewGuid()
-    MaxBlockSize = 10000u
-}
-
-let chain = 
-    Chains.Chain(chainDef, 
-                    (fun (Token t) -> Ref t), 
-                    (fun cb -> {//Chains.ChainBlockToken.Token = (Microsoft.FSharpLu.Json.Compact.serialize cb |> Token); 
-                                Chains.ChainBlockToken.Token = cb.Tokens.[0] //|> Token
-                                Chains.ChainBlockToken.Ref = Guid.NewGuid().ToString() |> Ref }), 
-                    //(fun e -> printfn "Event: %A" e))
-                    ignore)
-
-//let testTokens = [| for i in 0 .. 100000 -> Guid.NewGuid().ToString("N") |> Token |]
-// let testTokens = seq { for i in 0 .. 10000000 -> i.ToString("N") |> Token }
-// testTokens |> Seq.iter (chain.Add)
-// let page0 = (chain.TokenPage { Pos = 0UL } 7u) |> Seq.toArray
-// let page10 = (chain.TokenPage { Pos = 10UL } 7u) |> Seq.toArray
-// let page100 = (chain.TokenPage { Pos = 100UL } 7u) |> Seq.toArray
-// let page995 = (chain.TokenPage { Pos = 995UL } 7u) |> Seq.toArray
-// let page10000 = (chain.TokenPage { Pos = 10000UL } 7u) |> Seq.toArray
-
-// let page100000 = (chain.TokenPage { Pos = 100000UL } 7u) |> Seq.toArray
-// let page1000000 = (chain.TokenPage { Pos = 1000000UL } 7u) |> Seq.toArray
-// let page888888 = (chain.TokenPage { Pos = 888888UL } 200000u) |> Seq.toArray
-// (chain.TokenPage { Pos = 888888UL } 200000u) |> Seq.iter (ignore)
-
-
-open FSharpx.Collections
-let mutable vector = PersistentVector.empty<Token>
-let testTokens1 = seq { for i in 0 .. 50000000 -> i.ToString("N") |> Token }
-for t in testTokens1 do vector <- vector.Conj t
-
-
-chain.Chain.TopBlock
-chain.Chain.Spine
-chain.Chain.Blocks.[{BlockPos = 0u}].Size
 
 [<RequireQualifiedAccess>]
 module Customer =
