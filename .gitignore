@@ -190,3 +190,5 @@ ModelManifest.xml
 
 # Paket git dependencies
 paket-files/
+
+.vs

@@ -1,0 +1,17 @@
+FSharp.Core
+FSharp.Data
+
+Akkling.Cluster.Sharding
+Akkling.DistributedData
+Akkling.Persistence
+Akkling.Streams
+Akkling.TestKit
+
+Akka.Streams.Csv
+Akka.Streams.Xml
+Akka.Streams.SignalR
+
+deniszykov.WebSocketListener
+
+Suave
+Suave.Swagger
