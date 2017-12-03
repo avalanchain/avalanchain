@@ -52,5 +52,6 @@ nuget Inferno
 nuget BouncyCastle
 nuget dlech.Chaos.NaCl
 
+nuget Spreads = 1.0.0-alpha1
 
 github fsharp/FAKE modules/Octokit/Octokit.fsx

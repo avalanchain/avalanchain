@@ -22,7 +22,9 @@ let genTestData upperBound =
 
 let signAll = Array.map sign
 
-[ for i in 0 .. 9 -> async { perfTest 100000 } ]
+let perfTest n = genTestData n |> signAll |> ignore
+
+//[ for i in 0 .. 9 -> async { perfTest 100000 } ]
 let verifyAll data sigs = 
     Array.zip data sigs
     |> Array.map verify
@@ -34,5 +36,5 @@ let verifs = verifyAll data sigs
 
 
 let runs = [ for i in 0 .. 9 -> async { verifyAll data sigs |> ignore } ]
-|> Async.Parallel
-|> Async.RunSynchronously
+            |> Async.Parallel
+            |> Async.RunSynchronously

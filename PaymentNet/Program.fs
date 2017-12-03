@@ -85,12 +85,12 @@ let main argv =
         printfn "%A" (pubKey.Q.AffineYCoord.ToBigInteger())
         printfn "%d %d %d" x.Length y.Length d.Length
         
-        //Security.Cryptography.EccKey.New(x, y, d, CngKeyUsages.Signing)
+        Security.Cryptography.EccKey.New(x, y, d, CngKeyUsages.Signing)
         //CngKey.Create(CngAlgorithm.ECDsaP384)
-        let ecParameters = ECParameters()
-        ecParameters.Curve = ECCurve.NamedCurves.nistP384
-
-        ECDsaCng.Create(ECParameters())
+        
+        // let ecParameters = ECParameters()
+        // ecParameters.Curve = ECCurve.NamedCurves.nistP384
+        //ECDsaCng.Create(ECParameters())
 
 
     //let ecdsa = (new ECDsaCng(ECCurve.NamedCurves.nistP384)) 
