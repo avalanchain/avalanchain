@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<EndurTrades>
+    <EndurTrade>
+        <IdentityId>4167735</IdentityId>
+        <IdentityVersion>41677353</IdentityVersion>
+        <IdentityGroupId>ComSwap</IdentityGroupId>
+        <IdentityUTI></IdentityUTI>
+        <Instrument>
+            <Sides>
+                <Side>
+                    <LegId>0</LegId>
+                    <Instrument>ComSwap</Instrument>
+                    <ProductKey>1022372</ProductKey>
+                    <ProductName>COAL_API2.USD</ProductName>
+                    <LegType>Float</LegType>
+                    <PutCall></PutCall>
+                    <OptionType></OptionType>
+                    <PayReceive>Receive</PayReceive>
+                    <StartDate>2018-01-01T00:00:00Z</StartDate>
+                    <EndDate>2018-12-31T00:00:00Z</EndDate>
+                    <FirstDeliveryDate>2018-01-01T00:00:00Z</FirstDeliveryDate>
+                    <LastDeliveryDate>2018-12-31T00:00:00Z</LastDeliveryDate>
+                    <Currency>USD</Currency>
+                    <PriceValue>0.0</PriceValue>
+                    <PriceUnit>MT</PriceUnit>
+                    <PriceType>Price</PriceType>
+                    <FixingSourceKey>20005</FixingSourceKey>
+                    <FixingSourceName>ARGUS</FixingSourceName>
+                    <Profiles/>
+                    <Fees/>
+                </Side>
+            </Sides>
+        </Instrument>
+        <InstrumentName>ComSwap</InstrumentName>
+        <TradeDateDt>2017-05-25T00:00:00+01:00</TradeDateDt>
+        <Status>Validated</Status>
+        <BuySell>Buy</BuySell>
+        <StartDate>2018-01-01T00:00:00Z</StartDate>
+        <EndDate>2018-12-31T00:00:00Z</EndDate>
+        <PortfolioKey>20071</PortfolioKey>
+        <PortfolioName>ACC Coal Swaps</PortfolioName>
+        <TradeCategory></TradeCategory>
+        <StrategyName>ACC COAL</StrategyName>
+        <SubStrategyName></SubStrategyName>
+        <TradingVenueKey>0</TradingVenueKey>
+        <TradingVenueName></TradingVenueName>
+        <BrokerKey>20005</BrokerKey>
+        <BrokerName>ACCORD-EUROPEAN POWER</BrokerName>
+        <InternalLegalEntityKey>20002</InternalLegalEntityKey>
+        <InternalLegalEntityName>ACCORD ENERGY LIMITED</InternalLegalEntityName>
+        <CounterpartyKey>20002</CounterpartyKey>
+        <CounterpartyName>ACCORD ENERGY LIMITED</CounterpartyName>
+        <PartyAgreement></PartyAgreement>
+        <ExecutionTime>2017-05-25T00:00:00+01:00</ExecutionTime>
+        <UpdateTime>2017-05-25T13:38:15+01:00</UpdateTime>
+        <TraderKey>24161</TraderKey>
+        <TraderName>brookd3</TraderName>
+    </EndurTrade>
+    <EndurTrade>
+        <IdentityId>982221</IdentityId>
+        <IdentityVersion>98222189</IdentityVersion>
+        <IdentityGroupId>ComSwap</IdentityGroupId>
+        <IdentityUTI></IdentityUTI>
+        <Instrument>
+            <Sides>
+                <Side>
+                    <LegId>0</LegId>
+                    <Instrument>ComSwap</Instrument>
+                    <ProductKey>1024746</ProductKey>
+                    <ProductName>TTF_Gas_IceEndex_S.EUR</ProductName>
+                    <LegType>Float</LegType>
+                    <PutCall></PutCall>
+                    <OptionType></OptionType>
+                    <PayReceive>Receive</PayReceive>
+                    <StartDate>2017-04-01T00:00:00+01:00</StartDate>
+                    <EndDate>2018-03-31T00:00:00+01:00</EndDate>
+                    <FirstDeliveryDate>2017-04-01T00:00:00+01:00</FirstDeliveryDate>
+                    <LastDeliveryDate>2018-03-31T00:00:00+01:00</LastDeliveryDate>
+                    <Currency>EUR</Currency>
+                    <PriceValue>0.0</PriceValue>
+                    <PriceUnit>MWh</PriceUnit>
+                    <PriceType>Price</PriceType>
+                    <FixingSourceKey>20006</FixingSourceKey>
+                    <FixingSourceName>ICE</FixingSourceName>
+                    <Profiles/>
+                    <Fees/>
+                </Side>
+            </Sides>
+        </Instrument>
+        <InstrumentName>ComSwap</InstrumentName>
+        <TradeDateDt>2012-12-10T00:00:00Z</TradeDateDt>
+        <Status>Validated</Status>
+        <BuySell>Buy</BuySell>
+        <StartDate>2017-04-01T00:00:00+01:00</StartDate>
+        <EndDate>2018-03-31T00:00:00+01:00</EndDate>
+        <PortfolioKey>20040</PortfolioKey>
+        <PortfolioName>BGT GA Storage</PortfolioName>
+        <TradeCategory></TradeCategory>
+        <StrategyName>European Storage</StrategyName>
+        <SubStrategyName></SubStrategyName>
+        <TradingVenueKey>0</TradingVenueKey>
+        <TradingVenueName></TradingVenueName>
+        <BrokerKey>20922</BrokerKey>
+        <BrokerName>TAQA</BrokerName>
+        <InternalLegalEntityKey>20042</InternalLegalEntityKey>
+        <InternalLegalEntityName>BGT LE</InternalLegalEntityName>
+        <CounterpartyKey>20923</CounterpartyKey>
+        <CounterpartyName>TAQA - LE</CounterpartyName>
+        <PartyAgreement>BGT-TAQA-Storage Structrured Fee</PartyAgreement>
+        <ExecutionTime>2012-12-10T00:00:00Z</ExecutionTime>
+        <UpdateTime>2016-05-11T13:02:40+01:00</UpdateTime>
+        <TraderKey>20407</TraderKey>
+        <TraderName>edgellj</TraderName>
+    </EndurTrade>
+    <EndurPosition>
+        <IdentityId>4167735</IdentityId>
+        <IdentityVersion>41677353</IdentityVersion>
+        <LegId>0</LegId>
+        <PositionType>MIFID</PositionType>
+        <TenorName>JAN2018</TenorName>
+        <TenorStartDate>2018-01-01T00:00:00Z</TenorStartDate>
+        <TenorEndDate>2018-12-31T00:00:00Z</TenorEndDate>
+        <TradeQtyValue>60000.0</TradeQtyValue>
+        <TradeQtyUnit>MT</TradeQtyUnit>
+        <TradeQtyType>Volume</TradeQtyType>
+        <TotalQtyValue>60000.0</TotalQtyValue>
+        <TotalQtyUnit>MT</TotalQtyUnit>
+        <TotalQtyType>Volume</TotalQtyType>
+    </EndurPosition>
+</EndurTrades>

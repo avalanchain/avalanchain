@@ -1,0 +1,24 @@
+source https://www.nuget.org/api/v2
+
+framework: >= net461
+nuget FAKE
+nuget FSharp.Core
+nuget FSharp.Data
+
+nuget FsPickler = 3.3
+
+nuget Akkling.Cluster.Sharding
+nuget Akkling.DistributedData
+nuget Akkling.Persistence
+nuget Akkling.Streams
+nuget Akkling.TestKit
+
+nuget Akka.Streams.Csv
+nuget Akka.Streams.Xml
+nuget Akka.Streams.SignalR
+nuget deniszykov.WebSocketListener
+
+nuget Suave
+
+source https://www.myget.org/F/romcyber/api/v3/index.json
+nuget Suave.Swagger

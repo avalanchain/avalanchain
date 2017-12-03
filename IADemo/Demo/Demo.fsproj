@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net461</TargetFramework>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="lib/ws.fs" />
+    <Compile Include="Demo.fs" />
+    <None Include="App.config" />
+    <None Include="Demo.fsx" />
+    <None Include="utils\RunProcess.fsx" />
+    <None Include="_1-Clone-files.fsx" />
+    <None Include="_2-Send-All-Cluster.fsx" />
+  </ItemGroup>
+  <Import Project="..\.paket\Paket.Restore.targets" />
+</Project>

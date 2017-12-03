@@ -1,7 +1,7 @@
 //#r "../packages/FSharpx.Collections/lib/net40/FSharpx.Collections.dll"
 
 open System
-open System.Collections.Generic
+//open System.Collections.Generic
 //open FSharpx.Collections
 
 type MatchType = | Partial | Full

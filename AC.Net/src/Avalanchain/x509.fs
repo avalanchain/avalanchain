@@ -88,6 +88,4 @@ module x509 =
     store.Load(IO.File.OpenRead("X509.store"), Seq.toArray "A password here")
     let entries = store.GetCertificateChain friendlyName 
     let chain = X509Chain()
-    for ce in entries do 
-    
-        chain.Build(X509Certificate2(ce.Certificate)) |> ignore
+    // for ce in entries do chain.Build(X509Certificate2(ce.Certificate)) |> ignore
