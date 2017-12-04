@@ -110,11 +110,12 @@ NUGET
       xunit.core (>= 2.2) - restriction: && (>= net461) (>= netstandard1.6)
       xunit.extensibility.execution (>= 2.2 < 3.0) - restriction: && (>= net461) (< netstandard1.6)
     FSharp.Core (4.2.3)
+    FSharp.Data (2.4.3)
     FsPickler (3.3)
     FSPowerPack.Core.Community (3.0)
     FSPowerPack.Linq.Community (3.0)
       FSPowerPack.Core.Community
-    Google.Protobuf (3.4.1)
+    Google.Protobuf (3.5)
     Hyperion (0.9.6)
     Microsoft.AspNet.SignalR.Core (2.2.2)
       Microsoft.Owin (>= 2.1)
