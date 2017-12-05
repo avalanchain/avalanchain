@@ -31,7 +31,7 @@ module WebSockets =
     type IncomingConnection = Akka.Streams.Dsl.Tcp.IncomingConnection
 
 
-    let webSocketSink (webSocket : WebSocket) = //(errorQueue: ISourceQueue<Error>) = 
+    let internal webSocketSink (webSocket : WebSocket) = //(errorQueue: ISourceQueue<Error>) = 
         Flow.id
         // |> Flow.iter(fun msg -> printfn "Sending %A" msg)
         |> Flow.asyncMap 1 (fun (m: ByteString) -> webSocket.send Text (m.ToArray() |> ByteSegment) true)
@@ -45,7 +45,7 @@ module WebSockets =
         // |> Flow.asyncMap 1 (errorQueue.AsyncOffer)
         // |> Flow.toMat (Sink.forEach (printfn "Error enqueue result: %A")) Keep.left
 
-    let webSocketSource (webSocket : WebSocket) =
+    let internal webSocketSource (webSocket : WebSocket) =
         let emptyResponse = [||] |> ByteSegment
         let emptyAsync = async { return Choice1Of2 () }
         ()

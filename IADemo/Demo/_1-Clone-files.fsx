@@ -26,7 +26,7 @@ open Akkling.Persistence
 
 open Avalanchain.WebSockets
 
-let system = System.create "streams-sys" <| Configuration.defaultConfig()
+let system = System.create "ac" <| Configuration.defaultConfig()
 let mat = system.Materializer()
 
 // module Stages = 
@@ -105,3 +105,9 @@ let wsPaths =
                     conn.Flow |> Flow.join echo |> Graph.run mat |> ignore
     ] |> Map.ofList
 webSocketServer { defaultConfig with bindings = [ HttpBinding.createSimple HTTP "127.0.0.1" 8082 ]} wsPaths mat
+
+#time
+
+seq {0 .. 10000000}
+|> Source.ofSeq
+|> Source.runForEach mat ignore
