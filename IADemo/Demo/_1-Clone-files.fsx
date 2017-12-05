@@ -29,85 +29,71 @@ open Avalanchain.WebSockets
 let system = System.create "ac" <| Configuration.defaultConfig()
 let mat = system.Materializer()
 
-// module Stages = 
-let listFolder filter path =
-    Source.ofSeq(Directory.EnumerateFiles(path, filter)) 
-    |> Source.map(fun f -> Path.GetFileName f, f)
+// server
 
-let watchFolder filter path = 
-    Source.queue OverflowStrategy.DropNew 1000 
-        |> Source.mapMaterializedValue(
-            fun queue ->
-                let watcher = new FileSystemWatcher()
-                watcher.Path <- path
-                watcher.NotifyFilter <- NotifyFilters.LastWrite
-                watcher.Filter <- filter //"*.*"
-                watcher.Changed.Add(fun e -> queue.AsyncOffer(e.Name, e.FullPath) |> Async.Ignore |> Async.Start)
-                watcher.EnableRaisingEvents <- true
-                ()
-            )
-        |> Source.groupedWithin 10 (TimeSpan.FromMilliseconds 50.)
-        |> Source.collect(fun files -> files |> Seq.distinct)
-        //|> Source.recover (fun _ -> Some ())
+type Pos = uint64
 
-let fileTransferFlow chunkSize destination = 
+
+type ReplayMessage =
+    | Page of From: Pos * PageSize: uint32  
+    | GetMaxPos
+    | GetState
+
+type ReplayOk = ByteString[]
+
+type ReplayError =
+    | NotAllowed
+    | OutOfBounds
+
+type ReplayMessageResponse = Result<ReplayOk, ReplayError>
+
+let echo = 
     Flow.id
-    |> Flow.map(fun (fileName, path) -> 
-        let destinationFileName = Path.Combine(destination, fileName)
-        fileName, destinationFileName, Source.ofStreamChunked chunkSize (fun () -> new FileStream(path, FileMode.Open, FileAccess.Read) :> Stream)
-                                        |> Source.toMat (Sink.ofStreamFlushed(fun () -> new FileStream(destinationFileName, FileMode.OpenOrCreate, FileAccess.Write) :> Stream)) Keep.none)
-                                                    
+    // |> Flow.map()
+async {
+    //let! server = 
+    //    system.TcpStream()
+    //    |> Tcp.bindAndHandle mat "localhost" 5000 echo
 
-//folderWatcher OverflowStrategy.Backpressure 1000 "*.xml" "files"
-listFolder "*.xml" "files"
-|> Source.via (fileTransferFlow 1024 "files_out")
-|> Source.map (fun (fileName, path, runnable) -> 
-                    printfn "Transferring file: %s" fileName
-                    //async { 
-                    fileName, Graph.run mat runnable)
-|> Source.runForEach mat (fun (fileName, runnable) -> ())
+    let handler = Sink.forEach (fun (conn: Tcp.IncomingConnection) ->
+        printfn "New client connected (local: %A, remote: %A)" conn.LocalAddress conn.RemoteAddress
+        conn.HandleWith(echo, mat))
 
-let listAndWatchFolder filter path = 
-    listFolder filter path
-    |> Source.concat(watchFolder filter path |> Source.mapMaterializedValue ignore)
+    let! server =
+        system.TcpStream()
+        |> Tcp.bind "localhost" 5000
+        |> Source.toMat handler Keep.left
+        |> Graph.run mat
 
-listAndWatchFolder "*.xml" "files"
-|> Source.via (fileTransferFlow 1024 "files_out")
-|> Source.map (fun (fileName, path, runnable) -> 
-                    printfn "Transferring file: %s" fileName
-                    //async { 
-                    fileName, Graph.run mat runnable)
-|> Source.runForEach mat (fun (fileName, runnable) -> ())
+    printfn "TCP server listetning on %A" server.LocalAddress
+    Console.ReadLine() |> ignore
+
+    do! server.AsyncUnbind()
+} |> Async.RunSynchronously
+
+// client
+open Akka.IO
+
+let parser = 
+    Flow.id
+    |> Flow.takeWhile ((<>) "q")
+    |> Flow.concat (Source.singleton "BYE")
+    |> Flow.map (fun x -> ByteString.FromString(x + "\n"))
 
 
-let wsPaths =
-    [   "/ws1", fun (conn: IncomingConnection) -> 
-                    printfn "Connected ws1" 
-                    printfn "from: '%A' to: '%A'" conn.RemoteAddress conn.LocalAddress
-                    let echo = Flow.id
-                    conn.Flow |> Flow.join echo |> Graph.run mat |> ignore
-        "/ws2", fun (conn: IncomingConnection) -> 
-                    printfn "Connected ws2" 
-                    printfn "from: '%A' to: '%A'" conn.RemoteAddress conn.LocalAddress
-                    let echo =  Flow.id
-                                |> Flow.map string
-                                |> Flow.map (fun s -> s + " ws2")
-                                |> Flow.iter (printfn "Server: %s")
-                                |> Flow.map ByteString.FromString
-                    conn.Flow |> Flow.join echo |> Graph.run mat |> ignore
-        "/ws3", fun (conn: IncomingConnection) -> 
-                    printfn "Connected ws3" 
-                    printfn "from: '%A' to: '%A'" conn.RemoteAddress conn.LocalAddress
-                    let echo = Flow.id
-                                |> Flow.map string
-                                |> Flow.merge (listAndWatchFolder "*.xml" "files" |> Source.map(fun (fileName, path) -> fileName))
-                                |> Flow.map ByteString.FromString
-                    conn.Flow |> Flow.join echo |> Graph.run mat |> ignore
-    ] |> Map.ofList
-webSocketServer { defaultConfig with bindings = [ HttpBinding.createSimple HTTP "127.0.0.1" 8082 ]} wsPaths mat
+let repl = 
+    Framing.delimiter true 256 (ByteString.FromString("\n"))
+    |> Flow.map string
+    |> Flow.iter (printfn "Server: %s")
+    |> Flow.map (fun _ -> Console.ReadLine())
+    |> Flow.via parser
+    
+async {
+    let! client = 
+        system.TcpStream()
+        |> Tcp.outgoing "localhost" 5000 
+        |> Flow.join repl
+        |> Graph.run mat
 
-#time
-
-seq {0 .. 10000000}
-|> Source.ofSeq
-|> Source.runForEach mat ignore
+    printfn "Client connected (local: %A, remote: %A)" client.LocalAddress client.RemoteAddress
+} |> Async.RunSynchronously
