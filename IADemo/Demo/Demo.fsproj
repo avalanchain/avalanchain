@@ -4,6 +4,7 @@
     <TargetFramework>net461</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="lib/jwt.fs" />
     <Compile Include="lib/ws.fs" />
     <Compile Include="lib/persistent-streams.fs" />
     <Compile Include="Demo.fs" />

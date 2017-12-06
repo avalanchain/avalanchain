@@ -20,5 +20,16 @@ nuget deniszykov.WebSocketListener
 
 nuget Suave
 
+nuget FSharp.Interop.Dynamic
+nuget jose-jwt
+nuget Jint
+nuget Microsoft.FSharpLu
+nuget Microsoft.FSharpLu.Json
+
+nuget Inferno
+nuget BouncyCastle
+nuget dlech.Chaos.NaCl
+
+
 source https://www.myget.org/F/romcyber/api/v3/index.json
 nuget Suave.Swagger

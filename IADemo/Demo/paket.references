@@ -15,3 +15,13 @@ deniszykov.WebSocketListener
 
 Suave
 Suave.Swagger
+
+FSharp.Interop.Dynamic
+jose-jwt
+Jint
+Microsoft.FSharpLu
+Microsoft.FSharpLu.Json
+
+Inferno
+BouncyCastle
+dlech.Chaos.NaCl
