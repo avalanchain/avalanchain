@@ -66,21 +66,23 @@ module PersistentStreams =
 
     let internal persistActor (queue: ISourceQueue<TokenEvent>) =
         propsPersist(fun mailbox ->
-            let rec loop state =
+            let rec loop (pos, completed) =
                 actor {
                     let! msg = mailbox.Receive()
                     match msg with
                     | Event(changed) ->
                         queue.AsyncOffer(changed) |!> retype mailbox.Self
-                        return! loop (state + 1)
+                        return! loop (pos + 1, completed)
                     | Command(cmd) ->
                         match cmd with
                         | GetState ->
-                            mailbox.Sender() <! state
-                            return! loop state
-                        | Save jwt -> return Persist (Event { jwt = jwt })
+                            mailbox.Sender() <! (pos, completed)
+                            return! loop (pos, completed)
+                        | Complete -> return! loop (pos, true)
+                        | Save jwt ->   if completed then return! loop (pos, completed)
+                                        else return Persist (Event { jwt = jwt })
                 }
-            loop 0)
+            loop (0, false))
 
     type QueueProxy<'t> = {
         mutable Queue: ISourceQueueWithComplete<'t> option
