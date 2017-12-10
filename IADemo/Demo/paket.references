@@ -1,11 +1,31 @@
 FSharp.Core
 FSharp.Data
 
+Akka
+Akka.Streams
+Akka.Persistence
+Akka.Persistence.Sqlite
+Akka.Persistence.Sql.Common
+Akka.Persistence.Query
+Akka.Persistence.Query.Sql
+Akka.Remote
+Akka.TestKit
+Akka.TestKit.Xunit2
+Akka.Cluster
+Akka.Cluster.Sharding
+Akka.Cluster.Tools
+Akka.DistributedData
+Microsoft.Data.Sqlite
+
 Akkling.Cluster.Sharding
 Akkling.DistributedData
 Akkling.Persistence
 Akkling.Streams
 Akkling.TestKit
+
+Microsoft.Extensions.Logging
+Microsoft.Extensions.Logging.Abstractions
+
 
 Akka.Streams.Csv
 Akka.Streams.Xml

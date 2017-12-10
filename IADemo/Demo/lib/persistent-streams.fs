@@ -64,7 +64,26 @@ module PersistentStreams =
         | Command of TokenCommand
         | Event of TokenEvent
 
-    let internal persistActor (queue: ISourceQueue<TokenEvent>) =
+    let internal persistActor () =
+        propsPersist(fun mailbox ->
+            let rec loop (pos, completed) =
+                actor {
+                    let! msg = mailbox.Receive()
+                    match msg with
+                    | Event(changed) ->
+                        //queue.AsyncOffer(changed) |!> retype mailbox.Self
+                        return! loop (pos + 1, completed)
+                    | Command(cmd) ->
+                        match cmd with
+                        | GetState ->
+                            mailbox.Sender() <! (pos, completed)
+                            return! loop (pos, completed)
+                        | Complete -> return! loop (pos, true)
+                        | Save jwt ->   if completed then return! loop (pos, completed)
+                                        else return Persist (Event { jwt = jwt })
+                }
+            loop (0, false))
+    let internal persistActorWithQueue (queue: ISourceQueue<TokenEvent>) =
         propsPersist(fun mailbox ->
             let rec loop (pos, completed) =
                 actor {
@@ -105,14 +124,17 @@ module PersistentStreams =
 
     let persistentQueue<'T> system pid (overflowStrategy: OverflowStrategy) (maxBuffer: int) =
         Source.queue overflowStrategy maxBuffer
-        |> Source.mapMaterializedValue(persistActor >> spawn system pid)
+        |> Source.mapMaterializedValue(persistActorWithQueue >> spawn system pid)
 
     let persistentFlow<'T> system pid (overflowStrategy: OverflowStrategy) (maxBuffer: int) =
         let queueProxy: QueueProxy<TokenEvent> = { Queue = None }
-        let sink = Sink.toActorRef (Command Complete) (queueProxy |> persistActor |> spawn system pid)
+        let sink = Sink.toActorRef (Command Complete) (queueProxy |> persistActorWithQueue |> spawn system pid)
         Source.queue overflowStrategy maxBuffer
         |> Flow.ofSinkAndSourceMat (sink) 
             (fun ar sourceQueue -> queueProxy.Queue <- Some(sourceQueue); (ar, sourceQueue))
+
+    //let persistentSink<'T> system pid (overflowStrategy: OverflowStrategy) =
+
 
     let internal persistView pid (queue: ISourceQueue<TokenEvent>) =
         propsView pid (fun mailbox ->

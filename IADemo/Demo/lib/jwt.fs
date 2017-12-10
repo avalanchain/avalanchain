@@ -8,6 +8,10 @@ module Jwt =
     open System.Security.Cryptography
     
     open Jose
+<<<<<<< HEAD
+=======
+    open Microsoft.FSharpLu.Json
+>>>>>>> Some progress
     
     let private recordToMap<'r> (r: 'r) =
         let fields = FSharpType.GetRecordFields(typedefof<'r>) |> Array.map (fun pi -> pi.Name)
@@ -87,12 +91,20 @@ module Jwt =
 
     type ECToken<'T>(o: 'T, privateKey: CngKey) =
         let token = 
+<<<<<<< HEAD
             let payload = o |> FSharpLu.Json.Compact.serialize
+=======
+            let payload = o |> Compact.serialize
+>>>>>>> Some progress
             Jose.JWT.Encode(payload, privateKey, JwsAlgorithm.ES384)
         member __.Token = token
         member __.Ref = token.Split([|'.'|], 4) |> Array.last |> sha |> Sig
         member __.Payload = Jose.JWT.Decode(token, privateKey)
+<<<<<<< HEAD
                             |> FSharpLu.Json.Compact.deserialize<obj> :?> 'T
+=======
+                            |> Compact.deserialize<obj> :?> 'T
+>>>>>>> Some progress
 
     type ChainDefToken(chainDef: ChainDef, privateKey: CngKey) = 
         inherit ECToken<ChainDef>(chainDef, privateKey)
