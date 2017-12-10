@@ -103,35 +103,35 @@ module PersistentStreams =
                 }
             loop (0, false))
 
-    type QueueProxy<'t> = {
-        mutable Queue: ISourceQueueWithComplete<'t> option
-    }
-    with 
-        interface ISourceQueue<'t> with
-            member __.OfferAsync el = match __.Queue with
-                                        | Some queue -> queue.OfferAsync el
-                                        | None -> Task.FromResult(Exception("Receiving queue is not setup") |> QueueOfferResult.Failure :> IQueueOfferResult) 
-            member __.WatchCompletionAsync() = match __.Queue with
-                                                | Some queue -> queue.WatchCompletionAsync()
-                                                | None -> Task.FromException(Exception("Receiving queue is not setup"))
-        interface ISourceQueueWithComplete<'t> with
-            member __.Complete() = match __.Queue with
-                                    | Some queue -> queue.Complete()
-                                    | None -> raise (Exception("Receiving queue is not setup"))
-            member __.Fail ex = match __.Queue with
-                                | Some queue -> queue.Fail ex
-                                | None -> raise (Exception("Receiving queue is not setup"))
+    //type QueueProxy<'t> = {
+    //    mutable Queue: ISourceQueueWithComplete<'t> option
+    //}
+    //with 
+    //    interface ISourceQueue<'t> with
+    //        member __.OfferAsync el = match __.Queue with
+    //                                    | Some queue -> queue.OfferAsync el
+    //                                    | None -> Task.FromResult(Exception("Receiving queue is not setup") |> QueueOfferResult.Failure :> IQueueOfferResult) 
+    //        member __.WatchCompletionAsync() = match __.Queue with
+    //                                            | Some queue -> queue.WatchCompletionAsync()
+    //                                            | None -> Task.FromException(Exception("Receiving queue is not setup"))
+    //    interface ISourceQueueWithComplete<'t> with
+    //        member __.Complete() = match __.Queue with
+    //                                | Some queue -> queue.Complete()
+    //                                | None -> raise (Exception("Receiving queue is not setup"))
+    //        member __.Fail ex = match __.Queue with
+    //                            | Some queue -> queue.Fail ex
+    //                            | None -> raise (Exception("Receiving queue is not setup"))
 
-    let persistentQueue<'T> system pid (overflowStrategy: OverflowStrategy) (maxBuffer: int) =
-        Source.queue overflowStrategy maxBuffer
-        |> Source.mapMaterializedValue(persistActorWithQueue >> spawn system pid)
+    //let persistentQueue<'T> system pid (overflowStrategy: OverflowStrategy) (maxBuffer: int) =
+    //    Source.queue overflowStrategy maxBuffer
+    //    |> Source.mapMaterializedValue(persistActorWithQueue >> spawn system pid)
 
-    let persistentFlow<'T> system pid (overflowStrategy: OverflowStrategy) (maxBuffer: int) =
-        let queueProxy: QueueProxy<TokenEvent> = { Queue = None }
-        let sink = Sink.toActorRef (Command Complete) (queueProxy |> persistActorWithQueue |> spawn system pid)
-        Source.queue overflowStrategy maxBuffer
-        |> Flow.ofSinkAndSourceMat (sink) 
-            (fun ar sourceQueue -> queueProxy.Queue <- Some(sourceQueue); (ar, sourceQueue))
+    //let persistentFlow<'T> system pid (overflowStrategy: OverflowStrategy) (maxBuffer: int) =
+    //    let queueProxy: QueueProxy<TokenEvent> = { Queue = None }
+    //    let sink = Sink.toActorRef (Command Complete) (queueProxy |> persistActorWithQueue |> spawn system pid)
+    //    Source.queue overflowStrategy maxBuffer
+    //    |> Flow.ofSinkAndSourceMat (sink) 
+    //        (fun ar sourceQueue -> queueProxy.Queue <- Some(sourceQueue); (ar, sourceQueue))
 
     //let persistentSink<'T> system pid (overflowStrategy: OverflowStrategy) =
 

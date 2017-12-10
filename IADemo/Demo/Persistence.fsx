@@ -11,6 +11,7 @@ System.IO.Directory.SetCurrentDirectory(cd)
 
 open Akka.Actor
 open Akkling
+open Microsoft.FSharpLu
 
 let setupNode() = 
     let systemName = "ac"
@@ -21,72 +22,82 @@ let setupNode() =
                     #journal.plugin = "akka.persistence.journal.inmem"
           
                     #snapshot-store.plugin = "akka.persistence.snapshot-store.local"
-	journal {
-		plugin = "akka.persistence.journal.sqlite"
-		sqlite {
-		
-			# qualified type name of the SQLite persistence journal actor
-			class = "Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite"
+                	journal {
+                		plugin = "akka.persistence.journal.sqlite"
+                		sqlite {
+                		
+                			# qualified type name of the SQLite persistence journal actor
+                			class = "Akka.Persistence.Sqlite.Journal.SqliteJournal, Akka.Persistence.Sqlite"
 
-			# dispatcher used to drive journal actor
-			plugin-dispatcher = "akka.actor.default-dispatcher"
+                			# dispatcher used to drive journal actor
+                			plugin-dispatcher = "akka.actor.default-dispatcher"
 
-			# connection string used for database access
-			connection-string = "Filename=./streams.db"
-			
-			# connection string name for .config file used when no connection string has been provided
-			connection-string-name = ""
+                			# connection string used for database access
+                            # "Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"
+                			connection-string = "Filename=./db/streams.db"
+                			
+                			# connection string name for .config file used when no connection string has been provided
+                			connection-string-name = ""
 
-			# default SQLite commands timeout
-			connection-timeout = 30s
+                			# default SQLite commands timeout
+                			connection-timeout = 30s
 
-			# SQLite table corresponding with persistent journal
-			table-name = event_journal
-			
-			# metadata table
-			metadata-table-name = journal_metadata
+                			# SQLite table corresponding with persistent journal
+                			table-name = event_journal
+                			
+                			# metadata table
+                			metadata-table-name = journal_metadata
 
-			# should corresponding journal table be initialized automatically
-			auto-initialize = off
+                			# should corresponding journal table be initialized automatically
+                			auto-initialize = on
 
-			# timestamp provider used for generation of journal entries timestamps
-			timestamp-provider = "Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common"
-			
-			circuit-breaker {
-				max-failures = 5
-				call-timeout = 20s
-				reset-timeout = 60s
-			}
-		}
-	}
+                			# timestamp provider used for generation of journal entries timestamps
+                			timestamp-provider = "Akka.Persistence.Sql.Common.Journal.DefaultTimestampProvider, Akka.Persistence.Sql.Common"
+                			
+                			circuit-breaker {
+                				max-failures = 5
+                				call-timeout = 20s
+                				reset-timeout = 60s
+                			}
 
-	snapshot-store {
-		plugin = "akka.persistence.snapshot-store.sqlite"
-		sqlite {
-		
-			# qualified type name of the SQLite persistence journal actor
-			class = "Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite"
+                            #Query section
+                            #event-adapters {{
+                            #  color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
+                            #}}
+                            #event-adapter-bindings = {{
+                            #  ""System.String"" = color-tagger
+                            #}}
+                            #refresh-interval = 100ms
+                		}
+                	}
 
-			# dispatcher used to drive journal actor
-			plugin-dispatcher = "akka.actor.default-dispatcher"
+                	snapshot-store {
+                		plugin = "akka.persistence.snapshot-store.sqlite"
+                		sqlite {
+                		
+                			# qualified type name of the SQLite persistence journal actor
+                			class = "Akka.Persistence.Sqlite.Snapshot.SqliteSnapshotStore, Akka.Persistence.Sqlite"
 
-			# connection string used for database access
-			connection-string = "Filename=./snapshots.db"
+                			# dispatcher used to drive journal actor
+                			plugin-dispatcher = "akka.actor.default-dispatcher"
 
-			# connection string name for .config file used when no connection string has been provided
-			connection-string-name = ""
+                			# connection string used for database access
+                			connection-string = "Filename=./db/snapshots.db"
 
-			# default SQLite commands timeout
-			connection-timeout = 30s
-			
-			# SQLite table corresponding with persistent journal
-			table-name = snapshot_store
+                			# connection string name for .config file used when no connection string has been provided
+                			connection-string-name = ""
 
-			# should corresponding journal table be initialized automatically
-			auto-initialize = off
+                			# default SQLite commands timeout
+                			connection-timeout = 30s
+                			
+                			# SQLite table corresponding with persistent journal
+                			table-name = snapshot_store
 
-		}
-	}                    
+                			# should corresponding journal table be initialized automatically
+                			auto-initialize = on
+
+                		}
+                	}                                   
 
                     view.auto-update-interval = 100
                     query.journal.sql {
@@ -103,14 +114,14 @@ let setupNode() =
                       refresh-interval = 1s
                       # How many events to fetch in one query (replay) and keep buffered until they
                       # are delivered downstreams.
-                      max-buffer-size = 100
+                      max-buffer-size = 1000
                     }                    
                 }
             }
             """ 
         |> Configuration.parse
         |> Configuration.fallback (Configuration.defaultConfig())
-
+    Directory.CreateDirectory("db") |> ignore // Create folder for sqlite files if not exists 
     config//.WithFallback (DistributedPubSub.DefaultConfig())
     |> System.create systemName 
 
@@ -186,29 +197,39 @@ counter <! (PrintState |> Command)
 
 counter <! (TakeSnapshot |> Command)
 
-let journal: IActorRef = async {let! reply = counter <? Command GetJournal
-                                printfn "Current state of %A: %A" counter reply 
-                                return reply } |> Async.RunSynchronously
+// let journal: IActorRef = async {let! reply = counter <? Command GetJournal
+//                                 printfn "Current state of %A: %A" counter reply 
+//                                 return reply } |> Async.RunSynchronously
 
 
 open Akka.Streams
 open Akka.Streams.Dsl
+
+
 open Akka.Persistence.Journal
 open Akkling
 open Akkling.Streams
 open Akka.Persistence.Query
+open Akka.Persistence.Query.Sql
 
 //open Akka.Persistence.Query.Sql
 
 //let readJournal = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>("akka.persistence.query.my-read-journal");
-let readJournal = PersistenceQuery.Get(system).ReadJournalFor<InmemReadJournal>("akka.persistence.query.my-read-journal");
 
-Source.factorRef
-journal.GetType()
+let mat = ActorMaterializer.Create(system)
+let readJournal = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
 
 
-let readJournal
+let pidsSource = readJournal.PersistenceIds();
 
+// let pids = pidsSource |> Source.runFold mat (fun state e -> e :: state) [] 
+//             |> Async.Start
+
+let pids = pidsSource |> Source.runForEach mat (fun e -> printfn "%A" e) |> Async.Start
+
+
+let events = readJournal.CurrentEventsByPersistenceId("a2", 0L, 10L)
+let pids = events |> Source.runForEach mat (fun e -> printfn "%A" e) |> Async.Start
 
 
 

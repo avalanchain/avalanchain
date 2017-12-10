@@ -7,22 +7,7 @@ nuget FSharp.Data
 
 nuget FsPickler = 3.3
 
-nuget Akka >= 1.3.1
-nuget Akka.Streams >= 1.3.1
-nuget Akka.Persistence prerelease 
-nuget Akka.Persistence.Sqlite prerelease 
-nuget Akka.Persistence.Sql.Common prerelease 
-nuget Akka.Persistence.Query prerelease 
-nuget Akka.Persistence.Query.Sql prerelease 
-nuget Akka.Remote >= 1.3.1
-nuget Akka.TestKit >= 1.3.1
-nuget Akka.TestKit.Xunit2 >= 1.3.1
-nuget Akka.Cluster >= 1.3.1
-nuget Akka.Cluster.Sharding >= 1.3.1 prerelease
-nuget Akka.Cluster.Tools >= 1.3.1 
-nuget Akka.DistributedData >= 1.3.1 prerelease
-
-nuget Microsoft.Data.Sqlite = 1.1.1
+nuget Microsoft.Data.Sqlite 
 
 nuget Akkling.Cluster.Sharding
 nuget Akkling.DistributedData
@@ -33,9 +18,6 @@ nuget Akkling.TestKit
 nuget Microsoft.Extensions.Logging
 nuget Microsoft.Extensions.Logging.Abstractions
 
-nuget Akka.Streams.Csv
-nuget Akka.Streams.Xml
-nuget Akka.Streams.SignalR
 nuget deniszykov.WebSocketListener
 
 nuget Suave
@@ -50,6 +32,26 @@ nuget Inferno
 nuget BouncyCastle
 nuget dlech.Chaos.NaCl
 
+source https://www.myget.org/F/akkadotnet/api/v3/index.json
+
+nuget Akka >= 1.3.3-beta458 prerelease
+nuget Akka.Streams >= 1.3.3-beta458 prerelease
+nuget Akka.Persistence >= 1.3.3-beta458 prerelease
+nuget Akka.Persistence.Sqlite >= 1.3.3-beta458 prerelease
+nuget Akka.Persistence.Sql.Common >= 1.3.3-beta458 prerelease
+nuget Akka.Persistence.Query >= 1.3.3-beta458 prerelease
+nuget Akka.Persistence.Query.Sql >= 1.3.3-beta458 prerelease
+nuget Akka.Remote >= 1.3.3-beta458 prerelease
+nuget Akka.TestKit >= 1.3.3-beta458 prerelease
+nuget Akka.TestKit.Xunit2 >= 1.3.3-beta458 prerelease
+nuget Akka.Cluster >= 1.3.3-beta458 prerelease
+nuget Akka.Cluster.Sharding >= 1.3.3-beta458 prerelease
+nuget Akka.Cluster.Tools >= 1.3.3-beta458 prerelease
+nuget Akka.DistributedData >= 1.3.3-beta458 prerelease
+
+nuget Akka.Streams.Csv
+nuget Akka.Streams.Xml
+nuget Akka.Streams.SignalR
 
 source https://www.myget.org/F/romcyber/api/v3/index.json
 nuget Suave.Swagger
