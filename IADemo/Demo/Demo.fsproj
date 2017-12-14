@@ -4,15 +4,15 @@
     <TargetFramework>net461</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="lib\x509.fs" />
+    <Compile Include="lib/x509.fs" />
     <Compile Include="lib/jwt.fs" />
     <Compile Include="lib/ws.fs" />
     <Compile Include="lib/persistent-streams.fs" />
+    <None Include="lib/jwt.fsx" />
+    <None Include="lib/payments.fsx" />
     <Compile Include="Demo.fs" />
     <None Include="App.config" />
     <None Include="Demo.fsx" />
-    <None Include="lib\jwt.fsx" />
-    <None Include="lib\payments.fsx" />
     <None Include="utils/RunProcess.fsx" />
     <None Include="_1-Clone-files.fsx" />
     <None Include="_2-Send-all-cluster.fsx" />

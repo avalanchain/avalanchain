@@ -6,6 +6,8 @@ nuget FSharp.Core
 nuget FSharp.Data
 
 nuget FsPickler = 3.3
+nuget FsPickler.Json = 3.3
+nuget FsPickler.CSharp = 3.3
 
 nuget Microsoft.Data.Sqlite 
 
@@ -31,6 +33,10 @@ nuget Microsoft.FSharpLu.Json
 nuget Inferno
 nuget BouncyCastle
 nuget dlech.Chaos.NaCl
+
+nuget FSharp.Configuration
+nuget Topshelf
+nuget Argu
 
 source https://www.myget.org/F/akkadotnet/api/v3/index.json
 

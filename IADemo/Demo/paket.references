@@ -1,6 +1,14 @@
 FSharp.Core
 FSharp.Data
 
+FSharp.Configuration
+Topshelf
+Argu
+
+FsPickler.Json
+FsPickler.CSharp
+
+
 Akka
 Akka.Streams
 Akka.Persistence

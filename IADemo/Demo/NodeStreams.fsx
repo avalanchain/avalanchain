@@ -30,7 +30,48 @@ open FSharpLu.Json
 open System.Security.Cryptography
 
 open Jose
+open Newtonsoft.Json
 open Microsoft.FSharpLu.Json
+
+#time
+
+JsonConvert.DefaultSettings <- fun () ->
+    let settings = JsonSerializerSettings()
+    settings.ContractResolver <- Serialization.CamelCasePropertyNamesContractResolver()
+    settings.Converters <- [| CompactUnionJsonConverter() |]
+    settings
+
+
+module JwsAlgo = 
+    open Org.BouncyCastle.Crypto.Parameters
+    open AC_x509
+    
+
+    // Jose.JwsAlgorithm.ES384
+    type CustomEC() =
+        interface Jose.IJwsAlgorithm with 
+            member __.Sign (securedInput: byte[], key: obj): byte[] = 
+                AC_x509.sign (key :?> ECPrivateKeyParameters) securedInput
+            member __.Verify(signature: byte[], securedInput: byte[], key: obj): bool = 
+                AC_x509.verify (key :?> ECPublicKeyParameters) securedInput signature
+
+    type EmptyEC() =
+        interface Jose.IJwsAlgorithm with 
+            member __.Sign (securedInput: byte[], key: obj): byte[] = securedInput
+            member __.Verify(signature: byte[], securedInput: byte[], key: obj): bool = true
+
+    type EC25519() =
+        interface Jose.IJwsAlgorithm with 
+            member __.Sign (securedInput: byte[], key: obj): byte[] = securedInput
+            member __.Verify(signature: byte[], securedInput: byte[], key: obj): bool = true
+
+
+
+let jwsAlgo = Jose.JwsAlgorithm.ES384
+
+Jose.JWT.DefaultSettings.RegisterJws(jwsAlgo, JwsAlgo.EC25519()) |> ignore
+
+
 
 let private recordToMap<'r> (r: 'r) =
     let fields = FSharpType.GetRecordFields(typedefof<'r>) |> Array.map (fun pi -> pi.Name)
@@ -107,13 +148,23 @@ type ChainDef = {
     compression: Compression 
 }
 
+open System.IO
+open MBrace.FsPickler.Json
+
+let jsonSerializer = FsPickler.CreateJsonSerializer(indent = false)
 
 type ECToken<'T>(o: 'T, privateKey: CngKey) =
     let token = 
-        let payload = o |> Compact.serialize
+        // let payload = o |> JsonConvert.SerializeObject//Compact.serialize
+        use tw = new StringWriter()
+        do jsonSerializer.Serialize(tw, o)
+        let payload = tw.ToString()
         Jose.JWT.Encode(payload, privateKey, JwsAlgorithm.ES384)
-    new(token: string, privateKey: CngKey) = 
-        ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> Compact.deserialize<obj> :?> 'T), privateKey)
+        //Jose.JWT.EncodeBytes([| 1uy; 1uy; 1uy; 1uy; 1uy; 1uy |], privateKey, jwsAlgo)
+        //"4343.3434.343.343"
+    // new (token: string, privateKey: CngKey) = 
+    //     //ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> Compact.deserialize<'T>), privateKey)
+    //     ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> JsonConvert.DeserializeObject<'T>), privateKey)
     member __.Ref = token.Split([|'.'|], 4) |> Array.last |> sha |> Sig
     member __.Token = token
     member __.Payload = o
@@ -136,7 +187,7 @@ let chainDef = {
 let cngKey = CngKey.Create(CngAlgorithm.ECDsaP384)
 
 let chain (chainDef: ChainDef) =
-    ChainDefToken(chainDef, cngKey)
+    ChainDefToken(chainDef, null)//cngKey)
 
 let cdToken = chain chainDef
 // cdToken.Payload
@@ -144,7 +195,7 @@ let cdToken = chain chainDef
 let chainDef2 = {
     algo = Asym(ES512)
     uid = Guid.NewGuid()
-    chainType = ChainType.Derived (cdToken.Ref, 0UL, Map("function (a) {return a}"))
+    chainType = ChainType.Derived (cdToken.Ref, 0UL, Map("function (a) {return a;}"))
     encryption = Encryption.None
     compression = Compression.None
 }
@@ -165,36 +216,7 @@ let ecc384Keys() =
 
 
 
-module JwsAlgo = 
-    open Org.BouncyCastle.Crypto.Parameters
-    open AC_x509
-    
-
-    // Jose.JwsAlgorithm.ES384
-    type CustomEC() =
-        interface Jose.IJwsAlgorithm with 
-            member __.Sign (securedInput: byte[], key: obj): byte[] = 
-                AC_x509.sign (key :?> ECPrivateKeyParameters) securedInput
-            member __.Verify(signature: byte[], securedInput: byte[], key: obj): bool = 
-                AC_x509.verify (key :?> ECPublicKeyParameters) securedInput signature
-
-    type EmptyEC() =
-        interface Jose.IJwsAlgorithm with 
-            member __.Sign (securedInput: byte[], key: obj): byte[] = securedInput
-            member __.Verify(signature: byte[], securedInput: byte[], key: obj): bool = true
-
-    type EC25519() =
-        interface Jose.IJwsAlgorithm with 
-            member __.Sign (securedInput: byte[], key: obj): byte[] = securedInput
-            member __.Verify(signature: byte[], securedInput: byte[], key: obj): bool = true
-
-
-#time
-
-let jwsAlgo = Jose.JwsAlgorithm.ES256
-
-// Jose.JWT.DefaultSettings.RegisterJws(jwsAlgo, EmptyEC()) |> ignore
-Jose.JWT.DefaultSettings.RegisterJws(jwsAlgo, JwsAlgo.CustomEC()) |> ignore
+// Jose.JWT.DefaultSettings.RegisterJws(jwsAlgo, JwsAlgo.CustomEC()) |> ignore
 
 let keyPair = AC_x509.AC_x509.generateKeys()
 let token0 = Jose.JWT.EncodeBytes([| 1uy; 1uy; 1uy; 1uy; 1uy; 1uy |], keyPair.Private, jwsAlgo)
@@ -202,8 +224,8 @@ printfn "token: %s" token0
 printfn "token verification: %A" (Jose.JWT.DecodeBytes(token0, keyPair.Public, jwsAlgo))
 
 
-for a in 0 .. 999 do 
-    chain chainDef |> ignore 
+for a in 0 .. 99999 do 
+    (chain chainDef) |> ignore 
 
 for a in 0 .. 999 do 
     Jose.JWT.EncodeBytes([| 1uy; 1uy; 1uy; 1uy; 1uy; 1uy |], keyPair.Private, jwsAlgo)
