@@ -1,13 +1,25 @@
-#load "../.paket/load/net461/main.group.fsx"
+//#load "../.paket/load/net461/main.group.fsx"
 
 // #load "lib/ws.fs"
+
+#r "../packages/FSharp.Data/lib/portable-net45+netcore45/FSharp.Data.DesignTime.dll" 
 
 open System
 open System.IO
 #if INTERACTIVE
 let cd = Path.Combine(__SOURCE_DIRECTORY__, "bin/Debug/net461")
-System.IO.Directory.SetCurrentDirectory(cd)
-#I "bin/Debug/net461"
+let [<Literal>] ac_include = __SOURCE_DIRECTORY__ + "/AC_include.fsx"
+let skipFiles = [ "mscorlib.dll"; "FSharp.Core.dll"; "e_sqlite3.dll" ]
+Directory.EnumerateFiles(cd)
+|> Seq.filter (fun fn -> fn.EndsWith ".dll" && (skipFiles |> List.exists (fn.Contains) |> not))
+|> Seq.map (fun fn -> fn.Replace("\\", "/") |> sprintf "#r \"%s\"")
+|> Seq.toArray
+|> fun lines -> String.Join("\n", lines)
+|> fun txt -> File.WriteAllText(ac_include, txt)
+
+Directory.SetCurrentDirectory(__SOURCE_DIRECTORY__)
+#load "AC_include.fsx"
+Directory.SetCurrentDirectory(cd)
 #endif
 
 
@@ -32,6 +44,10 @@ open Akkling.Persistence
 open Akkling.Cluster
 open Akkling.Cluster.Sharding
 open Akkling.Streams
+
+open Akka.DistributedData
+open Akkling.DistributedData
+open Akkling.DistributedData.Consistency
 
     
 module Network =
@@ -111,6 +127,38 @@ let setupNode endpoint (seedNodes: Endpoint list) =
     // |> System.create systemName 
     create systemName config
 
+let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
+
+
+let node1 = setupNode endpoint1 [endpoint1]
+
+let cluster = Cluster.Get node1
+let ddata = DistributedData.Get node1
+
+// some helper functions
+let (++) set e = ORSet.add cluster e set
+
+// initialize set
+let set = [ 1; 2; 3 ] |> List.fold (++) ORSet.empty
+
+let key = ORSet.key<int> "test-set"
+
+// write that up in replicator under key 'test-set'
+ddata.AsyncUpdate(key, set, writeLocal)
+|> Async.RunSynchronously
+
+// read data 
+async {
+    let! reply = ddata.AsyncGet(key, readLocal)
+    match reply with
+    | Some value -> printfn "Data for key %A: %A" key value
+    | None -> printfn "Data for key '%A' not found" key
+} |> Async.RunSynchronously
+
+// delete data 
+ddata.AsyncDelete(key, writeLocal) |> Async.RunSynchronously
+
+
 
 let (|SubscribeAck|_|) (msg: obj) : Akka.Cluster.Tools.PublishSubscribe.SubscribeAck option =
     match msg with
@@ -129,7 +177,7 @@ type MediatorPublisher<'T>(topic: string, queue: ISourceQueue<'T>, log: string -
     inherit Akka.Actor.ActorBase()
     do printfn "%s" "Initing"
     let mdr = typed (DistributedPubSub.Get(ActorBase.Context.System).Mediator)
-    do mdr <! new Subscribe(topic, actor.Self)
+    do mdr <! Akka.Cluster.Tools.PublishSubscribe.Subscribe(topic, actor.Self)
     do log "Initialized"
     override actor.Receive (msg: obj) =
         match msg with
@@ -196,4 +244,58 @@ mediator.Tell(Publish(topic, { Message = "msg 1" }))
 let mediator2 = DistributedPubSub.Get(node2).Mediator
 mediator2.Tell(Publish(topic, { Message = "msg 2" }))
 
+////// DD
 
+// Source.o
+
+
+type Broadcaster<'T> (system, uid, initList: 'T list, doLog) = 
+    let cluster = Cluster.Get system
+    let ddata = DistributedData.Get system
+    // some helper functions
+    let (++) set e = ORSet.add cluster e set
+    let toSet initSet = List.fold (++) initSet
+    // initialize set
+    let initSet = initList |> toSet ORSet.empty
+    let key = ORSet.key uid 
+
+    // ddata.AsyncUpdate(key, set, writeLocal)
+    // |> Async.RunSynchronously
+
+    // read data 
+    async {
+        let! reply = ddata.AsyncGet(key, readLocal)
+        match reply with
+        | Some value -> printfn "Data for key %A: %A" key value
+        | None -> printfn "Data for key '%A' not found" key
+    } |> Async.RunSynchronously
+
+    // delete data 
+    ddata.AsyncDelete(key, writeLocal) |> Async.RunSynchronously
+
+    let updateState key (data: 'T) = ddata.AsyncUpdate(key, set, writeLocal)
+
+    member __.Add value: Async<unit option> = updateState key value
+        // async {
+        // let! reply = (retype replicator) <? get readLocal key
+        // match reply.Value with
+        // | GetSuccess(k, (data : ORSet<'T>), _) -> return! updateState key (valueList |> toSet data)
+        // | NotFound k -> return! updateState key (valueList |> toSet initSet)
+        // | DataDeleted k -> printfn "Data for key '%A' has been deleted" k; return None
+        // | GetFailure(k, _) -> printfn "Data for key '%A' didn't received in time" k; return None
+    // } 
+
+    member __.Read(): Async<IImmutableSet<'T> option> = async {
+        let! reply = (retype replicator) <? get readLocal key
+        match reply.Value with
+        | GetSuccess(k, (data : ORSet<'T>), _) -> 
+            let value = data |> ORSet.value
+            // printfn "Data for key %A: %A" k value
+            return (value |> Some)
+
+        | NotFound k -> printfn "Data for key '%A' not found" k; return None
+        | DataDeleted k -> printfn "Data for key '%A' has been deleted" k; return None
+        | GetFailure(k, _) -> printfn "Data for key '%A' didn't received in time" k; return None
+    } 
+
+let broadcaster<'T> node uid = Broadcaster<'T>(node, uid, [], false)
