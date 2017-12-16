@@ -21,8 +21,6 @@ module ChainDefs =
     open Akkling.Streams
 
     open FSharp.Reflection
-    open FSharpLu.Json
-
     open System.Security.Cryptography
 
     open Jose

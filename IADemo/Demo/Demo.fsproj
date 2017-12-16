@@ -10,6 +10,7 @@
     <Compile Include="libGen\persistent-streams.fs" />
     <Compile Include="lib\AC_x509.fs" />
     <Compile Include="lib\ChainDefs.fs" />
+    <Compile Include="lib\Chains.fs" />
     <Compile Include="lib\Node.fs" />
     <Compile Include="Demo.fs" />
 

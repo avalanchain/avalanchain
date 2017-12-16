@@ -49,8 +49,8 @@ module Node =
     //     | Message of 'T
 
     module DistPubSub =
-        type [<CLIMutable>] DistPubSubMessage<'T> =
-            { Message: 'T }
+        type [<CLIMutable>] DistPubSubMessage<'T> = { Message: 'T }
+        with static member Complete = (null :> obj :?> DistPubSubMessage<'T>)
 
         let (|SubscribeAck|_|) (msg: obj) : SubscribeAck option =
             match msg with
@@ -111,7 +111,9 @@ module Node =
         let distPubSubSink<'T, 'mat> system topic = 
             let mediator = DistributedPubSub.Get(system).Mediator |> typed
             Flow.id<'T, 'mat>
-            |> Flow.toMat(Sink.forEach(fun (msg: 'T) -> mediator <! (Publish(topic, { Message = msg } )))) Keep.left
+            |> Flow.map (fun (msg: 'T) -> Publish(topic, { Message = msg } ))
+            |> Flow.toMat(Sink.toActorRef (Publish(topic, DistPubSubMessage<'T>.Complete)) mediator) Keep.left
+            // |> Flow.toMat(Sink.forEach(fun (msg: 'T) -> mediator <! (Publish(topic, { Message = msg } )))) Keep.left
         
 
     let setupNode (nodeName: string) endpoint (seedNodes: Endpoint list) (overflowStrategy: OverflowStrategy) (maxBuffer: int) = //(distTopic: string option) =

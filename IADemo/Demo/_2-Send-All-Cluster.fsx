@@ -2,7 +2,7 @@
 
 // #load "lib/ws.fs"
 
-#r "../packages/FSharp.Data/lib/portable-net45+netcore45/FSharp.Data.DesignTime.dll" 
+#r "../packages/FSharp.Data/lib/net45/FSharp.Data.DesignTime.dll" 
 
 open System
 open System.IO
@@ -19,6 +19,7 @@ Directory.EnumerateFiles(cd)
 
 Directory.SetCurrentDirectory(__SOURCE_DIRECTORY__)
 #load "AC_include.fsx"
+#I "bin/Debug/net461"
 Directory.SetCurrentDirectory(cd)
 #endif
 
@@ -144,8 +145,8 @@ let set = [ 1; 2; 3 ] |> List.fold (++) ORSet.empty
 let key = ORSet.key<int> "test-set"
 
 // write that up in replicator under key 'test-set'
-ddata.AsyncUpdate(key, set, writeLocal)
-|> Async.RunSynchronously
+let a = ddata.AsyncUpdate(key, set, writeLocal)
+        |> Async.RunSynchronously
 
 // read data 
 async {

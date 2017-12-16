@@ -176,7 +176,7 @@ let persistActor actorId (snapshotInterval: int64): IActorRef<PersistMessage<'T>
                         //mailbox.Sender() <! retype (state, mailbox.LastSequenceNr)
                         printfn "State for Id '%s', pos: '%A': '%A'" actorId (mailbox.LastSequenceNr()) state
                         return! loop state
-                    | Offer v -> return Persist (Event { Val = v })
+                    | Offer v -> return! PersistAsync (Event { Val = v })
                     | TakeSnapshot -> 
                         snapshot state
                         return! loop state
