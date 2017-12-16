@@ -132,7 +132,6 @@ type PersistEvent<'T> =
 
 type PersistCommand<'T> =
     | Offer of 'T
-    | Batch of 'T seq
     | PrintState
     | TakeSnapshot
     | GetJournal
@@ -177,8 +176,7 @@ let persistActor actorId (snapshotInterval: int64): IActorRef<PersistMessage<'T>
                         //mailbox.Sender() <! retype (state, mailbox.LastSequenceNr)
                         printfn "State for Id '%s', pos: '%A': '%A'" actorId (mailbox.LastSequenceNr()) state
                         return! loop state
-                    | Offer v -> return! PersistAsync (Event { Val = v })
-                    | Batch v -> return! PersistAllAsync (v |> Seq.map (fun c -> Event { Val = c }))
+                    | Offer v -> return Persist (Event { Val = v })
                     | TakeSnapshot -> 
                         snapshot state
                         return! loop state
@@ -190,16 +188,10 @@ let persistActor actorId (snapshotInterval: int64): IActorRef<PersistMessage<'T>
             }
         loop { Latest = None; LastPos = 0UL } ) 
 
-let counter: IActorRef<PersistMessage<string>> = (persistActor "a2" 1000L)
+let counter: IActorRef<PersistMessage<string>> = (persistActor "a2" 4L)
 
 let msg = "Hi" |> Offer |> Command
 counter <! msg 
-
-#time
-for i in 0 .. 999 do counter <! msg 
-
-counter <! (seq [for i in 0 .. 9999 -> "Batch hi"] |> Batch |> Command)
-
 
 counter <! (PrintState |> Command)
 
@@ -236,12 +228,15 @@ let pidsSource = readJournal.PersistenceIds();
 let pids = pidsSource |> Source.runForEach mat (fun e -> printfn "%A" e) |> Async.Start
 
 
-let events = readJournal.CurrentEventsByPersistenceId("a2", 4000L, 4010L)
-events |> Source.runForEach mat (fun e -> printfn "%A" e) |> Async.Start
+let events = readJournal.CurrentEventsByPersistenceId("a2", 0L, 10L)
+let pids = events |> Source.runForEach mat (fun e -> printfn "%A" e) |> Async.Start
 
-let contevents = readJournal.EventsByPersistenceId("a2", 24000L, 44010L)
-contevents |> Source.runForEach mat (fun e -> printfn "%A" e) |> Async.Start
+#time
 
+for _ in 0 .. 1000 do 
+    counter <! msg 
+
+counter <! (PrintState |> Command)
 
 // open Akka.FSharp
 // open Akka.Persistence

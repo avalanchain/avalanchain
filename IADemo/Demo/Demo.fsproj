@@ -4,13 +4,17 @@
     <TargetFramework>net461</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="lib/x509.fs" />
-    <Compile Include="lib/jwt.fs" />
-    <Compile Include="lib/ws.fs" />
-    <Compile Include="lib/persistent-streams.fs" />
-    <None Include="lib/jwt.fsx" />
-    <None Include="lib/payments.fsx" />
+    <Compile Include="libGen\x509.fs" />
+    <Compile Include="libGen\jwt.fs" />
+    <Compile Include="libGen\ws.fs" />
+    <Compile Include="libGen\persistent-streams.fs" />
+    <Compile Include="lib\AC_x509.fs" />
+    <Compile Include="lib\ChainDefs.fs" />
+    <Compile Include="lib\Node.fs" />
     <Compile Include="Demo.fs" />
+
+    <None Include="libGen\jwt.fsx" />
+    <None Include="libGen\payments.fsx" />
     <None Include="App.config" />
     <None Include="Demo.fsx" />
     <None Include="Node.fsx" />

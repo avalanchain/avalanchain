@@ -162,9 +162,10 @@ type ECToken<'T>(o: 'T, privateKey: CngKey) =
         Jose.JWT.Encode(payload, privateKey, JwsAlgorithm.ES384)
         //Jose.JWT.EncodeBytes([| 1uy; 1uy; 1uy; 1uy; 1uy; 1uy |], privateKey, jwsAlgo)
         //"4343.3434.343.343"
-    // new (token: string, privateKey: CngKey) = 
-    //     //ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> Compact.deserialize<'T>), privateKey)
-    //     ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> JsonConvert.DeserializeObject<'T>), privateKey)
+    new (token: string, privateKey: CngKey) = 
+        //ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> Compact.deserialize<'T>), privateKey)
+        //ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> JsonConvert.DeserializeObject<'T>), privateKey)
+        ECToken<'T>((Jose.JWT.Decode(token, privateKey) |> jsonSerializer.Deserialize<'T>), privateKey)
     member __.Ref = token.Split([|'.'|], 4) |> Array.last |> sha |> Sig
     member __.Token = token
     member __.Payload = o
