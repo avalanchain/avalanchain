@@ -5,6 +5,7 @@ FSharp.Configuration
 Topshelf
 Argu
 
+FsPickler
 FsPickler.Json
 FsPickler.CSharp
 

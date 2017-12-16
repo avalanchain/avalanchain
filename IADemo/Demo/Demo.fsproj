@@ -13,6 +13,11 @@
     <Compile Include="Demo.fs" />
     <None Include="App.config" />
     <None Include="Demo.fsx" />
+    <None Include="Node.fsx" />
+    <None Include="Node2.fsx" />
+    <None Include="NodeStreams.fsx" />
+    <None Include="Persistence.fsx" />
+    <None Include="TcpStreams.fsx" />
     <None Include="utils/RunProcess.fsx" />
     <None Include="_1-Clone-files.fsx" />
     <None Include="_2-Send-all-cluster.fsx" />
