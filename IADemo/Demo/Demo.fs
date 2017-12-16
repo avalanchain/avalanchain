@@ -29,14 +29,35 @@ open Akkling.DistributedData.Consistency
 open Avalanchain.Node
 open Avalanchain.Node.Network
 
+open Chains
+open ChainDefs
+
 [<EntryPoint>]
 let main argv =
     printfn "%A" argv
 
+    let keyStorage = fun kid -> { PublicKey = PublicKey "pubKey"; PrivateKey = PrivateKey "privKey"; Kid = kid }
+
+    let keyPair = keyStorage 0us
+
+    let newChainDef() = {
+        algo = Asym(ES384)
+        uid = Guid.NewGuid()
+        chainType = ChainType.New
+        encryption = Encryption.None
+        compression = Compression.None
+    }
+
+    let chainDefs = [ for _ in 0 .. 19 -> newChainDef() |> toChainDefToken keyPair ]
+
+    // let cdToken = chainDef |> toChainDefToken keyPair 
+    // cdToken.Payload
+
+    // let cdTokenDerived = chain chainDef2
 
     let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
-    let endpoint2 = { IP = "127.0.0.1"; Port = 5001us }
-    let endpoint3 = { IP = "127.0.0.1"; Port = 5002us }
+    // let endpoint2 = { IP = "127.0.0.1"; Port = 5001us }
+    // let endpoint3 = { IP = "127.0.0.1"; Port = 5002us }
 
     let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 1000
@@ -48,26 +69,25 @@ let main argv =
     let (++) set e = ORSet.add cluster e set
 
     // initialize set
-    let set = [ for i in 0 .. 99999 -> i ] |> List.fold (++) ORSet.empty
+    // let set = [ for i in 0 .. 9999 -> i ] |> List.fold (++) ORSet.empty
+    let set = chainDefs |> List.fold (++) ORSet.empty
 
-    let key = ORSet.key "test-set"
+    let key = ORSet.key "chainDefs"
 
     // write that up in replicator under key 'test-set'
     ddata.AsyncUpdate(key, set, writeLocal)
     |> Async.RunSynchronously
 
     // read data 
-    async {
-        let! reply = ddata.AsyncGet(key, readLocal)
-        match reply with
-        | Some value -> printfn "Data for key %A: %A" key value
-        | None -> printfn "Data for key '%A' not found" key
-    } |> Async.RunSynchronously
+    let cds = async {   let! reply = ddata.AsyncGet(key, readLocal)
+                        match reply with
+                        | Some value -> printfn "Data for key %A: %A" key value
+                        | None -> printfn "Data for key '%A' not found" key
+                        return reply
+                    } |> Async.RunSynchronously
 
     // delete data 
     ddata.AsyncDelete(key, writeLocal) |> Async.RunSynchronously
-
-
 
 
 

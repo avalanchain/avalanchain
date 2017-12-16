@@ -1,6 +1,7 @@
 namespace Avalanchain
 
 open System.Collections.Generic
+
 module ChainDefs =
 
     open System
@@ -107,6 +108,16 @@ module ChainDefs =
     type TokenRef = Sig of string
     type ChainRef = TokenRef
 
+    type Kid = uint16
+    type PublicKey = PublicKey of obj 
+    type PrivateKey = PrivateKey of obj 
+    type KeyPair = {
+        PublicKey: PublicKey
+        PrivateKey: PrivateKey
+        Kid: Kid
+    }
+    type KeyStorage = Kid -> KeyPair
+
     [<RequireQualifiedAccess>] 
     type ChainType = 
     | New
@@ -157,39 +168,42 @@ module ChainDefs =
     //     From: JwtFromHeader
     // }
 
-    let toJwt (toHeader: JwtToHeader) privateKey (o: 'T) =
+    let toJwt (toHeader: JwtToHeader) keyPair (o: 'T) =
         let token = 
             // let payload = o |> JsonConvert.SerializeObject//Compact.serialize
             use tw = new StringWriter()
             do jsonSerializer.Serialize(tw, o)
             let payload = tw.ToString()
-            Jose.JWT.Encode(payload, privateKey, JwsAlgorithm.ES384)
+            let (PrivateKey privKey) = keyPair.PrivateKey
+            Jose.JWT.Encode(payload, privKey, JwsAlgorithm.ES384)
         {   Token = token
             Ref = token.Split([|'.'|], 4) |> Array.last |> sha |> Sig
-            Payload = token 
+            Payload = o 
             Header = toHeader() }
 
-    let fromJwt<'T> (fromHeader: JwtFromHeader) privateKey (token: string): JwtToken<'T> =
-        let payload = Jose.JWT.Decode<string>(token, privateKey)
+    let fromJwt<'T> (fromHeader: JwtFromHeader) keyStorage (token: string): JwtToken<'T> =
         let headers = Jose.JWT.Headers(token)
+        let header = fromHeader headers
+        let (PrivateKey privKey) = (keyStorage header.kid).PrivateKey
+        let payload = Jose.JWT.Decode<string>(token, privKey)
         use reader = new StringReader(payload)
         {   Token = token
             Ref = token.Split([|'.'|], 4) |> Array.last |> sha |> Sig
             Payload = jsonSerializer.Deserialize(reader) 
-            Header = fromHeader headers }
+            Header = header }
 
 
     type ChainDefToken = JwtToken<ChainDef>
-    let internal chainDefToHeader kid = fun () -> { kid = kid; pos = -1L }
+    let internal chainDefToHeader keyPair = fun () -> { kid = keyPair.Kid; pos = -1L }
     let internal chainDefFromHeader: JwtFromHeader = fun dc -> { kid = Convert.ToUInt16(dc.["kid"]); pos = -1L }
 
-    let toChainDefToken kid = toJwt (chainDefToHeader kid)
+    let toChainDefToken keyPair = toJwt (chainDefToHeader keyPair) keyPair
     let fromChainDefToken<'T> = fromJwt<'T> chainDefFromHeader
 
 
     type ChainItemToken<'T> = JwtToken<'T>
-    let internal chainItemToHeader kid pos = fun () -> { kid = kid; pos = pos }
+    let internal chainItemToHeader keyPair pos = fun () -> { kid = keyPair.Kid; pos = pos }
     let internal chainItemFromHeader: JwtFromHeader = fun dc -> { kid = Convert.ToUInt16(dc.["kid"]); pos = Convert.ToInt64(dc.["pos"]) }
 
-    let toChainItemToken kid pos = toJwt (chainItemToHeader kid pos)
+    let toChainItemToken keyPair pos = toJwt (chainItemToHeader keyPair pos) keyPair
     let fromChainItemToken<'T> = fromJwt<'T> chainItemFromHeader

@@ -25,10 +25,13 @@ module Chains =
     open Akkling.Persistence
 
     open Akka.Persistence.Query
-    open Akka.Persistence.Query.Sql    
+    open Akka.Persistence.Query.Sql   
+
+    open ChainDefs 
 
     type PersistEvent<'T> =
         { Val : 'T }
+        // { Val : JwtToken<'T> }
 
     type PersistCommand<'T> =
         | Offer of 'T
@@ -36,7 +39,6 @@ module Chains =
         | PrintState
         | TakeSnapshot
         | GetJournal
-        | StreamComplete
 
     type PersistMessage<'T> =
         | Command of PersistCommand<'T>
