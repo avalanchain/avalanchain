@@ -146,7 +146,8 @@ module Node =
                         |> fun l -> "[" + String.Join(", ", l) + "]"
         printfn "%s" seedNodes
 
-        let dbFolder = "./" + nodeName + "/db"
+        //let dbFolder = "./" + nodeName + "/db"
+        let dbFolder = "db"
         let sqliteSpec = 
             sprintf """
                 persistence {
@@ -165,7 +166,7 @@ module Node =
 
                 			# connection string used for database access
                             # "Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"
-                			connection-string = "Filename=%s/streams.db"
+                			connection-string = "Filename=db/streams.db"
                 			
                 			# connection string name for .config file used when no connection string has been provided
                 			connection-string-name = ""
@@ -213,7 +214,7 @@ module Node =
                 			plugin-dispatcher = "akka.actor.default-dispatcher"
 
                 			# connection string used for database access
-                			connection-string = "Filename=%s/snapshots.db"
+                			connection-string = "Filename=db/snapshots.db"
 
                 			# connection string name for .config file used when no connection string has been provided
                 			connection-string-name = ""
@@ -247,7 +248,7 @@ module Node =
                       # are delivered downstreams.
                       max-buffer-size = 1000
                     }                    
-                }   """ dbFolder dbFolder
+                }   """ //dbFolder dbFolder
 
         let config = 
             sprintf """
@@ -356,7 +357,7 @@ module Node =
                             durable {
                                 # List of keys that are durable. Prefix matching is supported by using * at the
                                 # end of a key.  
-                                keys = [ "chainDefs" ]
+                                keys = [ "chainDefs", "transactions" ]
 
                                 # The markers of that pruning has been performed for a removed node are kept for this
                                 # time and thereafter removed. If and old data entry that was never pruned is

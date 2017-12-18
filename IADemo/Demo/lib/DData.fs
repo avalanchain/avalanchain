@@ -1,6 +1,5 @@
 namespace Avalanchain
 
-open Akka.DistributedData
 module DData =
 
     open System
@@ -47,6 +46,7 @@ module DData =
         //             |> List.fold (++) ORSet.empty
 
         member __.Get() = async {   let! result = ddata.AsyncGet(orsetKey, readLocal)
+                                    let! res2 = ddata.GetAsync(orsetKey, readLocal) |> Async.AwaitTask
                                     return result |> Option.defaultValue ORSet.empty }
 
         member private __.Modify stateUpdater = async { let! state = __.Get()
@@ -61,6 +61,32 @@ module DData =
 
         member __.Delete() = ddata.AsyncDelete(orsetKey, writeLocal) 
 
+    type GSetHelper<'T when 'T: null> (system: ActorSystem, key) = 
+        let cluster = Akka.Cluster.Cluster.Get system
+        let ddata = DistributedData.Get system
+
+        let gsetKey = GSet.key<'T> key 
+
+        // some helper functions
+        let (++) set e = GSet.add e set
+
+        // initialize set
+        // let set = [ for i in 0 .. 9999 -> i ] |> List.fold (++) ORSet.empty
+
+        // let set = chainDefs 
+        //             |> List.map (fun cd -> cd.Token)
+        //             |> List.fold (++) ORSet.empty
+
+        member __.Get() = async {   let! result = ddata.AsyncGet(gsetKey, readLocal)
+                                    return result |> Option.defaultValue GSet.empty }
+
+        member private __.Modify stateUpdater = async { let! state = __.Get()
+                                                        let newState = stateUpdater state
+                                                        return! ddata.AsyncUpdate(gsetKey, newState, writeLocal)   }
+
+        member __.Add items = __.Modify <| fun state -> items |> GSet.ofSeq |> GSet.merge state
+
+        member __.Delete() = ddata.AsyncDelete(gsetKey, writeLocal) 
 
     // type ORMultiMapHelper<'T when 'T: null> (system: ActorSystem, key) = 
     //     let cluster = Akka.Cluster.Cluster.Get system
@@ -95,3 +121,35 @@ module DData =
 
     //     member __.Delete() = ddata.AsyncDelete(orsetKey, writeLocal)         
     
+
+    let chainDefs system = ORSetHelper(system, "chainDefs")
+
+
+    type PaymentAccountRef = {
+        Address: string
+    }
+
+    type PaymentAmount = decimal
+
+    type PaymentTransaction = {
+        From: PaymentAccountRef
+        To: (PaymentAccountRef * PaymentAmount)[]
+    }
+
+    let transactions system = ORSetHelper(system, "transactions")
+
+    type PaymentAccount = {
+        Ref: PaymentAccountRef
+        // PublicKey: SigningPublicKey
+        Name: string
+        // CryptoContext: CryptoContext
+    }
+
+
+    type PaymentBalances(system: ActorSystem, key) =
+        let cluster = Akka.Cluster.Cluster.Get system
+        let ddata = DistributedData.Get system
+
+        let orsetKey = ORSet.key<'T> key //"chainDefs"    
+
+

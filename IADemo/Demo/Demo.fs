@@ -63,8 +63,28 @@ let main argv =
     let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 1000
 
+    let transactions = 
+        [| for i in 0 .. 999 -> "str" + i.ToString() |] 
+        |> Source.ofArray
+        |> Source.map (Offer >> Command)
+        |> Source.toMat(persistSink 1000L) Keep.none
 
+    let ret = transactions |> Graph.run node1.Mat 
 
+    let ids = (readJournal node1.System).CurrentPersistenceIds() |> Source.runWith node1.Mat (Sink.Seq()) |> Async.AwaitTask |> Async.RunSynchronously
+
+    let events = 
+        currentEventsSource keyPair node1.System (ids.[0]) 0L 100L
+
+    printfn "Events: %A" events
+
+    //let trs = transactions<string> node1.System
+    //trs.Clear() |> Async.RunSynchronously
+    //[ for i in 0 .. 999 -> "str" + i.ToString() ] 
+    //|> trs.Add 
+    //|> Async.RunSynchronously
+    //let trsI1 = trs.Get() |> Async.RunSynchronously
+    //printfn "trs1 %A"
 
 
     //let node2 = setupNode endpoint2 [endpoint2]

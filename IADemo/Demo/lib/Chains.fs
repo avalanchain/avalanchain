@@ -102,4 +102,8 @@ module Chains =
     let allEventsSource<'T> keypair system pid from count = 
         (readJournal system).EventsByPersistenceId(pid, from, from + count) 
         |> Source.map(fun e -> (e.Event :?> 'T) |> toChainItemToken keypair e.SequenceNr) 
+
+    let persistFlow snapshotInterval keypair system pid = 
+        Flow.ofSinkAndSourceMat (persistSink snapshotInterval) Keep.none 
+            (allEventsSource keypair system pid 0L Int64.MaxValue) 
     
