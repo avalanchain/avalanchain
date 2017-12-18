@@ -32,7 +32,7 @@ module DData =
         let cluster = Akka.Cluster.Cluster.Get system
         let ddata = DistributedData.Get system
 
-        let orsetKey = ORSet.key key //"chainDefs"
+        let orsetKey = ORSet.key<'T> key //"chainDefs"
 
         // some helper functions
         let (++) set e = ORSet.add cluster e set
