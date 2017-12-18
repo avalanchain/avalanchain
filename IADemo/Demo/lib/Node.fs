@@ -25,6 +25,9 @@ module Node =
     open Akka.Persistence.Query
     open Akka.Persistence.Query.Sql  
 
+    open Microsoft.FSharp.Quotations
+    open Microsoft.FSharp.Linq.QuotationEvaluation    
+
     
     module Network =
         type Endpoint = {
@@ -49,6 +52,21 @@ module Node =
         Mediator: Lazy<IActorRef> 
         Journal: Lazy<SqlReadJournal>
     }
+
+    let createSystem (name : string) (config : Akka.Configuration.Config) : ActorSystem = 
+        let system = ActorSystem.Create(name, config)
+        let extendedSystem = system :?> ExtendedActorSystem
+        let exprSerializer = Akkling.Serialization.ExprSerializer(extendedSystem)
+        let akka_pubsub = Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer(extendedSystem)
+        let hyperion = Akka.Serialization.HyperionSerializer(extendedSystem)           // I don't know why, but without this system cannot instantiate serializer
+        system.Serialization.AddSerializer("expr", exprSerializer)
+        system.Serialization.AddSerializationMap(typeof<Expr>, exprSerializer)
+        // system.Serialization.AddSerializer("akka-pubsub", akka_pubsub)
+        // system.Serialization.AddSerializationMap(typeof<Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage>, akka_pubsub)
+        system.Serialization.AddSerializer("hyperion", hyperion)
+        system.Serialization.AddSerializationMap(typeof<Object>, hyperion)
+        // system.Serialization.AddSerializationMap(typeof<Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber>, akka_pubsub)
+        system    
 
     // type DistPubSubMessage<'T> =
     //     | Message of 'T
@@ -237,11 +255,21 @@ module Node =
                     actor {
                         provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
                         serializers {
-                            hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
-                        }
+                            akka-pubsub = "Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer, Akka.Cluster.Tools"
+                            akka-data-replication = "Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData"
+                            akka-replicated-data = "Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData"                            
+                        }                            
                         serialization-bindings {
-                            "System.Object" = hyperion
-                        }
+                            "Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools" = akka-pubsub
+                            "Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools" = akka-pubsub
+                            "Akka.DistributedData.IReplicatorMessage, Akka.DistributedData" = akka-data-replication
+                            "Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData" = akka-replicated-data
+                        }                            
+                        serialization-identifiers {
+                            "Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer, Akka.Cluster.Tools" = 21
+                            "Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData" = 11
+                            "Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData" = 12
+                        }                        
                     }
                     remote {
                         helios.tcp {
@@ -328,7 +356,7 @@ module Node =
                             durable {
                                 # List of keys that are durable. Prefix matching is supported by using * at the
                                 # end of a key.  
-                                keys = [ * ]
+                                keys = [ "chainDefs" ]
 
                                 # The markers of that pruning has been performed for a removed node are kept for this
                                 # time and thereafter removed. If and old data entry that was never pruned is
@@ -345,7 +373,7 @@ module Node =
                                 # of akka.actor.Actor and handle the protocol defined in 
                                 # akka.cluster.ddata.DurableStore. The class must have a constructor with 
                                 # com.typesafe.config.Config parameter.
-                                store-actor-class = ""
+                                store-actor-class = "Akka.DistributedData.LightningDB.LmdbDurableStore, Akka.DistributedData.LightningDB"
 
                                 use-dispatcher = akka.cluster.distributed-data.durable.pinned-store
 
@@ -353,33 +381,34 @@ module Node =
                                     executor = thread-pool-executor
                                     type = PinnedDispatcher
                                 }
-                            }
-                            lmdb {
-                                # Directory of LMDB file. There are two options:
-                                # 1. A relative or absolute path to a directory that ends with 'ddata'
-                                #    the full name of the directory will contain name of the ActorSystem
-                                #    and its remote port.
-                                # 2. Otherwise the path is used as is, as a relative or absolute path to
-                                #    a directory.
-                                #
-                                # When running in production you may want to configure this to a specific
-                                # path (alt 2), since the default directory contains the remote port of the
-                                # actor system to make the name unique. If using a dynamically assigned 
-                                # port (0) it will be different each time and the previously stored data 
-                                # will not be loaded.
-                                dir = "ddata"
+                                lmdb {
+                                    # Directory of LMDB file. There are two options:
+                                    # 1. A relative or absolute path to a directory that ends with 'ddata'
+                                    #    the full name of the directory will contain name of the ActorSystem
+                                    #    and its remote port.
+                                    # 2. Otherwise the path is used as is, as a relative or absolute path to
+                                    #    a directory.
+                                    #
+                                    # When running in production you may want to configure this to a specific
+                                    # path (alt 2), since the default directory contains the remote port of the
+                                    # actor system to make the name unique. If using a dynamically assigned 
+                                    # port (0) it will be different each time and the previously stored data 
+                                    # will not be loaded.
+                                    dir = "bin/Debug/net461/ddata"
 
-                                # Size in bytes of the memory mapped file.
-                                map-size = 100 MiB
+                                    # Size in bytes of the memory mapped file.
+                                    #map-size = 100 MiB
+                                    map-size = 100000000
 
-                                # Accumulate changes before storing improves performance with the
-                                # risk of losing the last writes if the JVM crashes.
-                                # The interval is by default set to 'off' to write each update immediately.
-                                # Enabling write behind by specifying a duration, e.g. 200ms, is especially 
-                                # efficient when performing many writes to the same key, because it is only 
-                                # the last value for each key that will be serialized and stored.  
-                                # write-behind-interval = 200 ms
-                                write-behind-interval = off
+                                    # Accumulate changes before storing improves performance with the
+                                    # risk of losing the last writes if the JVM crashes.
+                                    # The interval is by default set to 'off' to write each update immediately.
+                                    # Enabling write behind by specifying a duration, e.g. 200ms, is especially 
+                                    # efficient when performing many writes to the same key, because it is only 
+                                    # the last value for each key that will be serialized and stored.  
+                                    #write-behind-interval = 200 ms
+                                    write-behind-interval = off
+                                }                                
                             }
                         }                        
                     }
@@ -393,7 +422,8 @@ module Node =
                 |> Configuration.parse
     
         let system = config//.WithFallback (DistributedPubSub.DefaultConfig())
-                        |> System.create systemName 
+                        //|> System.create systemName 
+                        |> createSystem systemName 
         {   Endpoint = endpoint
             System = system
             Mat = system.Materializer()

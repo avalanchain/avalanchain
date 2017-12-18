@@ -65,3 +65,4 @@ nuget Suave.Swagger
 
 nuget Spreads = 1.0.0-alpha1
 
+nuget LightningDB = 0.10.0

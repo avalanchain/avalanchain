@@ -95,4 +95,11 @@ module Chains =
 
     let readJournal system = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
 
+    let currentEventsSource<'T> keypair system pid from count = 
+        (readJournal system).CurrentEventsByPersistenceId(pid, from, from + count) 
+        |> Source.map(fun e -> (e.Event :?> 'T) |> toChainItemToken keypair e.SequenceNr) 
+
+    let allEventsSource<'T> keypair system pid from count = 
+        (readJournal system).EventsByPersistenceId(pid, from, from + count) 
+        |> Source.map(fun e -> (e.Event :?> 'T) |> toChainItemToken keypair e.SequenceNr) 
     

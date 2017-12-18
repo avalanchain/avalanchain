@@ -31,6 +31,7 @@ open Avalanchain.Node.Network
 
 open Chains
 open ChainDefs
+open DData
 
 [<EntryPoint>]
 let main argv =
@@ -62,32 +63,7 @@ let main argv =
     let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 1000
 
-    let cluster = Cluster.Get node1.System
-    let ddata = DistributedData.Get node1.System
 
-    // some helper functions
-    let (++) set e = ORSet.add cluster e set
-
-    // initialize set
-    // let set = [ for i in 0 .. 9999 -> i ] |> List.fold (++) ORSet.empty
-    let set = chainDefs |> List.fold (++) ORSet.empty
-
-    let key = ORSet.key "chainDefs"
-
-    // write that up in replicator under key 'test-set'
-    ddata.AsyncUpdate(key, set, writeLocal)
-    |> Async.RunSynchronously
-
-    // read data 
-    let cds = async {   let! reply = ddata.AsyncGet(key, readLocal)
-                        match reply with
-                        | Some value -> printfn "Data for key %A: %A" key value
-                        | None -> printfn "Data for key '%A' not found" key
-                        return reply
-                    } |> Async.RunSynchronously
-
-    // delete data 
-    ddata.AsyncDelete(key, writeLocal) |> Async.RunSynchronously
 
 
 
