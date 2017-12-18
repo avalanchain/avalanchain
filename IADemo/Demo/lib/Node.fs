@@ -166,7 +166,7 @@ module Node =
 
                 			# connection string used for database access
                             # "Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"
-                			connection-string = "Filename=db/streams.db"
+                			connection-string = "Filename=./db/streams.db"
                 			
                 			# connection string name for .config file used when no connection string has been provided
                 			connection-string-name = ""
@@ -214,7 +214,7 @@ module Node =
                 			plugin-dispatcher = "akka.actor.default-dispatcher"
 
                 			# connection string used for database access
-                			connection-string = "Filename=db/snapshots.db"
+                			connection-string = "Filename=./db/snapshots.db"
 
                 			# connection string name for .config file used when no connection string has been provided
                 			connection-string-name = ""
@@ -407,8 +407,8 @@ module Node =
                                     # Enabling write behind by specifying a duration, e.g. 200ms, is especially 
                                     # efficient when performing many writes to the same key, because it is only 
                                     # the last value for each key that will be serialized and stored.  
-                                    #write-behind-interval = 200 ms
-                                    write-behind-interval = off
+                                    write-behind-interval = 200 ms
+                                    #write-behind-interval = off
                                 }                                
                             }
                         }                        

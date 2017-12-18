@@ -63,15 +63,18 @@ let main argv =
     let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 1000
 
+    let persister: IActorRef<PersistMessage<string>> = spawn node1.System "a2" (persistActor 4L)
+
     let transactions = 
         [| for i in 0 .. 999 -> "str" + i.ToString() |] 
         |> Source.ofArray
         |> Source.map (Offer >> Command)
-        |> Source.toMat(persistSink 1000L) Keep.none
+        //|> Source.toMat(persistSink 1000L) Keep.none
+        |> Source.toMat(Sink.toActorRef (null |> Offer |> Command) persister) Keep.none
 
     let ret = transactions |> Graph.run node1.Mat 
 
-    let ids = (readJournal node1.System).CurrentPersistenceIds() |> Source.runWith node1.Mat (Sink.Seq()) |> Async.AwaitTask |> Async.RunSynchronously
+    let ids = (node1.Journal.Value).CurrentPersistenceIds() |> Source.runWith node1.Mat (Sink.Seq()) |> Async.AwaitTask |> Async.RunSynchronously
 
     let events = 
         currentEventsSource keyPair node1.System (ids.[0]) 0L 100L
