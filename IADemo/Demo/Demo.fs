@@ -1,6 +1,7 @@
 module Avalanchain.Demo
 
 open System
+open System.IO
 open Akka.Actor
 open Akka.Configuration
 open Akka.Cluster
@@ -36,6 +37,11 @@ open DData
 [<EntryPoint>]
 let main argv =
     printfn "%A" argv
+
+
+    printfn "Current dir %s" (Directory.GetCurrentDirectory())
+    let cd = Path.Combine(__SOURCE_DIRECTORY__, "bin/Debug/net461")
+    Directory.SetCurrentDirectory(cd)
 
     let keyStorage = fun kid -> { PublicKey = PublicKey "pubKey"; PrivateKey = PrivateKey "privKey"; Kid = kid }
 

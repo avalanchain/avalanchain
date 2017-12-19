@@ -77,8 +77,8 @@ module Chains =
                             //mailbox.Sender() <! retype (state, mailbox.LastSequenceNr)
                             printfn "State for PId '%s', pos: '%A': '%A'" mailbox.Pid (mailbox.LastSequenceNr()) state
                             return! loop state
-                        | Offer v -> return! PersistAsync (Event { Val = v })
-                        | Batch va -> return! (va |> Seq.map (fun v -> Event { Val = v }) |> PersistAllAsync)
+                        | Offer v -> return PersistAsync (Event { Val = v })
+                        | Batch va -> return (va |> Seq.map (fun v -> Event { Val = v }) |> PersistAllAsync)
                         | TakeSnapshot -> 
                             snapshot state
                             return! loop state
