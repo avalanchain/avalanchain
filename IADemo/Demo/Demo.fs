@@ -69,23 +69,27 @@ let main argv =
     let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 1000
 
-    let persister: IActorRef<PersistMessage<string>> = spawn node1.System "a2" (persistActor 4L)
+    //let persister: IActorRef<PersistMessage<string>> = spawn node1.System "a2" (persistActor 4L)
 
-    let transactions = 
+    let transactions system pid = 
         [| for i in 0 .. 999 -> "str" + i.ToString() |] 
         |> Source.ofArray
-        |> Source.map (Offer >> Command)
+        |> Source.map Offer
         //|> Source.toMat(persistSink 1000L) Keep.none
-        |> Source.toMat(Sink.toActorRef (null |> Offer |> Command) persister) Keep.none
+        |> Source.toMat(persistSink system pid 100L) Keep.none
 
-    let ret = transactions |> Graph.run node1.Mat 
+    transactions node1.System "p1" |> Graph.run node1.Mat 
 
     let ids = (node1.Journal.Value).CurrentPersistenceIds() |> Source.runWith node1.Mat (Sink.Seq()) |> Async.AwaitTask |> Async.RunSynchronously
 
     let events = 
         currentEventsSource keyPair node1.System (ids.[0]) 0L 100L
 
-    printfn "Events: %A" events
+    printfn "Events: "
+    
+    events
+    |> Source.runForEach node1.Mat (printfn "El: %A")
+    |> Async.RunSynchronously
 
     //let trs = transactions<string> node1.System
     //trs.Clear() |> Async.RunSynchronously
