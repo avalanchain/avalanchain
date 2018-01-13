@@ -15,6 +15,7 @@
     <Compile Include="lib\Chains.fs" />
     <Compile Include="lib\DData.fs" />
     <Compile Include="lib\Node.fs" />
+    <Compile Include="lib\Chat.fs" />
     <Compile Include="Demo.fs" />
     <None Include="libGen\jwt.fsx" />
     <None Include="libGen\payments.fsx" />

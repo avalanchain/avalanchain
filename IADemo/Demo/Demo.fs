@@ -27,21 +27,44 @@ open Akkling
 open Akkling.DistributedData
 open Akkling.DistributedData.Consistency
 
+open Avalanchain
 open Avalanchain.Node
 open Avalanchain.Node.Network
+open Avalanchain.Chat
 
 open Chains
 open ChainDefs
 open DData
 
+let testPersistentStream node keyPair = 
+    let transactions system pid = 
+        [| for i in 0 .. 999 -> "str" + i.ToString() |] 
+        |> Source.ofArray
+        |> Source.map Offer
+        //|> Source.toMat(persistSink 1000L) Keep.none
+        |> Source.toMat(persistSink system pid 100L) Keep.none
+
+    transactions node.System "p1" |> Graph.run node.Mat 
+
+    let ids = (node.Journal.Value).CurrentPersistenceIds() 
+                |> Source.runWith node.Mat (Sink.Seq()) 
+                |> Async.AwaitTask 
+                |> Async.RunSynchronously
+
+    let events = 
+        currentEventsSource keyPair node.System (ids.[0]) 0L 1000L
+
+    ()
+
+
 [<EntryPoint>]
 let main argv =
     printfn "%A" argv
 
-
     printfn "Current dir %s" (Directory.GetCurrentDirectory())
     let cd = Path.Combine(__SOURCE_DIRECTORY__, "bin/Debug/net461")
     Directory.SetCurrentDirectory(cd)
+    Directory.CreateDirectory("db") |> ignore
 
     let keyStorage = fun kid -> { PublicKey = PublicKey "pubKey"; PrivateKey = PrivateKey "privKey"; Kid = kid }
 
@@ -63,33 +86,99 @@ let main argv =
     // let cdTokenDerived = chain chainDef2
 
     let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
-    // let endpoint2 = { IP = "127.0.0.1"; Port = 5001us }
+    let endpoint2 = { IP = "127.0.0.1"; Port = 5001us }
     // let endpoint3 = { IP = "127.0.0.1"; Port = 5002us }
 
     let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 1000
+    //let ddata = DistributedData.Get node1.System
+    //ddata.Replicator <! Subscribe 
 
-    //let persister: IActorRef<PersistMessage<string>> = spawn node1.System "a2" (persistActor 4L)
+    let node2 = setupNode "ac2" endpoint2 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
+    Threading.Thread.Sleep 1000
 
-    let transactions system pid = 
-        [| for i in 0 .. 999 -> "str" + i.ToString() |] 
-        |> Source.ofArray
-        |> Source.map Offer
-        //|> Source.toMat(persistSink 1000L) Keep.none
-        |> Source.toMat(persistSink system pid 100L) Keep.none
+    //testPersistentStream node keyPair
 
-    transactions node1.System "p1" |> Graph.run node1.Mat 
+    let payments = PaymentAccounts(node1.System)
 
-    let ids = (node1.Journal.Value).CurrentPersistenceIds() |> Source.runWith node1.Mat (Sink.Seq()) |> Async.AwaitTask |> Async.RunSynchronously
+    payments.AddAccount { Ref = { Address = "Addr3" }; Name = "Acc3"; PubKey = PublicKey "PUBKEY3" } |> Async.RunSynchronously
+    payments.AddAccount { Ref = { Address = "Addr4" }; Name = "Acc4"; PubKey = PublicKey "PUBKEY4" } |> Async.RunSynchronously
+    payments.AddAccount { Ref = { Address = "Addr5" }; Name = "Acc5"; PubKey = PublicKey "PUBKEY5" } |> Async.RunSynchronously
+    let accounts = payments.Accounts() |> Async.RunSynchronously |> Seq.toArray
+    printfn "Accounts: %A" accounts
+    let acc = accounts |> Seq.head
+    payments.PostTransaction { From = acc.Ref; To = [| { Ref = accounts.[1].Ref; Amount = 100M }; { Ref = accounts.[2].Ref; Amount = 25M } |]; Dt = DateTimeOffset.Now } |> Async.RunSynchronously
+    let balances = payments.Balances() |> Async.RunSynchronously
+    printfn "Balances: %A" balances
+    for b in balances do printfn "Bal %s %A" b.Key.Address (payments.AddressBalance b.Key.Address |> Async.RunSynchronously)
 
-    let events = 
-        currentEventsSource keyPair node1.System (ids.[0]) 0L 100L
+    //testPersistentStream node keyPair
 
-    printfn "Events: "
-    
-    events
-    |> Source.runForEach node1.Mat (printfn "El: %A")
-    |> Async.RunSynchronously
+    let payments = PaymentAccounts(node2.System)
+
+
+//    let chat = ChatAccounts(node1.System)
+//    let msgs = chat.ChannelMessages "Chan1" |> Async.RunSynchronously
+//    printfn "Messages: %A" msgs
+//    let accounts = chat.Accounts() |> Async.RunSynchronously
+//    printfn "Accounts: %A" accounts
+//    chat.AddAccount { Address = "Addr3"; Name = "Acc3"; PubKey = PublicKey "PUBKEY3" } |> Async.RunSynchronously
+//    let accounts = chat.Accounts() |> Async.RunSynchronously
+//    printfn "Accounts: %A" accounts
+//    let acc = accounts |> Seq.head
+//    chat.PostMessage "Chan1" acc.Address "Kuku" |> Async.RunSynchronously
+//    let msgs = chat.ChannelMessages "Chan1" |> Async.RunSynchronously
+//    printfn "Messages: %A" msgs
+
+//    seq { for i in 1 .. 10000 -> "Kuku " + i.ToString() }
+//    |> chat.PostMessages "Chan1" acc.Address 
+//    |> Async.RunSynchronously
+
+//    let trans = transactionsSet<string> node1.System
+
+//    trans.Add [] |> Async.RunSynchronously
+//    let res = trans.Get() |> Async.RunSynchronously |> ORSet.value
+
+//    printfn "Res0: %A" res
+//    printfn "Res0 Count: %A" res.Count
+
+//    trans.Add [for i in 140000 .. 200000 -> i.ToString()]
+//    |> Async.RunSynchronously
+
+//    let res = trans.Get() |> Async.RunSynchronously
+
+//    printfn "Res: %A" (res |> Seq.sort)
+//    printfn "Res Count: %A" res.Count
+
+    Console.ReadKey() |> ignore
+
+    let accounts = payments.Accounts() |> Async.RunSynchronously |> Seq.toArray
+    printfn "Accounts: %A" accounts
+    payments.AddAccount { Ref = { Address = "Addr7" }; Name = "Acc7"; PubKey = PublicKey "PUBKEY7" } |> Async.RunSynchronously
+    payments.AddAccount { Ref = { Address = "Addr8" }; Name = "Acc8"; PubKey = PublicKey "PUBKEY8" } |> Async.RunSynchronously
+    let accounts = payments.Accounts() |> Async.RunSynchronously |> Seq.toArray
+    printfn "Accounts: %A" accounts
+    let balances = payments.Balances() |> Async.RunSynchronously
+    printfn "Balances: %A" balances
+    for b in balances do printfn "Bal %s %A" b.Key.Address (payments.AddressBalance b.Key.Address |> Async.RunSynchronously)
+    payments.PostTransaction { From = acc.Ref; To = [| { Ref = accounts.[1].Ref; Amount = 150M } |]; Dt = DateTimeOffset.Now } |> Async.RunSynchronously
+    let batch = [| for i in 1 .. 1000 ->
+                    { From = acc.Ref; To = [| { Ref = accounts.[1].Ref; Amount = 150M } |]; Dt = DateTimeOffset.Now } |]
+    for i in 1 .. 10 do
+        printfn "Batch %i starts" i
+        batch |> payments.PostTransactions |> Async.RunSynchronously
+        printfn "Batch %i finished" i
+    let transactions = payments.Transactions() |> Async.RunSynchronously
+    printfn "Transactions: %A" transactions
+    let balances = payments.Balances() |> Async.RunSynchronously
+    printfn "Balances: %A" balances
+
+
+    Console.ReadKey() |> ignore
+
+    //node1.System.Terminate().Wait()
+    0
+
 
     //let trs = transactions<string> node1.System
     //trs.Clear() |> Async.RunSynchronously
@@ -127,4 +216,4 @@ let main argv =
     //|> Async.Start
 
 
-    0 // return an integer exit code
+    // return an integer exit code

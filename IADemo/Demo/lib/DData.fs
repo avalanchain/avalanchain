@@ -27,11 +27,11 @@ module DData =
     open Akkling.DistributedData.Consistency
     
 
-    type ORSetHelper<'T when 'T: null> (system: ActorSystem, key) = 
+    type ORSetHelper<'T> (system: ActorSystem, key) = 
         let cluster = Akka.Cluster.Cluster.Get system
         let ddata = DistributedData.Get system
-
-        let orsetKey = ORSet.key<'T> key //"chainDefs"
+        let replicator = ddata.TypedReplicator
+        let ddKey = ORSet.key<'T> key //"chainDefs"
 
         // some helper functions
         let (++) set e = ORSet.add cluster e set
@@ -45,30 +45,46 @@ module DData =
         //             |> List.map (fun cd -> cd.Token)
         //             |> List.fold (++) ORSet.empty
 
-        member __.Get() = async {   let! result = ddata.AsyncGet(orsetKey, readLocal)
-                                    let! res2 = ddata.GetAsync(orsetKey, readLocal) |> Async.AwaitTask
+        member __.Get() = async {   let! result = ddata.AsyncGet(ddKey) // readAll (TimeSpan.FromSeconds 1.))
+                                    //let! res2 = ddata.GetAsync(orsetKey, readLocal) |> Async.AwaitTask
                                     return result |> Option.defaultValue ORSet.empty }
 
-        member private __.Modify stateUpdater = async { let! state = __.Get()
+        member private __.Modify_ stateUpdater = async {let! state = __.Get()
                                                         let newState = stateUpdater state
-                                                        return! ddata.AsyncUpdate(orsetKey, newState, writeLocal)   }
+                                                        return! ddata.AsyncUpdate(ddKey, newState)   }
 
-        member __.Add items = __.Modify <| fun state -> items |> ORSet.ofSeq cluster |> ORSet.merge state
+        member private __.Modify stateUpdater = 
+            async { let! state = __.Get()
+                    //let newState = stateUpdater state
+                    let doLog = true
+                    let! reply = (retype replicator) <? update stateUpdater writeLocal ORSet<'T>.Empty ddKey
+                    match reply (*.Value*) with
+                    | UpdateSuccess(k, v) ->    if doLog then printfn "State modified for uid '%A'" k
+                                                return ()
+                    | DataDeleted k ->          printfn "State already deleted: '%A'" k
+                                                return ()
+                    | UpdateTimeout k ->        printfn "Update of value for the uid '%A' timed out" k
+                                                return ()   }
 
+
+        member __.Add items = __.Modify <| fun state -> items |> List.fold (++) state
         member __.Remove items = __.Modify <| fun state -> items |> List.fold (--) state
 
         member __.Clear () = __.Modify <| fun state -> ORSet.clear cluster state
 
-        member __.Delete() = ddata.AsyncDelete(orsetKey, writeLocal) 
+        member __.Delete() = ddata.AsyncDelete(ddKey) 
 
-    type GSetHelper<'T when 'T: null> (system: ActorSystem, key) = 
+    type ORSetHelper2<'T> (system: ActorSystem, key) = 
         let cluster = Akka.Cluster.Cluster.Get system
         let ddata = DistributedData.Get system
+        let replicator = ddata.TypedReplicator
 
-        let gsetKey = GSet.key<'T> key 
+        let ddKey = ORSet.key<'T> key //"chainDefs"
 
         // some helper functions
-        let (++) set e = GSet.add e set
+        let (++) set e = ORSet.add cluster e set
+        let (--) set e = ORSet.remove cluster e set
+
 
         // initialize set
         // let set = [ for i in 0 .. 9999 -> i ] |> List.fold (++) ORSet.empty
@@ -77,37 +93,76 @@ module DData =
         //             |> List.map (fun cd -> cd.Token)
         //             |> List.fold (++) ORSet.empty
 
-        member __.Get() = async {   let! result = ddata.AsyncGet(gsetKey, readLocal)
+        member __.Get() = async {   let! result = ddata.GetAsync(ddKey, readLocal) |> Async.AwaitTask
+                                    return result }
+
+        member private __.Modify stateUpdater = async { //let! state = replicator <! Dsl.Update(orsetKey, WriteLocal.Instance, Func<_,_>(fun x -> x.Merge()))
+                                                        let! state = __.Get()
+                                                        let newState = stateUpdater state
+                                                        return! ddata.AsyncUpdate(ddKey, newState, writeLocal)
+                                                        //ddata.Replicator.Tell (Dsl.Update(orsetKey, newState))
+                                                        }
+
+        member __.Add items = __.Modify <| fun state -> items |> ORSet.ofSeq cluster |> ORSet.merge state
+
+        member __.Remove items = __.Modify <| fun state -> items |> List.fold (--) state
+
+        member __.Clear () = __.Modify <| fun state -> ORSet.clear cluster state
+
+        member __.Delete() = ddata.AsyncDelete(ddKey, writeLocal) 
+
+    type GSetHelper<'T> (system: ActorSystem, key) = 
+        let cluster = Akka.Cluster.Cluster.Get system
+        let ddata = DistributedData.Get system
+        let replicator = ddata.TypedReplicator
+        let ddKey = GSet.key<'T> key 
+
+        // some helper functions
+        let (++) set e = GSet.add e set
+
+        member __.Get() = async {   let! result = ddata.AsyncGet(ddKey, readLocal)
                                     return result |> Option.defaultValue GSet.empty }
 
         member private __.Modify stateUpdater = async { let! state = __.Get()
                                                         let newState = stateUpdater state
-                                                        return! ddata.AsyncUpdate(gsetKey, newState, writeLocal)   }
+                                                        do! ddata.AsyncUpdate(ddKey, newState, writeLocal)   }
 
         member __.Add items = __.Modify <| fun state -> items |> GSet.ofSeq |> GSet.merge state
 
-        member __.Delete() = ddata.AsyncDelete(gsetKey, writeLocal) 
+        member __.Delete() = ddata.AsyncDelete(ddKey, writeLocal) 
 
-    // type ORMultiMapHelper<'T when 'T: null> (system: ActorSystem, key) = 
-    //     let cluster = Akka.Cluster.Cluster.Get system
-    //     let ddata = DistributedData.Get system
+    type GCounterHelper (system: ActorSystem, key) = 
+        let cluster = Akka.Cluster.Cluster.Get system
+        let ddata = DistributedData.Get system
+        let ddKey = GCounter.key key 
 
-    //     let orsetKey = ORMultiMap.key key //"chainDefs"
+        member __.Get() = async {   let! result = ddata.AsyncGet(ddKey, readLocal)
+                                    return result |> Option.defaultValue GCounter.empty }
 
-    //     // some helper functions
-    //     let (++) set e = ORSet.add cluster e set
-    //     let (--) set e = ORSet.remove cluster e set
+        member private __.Modify stateUpdater = async { let! state = __.Get()
+                                                        let newState = stateUpdater state
+                                                        return! ddata.AsyncUpdate(ddKey, newState, writeLocal)   }
+
+        member __.Inc () = __.Modify <| GCounter.inc cluster 1UL
+        member __.Inc times = __.Modify <| GCounter.inc cluster times
 
 
-    //     // initialize set
-    //     // let set = [ for i in 0 .. 9999 -> i ] |> List.fold (++) ORSet.empty
+    type ORMultiMapHelper<'K, 'V> (system: ActorSystem, key) = 
+        let cluster = Akka.Cluster.Cluster.Get system
+        let ddata = DistributedData.Get system
+        let ddkey = ORMultiValueDictionaryKey<'K, 'V> key 
 
-    //     // let set = chainDefs 
-    //     //             |> List.map (fun cd -> cd.Token)
-    //     //             |> List.fold (++) ORSet.empty
+        member __.Get() = async {   let! result = ddata.AsyncGet(ddkey)
+                                    return result |> Option.defaultValue ORMultiMap<'K, 'V>.Empty }
+        member __.Modify newState = ddata.AsyncUpdate(ddkey, newState) 
 
-    //     member __.Get() = async {   let! result = ddata.AsyncGet(orsetKey, readLocal)
-    //                                 return result |> Option.defaultValue ORMultiMap.empty }
+        member __.AddItem k v = async { let! state = __.Get()
+                                        return! ORMultiMap.addItem cluster k v state |> __.Modify }
+
+        member __.AddItems kvs = async {let! state = __.Get()
+                                        let newState = kvs |> Seq.fold (fun st (k, v) -> ORMultiMap.addItem cluster k v st) state
+                                        return! newState |> __.Modify }
+
 
     //     member private __.Modify stateUpdater = async { let! state = __.Get()
     //                                                     let newState = stateUpdater state
@@ -122,34 +177,23 @@ module DData =
     //     member __.Delete() = ddata.AsyncDelete(orsetKey, writeLocal)         
     
 
-    let chainDefs system = ORSetHelper(system, "chainDefs")
-
-
-    type PaymentAccountRef = {
-        Address: string
-    }
-
-    type PaymentAmount = decimal
-
-    type PaymentTransaction = {
-        From: PaymentAccountRef
-        To: (PaymentAccountRef * PaymentAmount)[]
-    }
-
-    let transactions system = ORSetHelper(system, "transactions")
-
-    type PaymentAccount = {
-        Ref: PaymentAccountRef
-        // PublicKey: SigningPublicKey
-        Name: string
-        // CryptoContext: CryptoContext
-    }
-
-
-    type PaymentBalances(system: ActorSystem, key) =
+    type LWWMapHelper<'K, 'V> (system: ActorSystem, key) = 
         let cluster = Akka.Cluster.Cluster.Get system
         let ddata = DistributedData.Get system
+        let ddkey: LWWDictionaryKey<'K, 'V> = LWWMap.key key 
 
-        let orsetKey = ORSet.key<'T> key //"chainDefs"    
+        member __.Get() = async {   let! result = ddata.AsyncGet(ddkey)
+                                    return result |> Option.defaultValue LWWMap.empty }
+        member __.Modify newState = ddata.AsyncUpdate(ddkey, newState) 
+
+        member __.AddItem k v = async { let! state = __.Get()
+                                        return! LWWMap.add cluster k v state |> __.Modify }
+
+        member __.AddItems kvs = async {let! state = __.Get()
+                                        let newState = kvs |> Seq.fold (fun st (k, v) -> LWWMap.add cluster k v st) state
+                                        return! newState |> __.Modify }
+
+    let chainDefs system = ORSetHelper(system, "chainDefs")
+
 
 

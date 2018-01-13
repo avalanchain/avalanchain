@@ -277,15 +277,25 @@ module Node =
                         public-hostname = "%s"
                         hostname = "%s"
                         port = %d
-                        maximum-frame-size = 40000000b
+                        maximum-frame-size = 800000000b
+                        }
+                        transport-failure-detector {
+                            heartbeat-interval = 60 s # default 4s
+                            acceptable-heartbeat-pause = 20 s # default 10s
                         }
                     }
                     cluster {
-                        auto-down-unreachable-after = 5s
+                        auto-down-unreachable-after = 240s
                         seed-nodes = %s
-                        distributed-data {
-                            max-delta-elements = 10000
-                        }
+                        #gossip-time-to-live = 10s
+                        #unreachable-nodes-reaper-interval = 10s
+                        #publish-stats-interval = 5s
+                        #failure-detector {
+                        #    heartbeat-interval = 5 s
+                        #    min-std-deviation = 2 s
+                        #    acceptable-heartbeat-pause = 13 s
+                        #    expected-response-after = 10 s
+                        #}
 
                         pub-sub {
                             # Actor name of the mediator actor, /system/distributedPubSubMediator
@@ -311,21 +321,21 @@ module Node =
                         }
                         distributed-data {
                             # Actor name of the Replicator actor, /system/ddataReplicator
-                            name = ddataReplicator
+                            name = acSync
 
                             # Replicas are running on members tagged with this role.
                             # All members are used if undefined or empty.
                             role = ""
 
                             # How often the Replicator should send out gossip information
-                            gossip-interval = 2 s
+                            gossip-interval = 200 ms
 
                             # How often the subscribers will be notified of changes, if any
                             notify-subscribers-interval = 500 ms
 
                             # Maximum number of entries to transfer in one gossip message when synchronizing
                             # the replicas. Next chunk will be transferred in next round of gossip.
-                            max-delta-elements = 1000
+                            max-delta-elements = 10000
 
                             # The id of the dispatcher to use for Replicator actors. If not specified
                             # default dispatcher is used.
@@ -340,7 +350,7 @@ module Node =
                             # This is used when initiating and completing the pruning process of data associated
                             # with removed cluster nodes. The time measurement is stopped when any replica is 
                             # unreachable, so it should be configured to worst case in a healthy cluster.
-                            max-pruning-dissemination = 60 s
+                            max-pruning-dissemination = 260 s
 
                             # Serialized Write and Read messages are cached when they are sent to 
                             # several nodes. If no further activity they are removed from the cache
@@ -351,13 +361,13 @@ module Node =
 
                                 # Some complex deltas grow in size for each update and above this
                                 # threshold such deltas are discarded and sent as full state instead.
-                                max-delta-size = 200  
+                                max-delta-size = 200000  
                             }
 
                             durable {
                                 # List of keys that are durable. Prefix matching is supported by using * at the
                                 # end of a key.  
-                                keys = [ "chainDefs", "transactions" ]
+                                keys = [ "ppchainDefs", "pptransactions", "ppchat*", "pppmt*" ]
 
                                 # The markers of that pruning has been performed for a removed node are kept for this
                                 # time and thereafter removed. If and old data entry that was never pruned is
