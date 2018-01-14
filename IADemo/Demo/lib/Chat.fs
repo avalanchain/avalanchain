@@ -147,36 +147,27 @@ module Chat =
                                                             |> Option.defaultValue 0M
                                                     }
 
-        member __.PostTransaction transaction = async {
-            let st = {  Ref = { TRef = Guid.NewGuid().ToString("N") }
-                        Result = Ok transaction // Add validation
-                        TimeStamp = DateTimeOffset.Now }
-            let! bals = balances.Get()
-            let bals = bals |> ORMultiMap.addItem clusterNode transaction.From st.Ref
-            let bals = transaction.To |> Array.fold (fun bl t -> bl |> ORMultiMap.addItem clusterNode t.Ref st.Ref) bals
-            do! transactions.AddItem st.Ref st
-            do! balances.Modify bals
-        }
-
         member __.PostTransactions trans = async {
-            let items = [| for transaction in trans ->
+            let items = [   for transaction in trans ->
                             let st = {  Ref = { TRef = Guid.NewGuid().ToString("N") }
                                         Result = Ok transaction // Add validation
                                         TimeStamp = DateTimeOffset.Now } 
-                            st.Ref, st |]
-            let! balsU = balances.Get()
-            let mutable items = []
-            let mutable bals = balsU
-            for transaction in trans do 
-                let st = {  Ref = { TRef = Guid.NewGuid().ToString("N") }
-                            Result = Ok transaction // Add validation
-                            TimeStamp = DateTimeOffset.Now }
-                bals <- bals |> ORMultiMap.addItem clusterNode transaction.From st.Ref
-                bals <- transaction.To |> Array.fold (fun bl t -> bl |> ORMultiMap.addItem clusterNode t.Ref st.Ref) bals
-                items <- st :: items
-            do! transactions.AddItems (items |> List.rev |> List.map (fun st -> st.Ref, st))
-            do! balances.Modify bals
+                            st.Ref, st ] 
+            do! transactions.AddItems items 
+            do! balances.Modify <|  fun balsU ->
+                                        let mutable items = items
+                                        let mutable bals = balsU
+                                        for (rf, st) in items do 
+                                            match st.Result with
+                                            | Ok trans ->
+                                                bals <- bals |> ORMultiMap.addItem clusterNode trans.From rf
+                                                bals <- trans.To |> Array.fold (fun bl t -> bl |> ORMultiMap.addItem clusterNode t.Ref rf) bals
+                                            | _ -> ()
+                                        bals
+
         }
+
+        member __.PostTransaction transaction = __.PostTransactions [ transaction ]
                         
             //transactions.Add [transaction]
         //member __.PostMessages channel account messages = 

@@ -367,7 +367,7 @@ module Node =
                             durable {
                                 # List of keys that are durable. Prefix matching is supported by using * at the
                                 # end of a key.  
-                                keys = [ "ppchainDefs", "pptransactions", "ppchat*", "pppmt*" ]
+                                keys = [ "chainDefs", "transactions", "chat*", "pmt*" ]
 
                                 # The markers of that pruning has been performed for a removed node are kept for this
                                 # time and thereafter removed. If and old data entry that was never pruned is
