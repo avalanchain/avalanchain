@@ -131,11 +131,11 @@ module Node =
                                             Akka.NotUsed.Instance)
 
         let topic = "distpubsub"
-        let distPubSubSink<'T, 'mat> system topic = 
+        let distPubSubSink<'T, 'mat> system topic completeMsg = 
             let mediator = DistributedPubSub.Get(system).Mediator |> typed
             Flow.id<'T, 'mat>
             |> Flow.map (fun (msg: 'T) -> Publish(topic, { Message = msg } ))
-            |> Flow.toMat(Sink.toActorRef (Publish(topic, DistPubSubMessage<'T>.Complete)) mediator) Keep.left
+            |> Flow.toMat(Sink.toActorRef (Publish(topic, completeMsg (*DistPubSubMessage<'T>.Complete *) )) mediator) Keep.left
             // |> Flow.toMat(Sink.forEach(fun (msg: 'T) -> mediator <! (Publish(topic, { Message = msg } )))) Keep.left
         
 

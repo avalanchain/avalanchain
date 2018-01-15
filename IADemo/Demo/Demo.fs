@@ -30,6 +30,7 @@ open Akkling.DistributedData.Consistency
 open Avalanchain
 open Avalanchain.Node
 open Avalanchain.Node.Network
+open DistPubSub
 open Avalanchain.Chat
 
 open Chains
@@ -37,24 +38,34 @@ open ChainDefs
 open DData
 
 let testPersistentStream node keyPair = 
+    //let mediator = node.Mediator
+    let topic = "acTokens"
+    let source = distPubSubSource<string> node.System topic OverflowStrategy.DropNew 1000000
+
     let transactions system pid = 
         [| for i in 0 .. 999 -> "str" + i.ToString() |] 
         |> Source.ofArray
         |> Source.map Offer
-        //|> Source.toMat(persistSink 1000L) Keep.none
-        |> Source.toMat(persistSink system pid 100L) Keep.none
+        //|> Source.alsoTo (persistSink system pid 100L)
+        |> Source.toMat(distPubSubSink node.System topic (Offer "complete")) Keep.none
 
     transactions node.System "p1" |> Graph.run node.Mat 
 
-    let ids = (node.Journal.Value).CurrentPersistenceIds() 
-                |> Source.runWith node.Mat (Sink.Seq()) 
-                |> Async.AwaitTask 
-                |> Async.RunSynchronously
+    let printer = source
+                |> Source.runForEach (node.Mat) (printfn "Received AC Token: %A")
+                |> Async.Start
 
-    let events = 
-        currentEventsSource keyPair node.System (ids.[0]) 0L 1000L
 
-    ()
+    //let ids = (node.Journal.Value).CurrentPersistenceIds() 
+    //            |> Source.runWith node.Mat (Sink.Seq()) 
+    //            |> Async.AwaitTask 
+    //            |> Async.RunSynchronously
+
+    //let events = 
+    //    currentEventsSource keyPair node.System (ids.[0]) 0L 1000L
+
+    //()
+    printer
 
 
 [<EntryPoint>]
@@ -90,95 +101,15 @@ let main argv =
     // let endpoint3 = { IP = "127.0.0.1"; Port = 5002us }
 
     let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
-    Threading.Thread.Sleep 1000
+    Threading.Thread.Sleep 3000
     //let ddata = DistributedData.Get node1.System
     //ddata.Replicator <! Subscribe 
 
     let node2 = setupNode "ac2" endpoint2 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 1000
 
-    //testPersistentStream node keyPair
-
-    let payments = PaymentAccounts(node1.System)
-
-    payments.AddAccount { Ref = { Address = "Addr3" }; Name = "Acc3"; PubKey = PublicKey "PUBKEY3" } |> Async.RunSynchronously
-    payments.AddAccount { Ref = { Address = "Addr4" }; Name = "Acc4"; PubKey = PublicKey "PUBKEY4" } |> Async.RunSynchronously
-    payments.AddAccount { Ref = { Address = "Addr5" }; Name = "Acc5"; PubKey = PublicKey "PUBKEY5" } |> Async.RunSynchronously
-    let accounts = payments.Accounts() |> Async.RunSynchronously |> Seq.toArray
-    printfn "Accounts: %A" accounts
-    let acc = accounts |> Seq.head
-    payments.PostTransaction { From = acc.Ref; To = [| { Ref = accounts.[1].Ref; Amount = 100M }; { Ref = accounts.[2].Ref; Amount = 25M } |]; Dt = DateTimeOffset.Now } |> Async.RunSynchronously
-    let balances = payments.Balances() |> Async.RunSynchronously
-    printfn "Balances: %A" balances
-    for b in balances do printfn "Bal %s %A" b.Key.Address (payments.AddressBalance b.Key.Address |> Async.RunSynchronously)
-
-    //testPersistentStream node keyPair
-
-    let payments = PaymentAccounts(node2.System)
-
-
-//    let chat = ChatAccounts(node1.System)
-//    let msgs = chat.ChannelMessages "Chan1" |> Async.RunSynchronously
-//    printfn "Messages: %A" msgs
-//    let accounts = chat.Accounts() |> Async.RunSynchronously
-//    printfn "Accounts: %A" accounts
-//    chat.AddAccount { Address = "Addr3"; Name = "Acc3"; PubKey = PublicKey "PUBKEY3" } |> Async.RunSynchronously
-//    let accounts = chat.Accounts() |> Async.RunSynchronously
-//    printfn "Accounts: %A" accounts
-//    let acc = accounts |> Seq.head
-//    chat.PostMessage "Chan1" acc.Address "Kuku" |> Async.RunSynchronously
-//    let msgs = chat.ChannelMessages "Chan1" |> Async.RunSynchronously
-//    printfn "Messages: %A" msgs
-
-//    seq { for i in 1 .. 10000 -> "Kuku " + i.ToString() }
-//    |> chat.PostMessages "Chan1" acc.Address 
-//    |> Async.RunSynchronously
-
-//    let trans = transactionsSet<string> node1.System
-
-//    trans.Add [] |> Async.RunSynchronously
-//    let res = trans.Get() |> Async.RunSynchronously |> ORSet.value
-
-//    printfn "Res0: %A" res
-//    printfn "Res0 Count: %A" res.Count
-
-//    trans.Add [for i in 140000 .. 200000 -> i.ToString()]
-//    |> Async.RunSynchronously
-
-//    let res = trans.Get() |> Async.RunSynchronously
-
-//    printfn "Res: %A" (res |> Seq.sort)
-//    printfn "Res Count: %A" res.Count
-
+    let pr = testPersistentStream node1 keyPair
     Console.ReadKey() |> ignore
-
-    let accounts = payments.Accounts() |> Async.RunSynchronously |> Seq.toArray
-    printfn "Accounts: %A" accounts
-    payments.AddAccount { Ref = { Address = "Addr7" }; Name = "Acc7"; PubKey = PublicKey "PUBKEY7" } |> Async.RunSynchronously
-    payments.AddAccount { Ref = { Address = "Addr8" }; Name = "Acc8"; PubKey = PublicKey "PUBKEY8" } |> Async.RunSynchronously
-    let accounts = payments.Accounts() |> Async.RunSynchronously |> Seq.toArray
-    printfn "Accounts: %A" accounts
-    let balances = payments.Balances() |> Async.RunSynchronously
-    printfn "Balances: %A" balances
-    for b in balances do printfn "Bal %s %A" b.Key.Address (payments.AddressBalance b.Key.Address |> Async.RunSynchronously)
-    payments.PostTransaction { From = acc.Ref; To = [| { Ref = accounts.[1].Ref; Amount = 150M } |]; Dt = DateTimeOffset.Now } |> Async.RunSynchronously
-    let batch = [| for i in 1 .. 1000 ->
-                    { From = acc.Ref; To = [| { Ref = accounts.[1].Ref; Amount = 150M } |]; Dt = DateTimeOffset.Now } |]
-    for i in 1 .. 10 do
-        printfn "Batch %i starts" i
-        batch |> payments.PostTransactions |> Async.RunSynchronously
-        printfn "Batch %i finished" i
-    let transactions = payments.Transactions() |> Async.RunSynchronously
-    printfn "Transactions: %A" transactions
-    let balances = payments.Balances() |> Async.RunSynchronously
-    printfn "Balances: %A" balances
-
-
-    Console.ReadKey() |> ignore
-
-    //node1.System.Terminate().Wait()
-    0
-
 
     //let trs = transactions<string> node1.System
     //trs.Clear() |> Async.RunSynchronously
@@ -217,3 +148,4 @@ let main argv =
 
 
     // return an integer exit code
+    0
