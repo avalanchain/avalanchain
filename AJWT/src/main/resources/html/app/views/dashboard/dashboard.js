@@ -1,9 +1,9 @@
 ﻿(function () {
     'use strict';
     var controllerId = 'dashboard';
-    angular.module('avalanchain').controller(controllerId, ['$scope', 'common', 'dataservice', '$interval', dashboard]);
+    angular.module('avalanchain').controller(controllerId, ['$scope', 'common', 'dataservice', '$interval','$rootScope', dashboard]);
 
-    function dashboard($scope, common, dataservice, $interval) {
+    function dashboard($scope, common, dataservice, $interval, $rootScope) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -102,11 +102,34 @@
             vm.currencies = angular.copy(vm.yahoodata);
         }
 
+        vm.accountsCount = 0;
         activate();
 
         function activate() {
-            common.activateController([getData(dataservice, vm)], controllerId)
+            common.activateController([getData()], controllerId)
                 .then(function () { log('Activated Dashboard') });//log('Activated Admin View');
+        }
+
+        function getData() {
+            vm.yahoodata = [];
+            dataservice.getYahoo(vm);
+            vm.startTimer();
+            // setInterval(function updateRandom() {
+            //
+            // }, 500);
+            if(!$rootScope.mdata.accounts.length){
+                getAccounts();
+
+            }
+        }
+        function getAccounts() {
+
+            dataservice.getAccs().then(function(data) {
+                $rootScope.mdata.accounts = data.data;
+                vm.accountsCount = Object.keys($rootScope.mdata.accounts).length;
+            });
+
+
         }
     };
 
@@ -122,16 +145,6 @@
         return dat;
     }
 
-    function getData(dataservice, vm) {
-        vm.yahoodata = [];
-        dataservice.getYahoo(vm);
-        vm.startTimer();
-        // setInterval(function updateRandom() {
-        //
-        // }, 500);
-
-
-    }
 
     function getDates(startDate, stopDate) {
         var dateArray = new Array();

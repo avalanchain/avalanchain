@@ -68,7 +68,7 @@
                 //vm.messages = data.messages;
             }
         }
-        
+
         function sendMessage(mes) {
             var message = {msg:mes};
             return dataProvider.post({}, '/v1/chat/newMessage', message,
@@ -338,9 +338,10 @@
         }
 
 
-        function getYData() {
-            var url = "http://query.yahooapis.com/v1/public/yql";
-            var symbol = '"EURUSD","USDEUR", "USDJPY", "USDGBP", "USDAUD", "USDCHF", "USDSEK", "USDNOK", "USDRUB", "USDTRY", "USDBRL", "USDCAD", "USDCNY", "USDHKD", "USDINR", "USDKRW", "USDMXN", "USDNZD", "USDSGD", "USDZAR"';
+        function getYData1() {
+            var url = "https://query.yahooapis.com/v1/public/yql";
+            //var symbol = '"EURUSD","USDEUR", "USDJPY", "USDGBP", "USDAUD", "USDCHF", "USDSEK", "USDNOK", "USDRUB", "USDTRY", "USDBRL", "USDCAD", "USDCNY", "USDHKD", "USDINR", "USDKRW", "USDMXN", "USDNZD", "USDSGD", "USDZAR"';
+            var symbol = '"EURUSD","USDEUR", "USDJPY", "USDGBP"';
             var data = encodeURIComponent("select * from yahoo.finance.xchange where pair in (symbol)");
             data = data.replace("symbol", symbol);
             /*
@@ -352,10 +353,177 @@
             var sc = {};
 
 
-            return dataProvider.get(sc, str1, function (data, status) {
+            return dataProvider.get(sc, str1, function(data, status) {
+                //$scope.GetAllProgresses = data;
+            });
+            //"AUD", "CHF", "SEK", "NOK", "RUB", "TRY", "BRL", "CAD", "CNY", "HKD", "INR", "KRW", "MXN", "NZD", "SGD", "ZAR"
+        }
+        function getYData() {
+            var defer = $q.defer();
+            var rates = {
+                "EUR": 1/(1.1795),
+                "GBP": 0.88208,
+                "JPY": 132.66,
+                "USD": 1.1795,
+                "AUD": 1.4373,
+                "BRL": 3.3784,
+                "CAD": 1.3894,
+                "CHF": 1.0707,
+                "CNY": 7.2382,
+                "HKD": 8.0948,
+                "INR": 71.039,
+                "KRW": 1251.9,
+                "MXN": 22.071,
+                "NOK": 8.9905,
+                "NZD": 1.5024,
+                "RUB": 63.408,
+                "SEK": 9.5238,
+                "SGD": 1.5047,
+                "TRY": 3.7387,
+                "ZAR": 14.241
+            };
+            var dt = [];
+
+            for (var name in rates) {
+                if (rates.hasOwnProperty(name)) {
+                    var erate = rates[name] * 0.01 * Math.random();
+                    var main = name === 'EUR' ? 'USD' : 'EUR';
+                    dt.push({
+                        Ask: (rates[name] + erate).toFixed(4),
+                        Bid: (rates[name] - erate).toFixed(4),
+                        Rate: (rates[name] + erate).toFixed(4),
+                        Name: main + '/' + name,
+                        Time: getTime(new Date()),
+                        Date: new Date()
+                    });
+                }
+            }
+            //for (var i = 1; i <= rates.length; i++) {
+            //    var erate =  rates['USD'] * 0.01 * Math.random();
+            //    dt.push({
+            //        Ask: (rates['USD'] + erate).toFixed(4),
+            //        Bid: (rates['USD'] - erate).toFixed(4),
+            //        Rate: (rates['USD'] + erate).toFixed(4),
+            //        Name: 'EUR' + '/' + 'USD',
+            //        Time: getTime(new Date()),
+            //        Date: new Date()
+            //});
+            //     var grate = rates['GBP'] * 0.01 * Math.random();
+            //    dt.push({
+            //        Ask: (rates['GBP'] + grate).toFixed(4),
+            //        Bid: (rates['GBP'] - grate).toFixed(4),
+            //        Rate: (rates['GBP'] + grate).toFixed(4),
+            //        Name: 'EUR' + '/' + 'GBP',
+            //        Time: getTime(new Date()),
+            //        Date: new Date()
+            //    });
+            //    var jrate = rates['JPY'] * 0.01 * Math.random();
+            //    dt.push({
+            //        Ask: (rates['JPY'] + jrate).toFixed(4),
+            //        Bid: (rates['JPY'] - jrate).toFixed(4),
+            //        Rate: (rates['JPY'] + jrate).toFixed(4),
+            //        Name: 'EUR' + '/' + 'JPY',
+            //        Time: getTime(new Date()),
+            //        Date: new Date()
+            //    });
+            //    var urate = rates['EUR'] * 0.01 * Math.random();
+            //    dt.push({
+            //        Ask: (rates['EUR'] + urate).toFixed(4),
+            //        Bid: (rates['EUR'] - urate).toFixed(4),
+            //        Rate: (rates['EUR'] + urate).toFixed(4),
+            //        Name: 'USD' + '/' + 'EUR',
+            //        Time: getTime(new Date()),
+            //        Date: new Date()
+            //    });
+            // };
+
+            $timeout(function() {
+                    defer.resolve(dt);
+                },
+                200);
+
+            return defer.promise;
+        }
+        function getPrices(currency) {
+            if (!currency)
+                currency = 'USD';
+
+            var url = "https://min-api.cryptocompare.com/data/price?fsym=" + currency + "&tsyms=BTC,ETH,EUR,LTC";
+
+            var sc = {};
+
+
+            return dataProvider.get(sc, url, function(data, status) {
                 //$scope.GetAllProgresses = data;
             });
 
+        }
+
+        function getTime(d) {
+            var seconds = d.getSeconds() < 10 ? '0' + d.getSeconds() : d.getSeconds();
+            return d.getHours() + ":" + d.getMinutes() + ":" + seconds;
+        }
+
+        function msToTime(s) {
+
+            // Pad to 2 or 3 digits, default is 2
+            function pad(n, z) {
+                z = z || 2;
+                return ('00' + n).slice(-z);
+            }
+
+            var ms = s % 1000;
+            s = (s - ms) / 1000;
+            var secs = s % 60;
+            s = (s - secs) / 60;
+            var mins = s % 60;
+            var hrs = (s - mins) / 60;
+
+            return pad(hrs) + ':' + pad(mins) + ':' + pad(secs) + '.' + pad(ms, 3);
+        }
+
+
+        function mapping(data, $scope){
+            for (var i = 0; i < data.length; i++) {
+                var from = mapvalues(data[i].Name.split('/')[1]);
+                var to = mapvalues(data[i].Name.split('/')[0]);
+                data[i].Name = from + '/' + to;
+                data[i].id = from +  to;
+                if($scope.prices && from!='USD'){
+                    var delta = (data[i].Ask - data[i].Bid).toFixed(7);
+                    data[i].Ask = Number(1/$scope.prices[from]) + Number(delta);
+                    data[i].Bid = Number(1/$scope.prices[from]) - Number(delta);
+                    data[i].Ask = (data[i].Ask).toFixed(2);
+                    data[i].Bid = (data[i].Bid).toFixed(2);
+                }else{
+                    var delta = ((data[i].Ask - data[i].Bid)/100).toFixed(7);
+                    data[i].Ask = Number($scope.prices[to]) + Number(delta);
+                    data[i].Bid = Number($scope.prices[to]) - Number(delta);
+                    data[i].Ask = (data[i].Ask).toFixed(7);
+                    data[i].Bid = (data[i].Bid).toFixed(7);
+                }
+
+            }
+            return data;
+        }
+
+        function mapvalues(value){
+            var val = value;
+            // str = str.replace(/abc/g, '');
+            switch (value) {
+                case 'JPY':
+                    val = 'LTC';
+                    break;
+                case "EUR":
+                    val = 'BTC';
+                    break;
+                case 'GBP':
+                    val = 'ETH';
+                    break;
+                // default:
+                //   alert( 'Я таких значений не знаю' );
+            }
+            return val;
         }
 
         function addCluster() {

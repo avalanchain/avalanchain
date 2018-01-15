@@ -8,7 +8,7 @@
         var log = getLogFn(controllerId);
 
         this.info = 'quoka trader';
-        this.helloText = 'Welcome in Avalanchain';
+        this.helloText = 'Welcome in smartmoney';
         this.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         $scope.datayahoo = [];
         $scope.quoka = 0;
@@ -128,9 +128,15 @@
             return user;
         }
         function getData() {
+            //return dataservice.getYData().then(function (data) {
+            //    $scope.quoka = dataservice.getQuoka(data.data.query.results.rate);
+            //    $scope.users = addAmount(data.data.query.results.rate);
+            //});
             return dataservice.getYData().then(function (data) {
-                $scope.quoka = dataservice.getQuoka(data.data.query.results.rate);
-                $scope.users = addAmount(data.data.query.results.rate);
+                if (data.length > 0) {
+                    $scope.quoka = dataservice.getQuoka(data);
+                    $scope.users = addAmount(data);
+                }
             });
         }
         activate();

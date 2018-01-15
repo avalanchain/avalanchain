@@ -8,7 +8,7 @@
         var log = getLogFn(controllerId);
         var vm = this;
         vm.info = 'Quoka Dashboard';
-        vm.helloText = 'Welcome in Avalanchain';
+        vm.helloText = 'Welcome in smartmoney';
         vm.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         var currencies = dataservice.commondata().currencies();
         var percentage = dataservice.commondata().percentage();
@@ -49,115 +49,115 @@
         //  setInterval(function updateRandom() {
         //      getMessageCount();
         //  }, 3000);
-         $scope.min = 34.40;
-         var lineAreaOptions = {
-             series: {
-                 lines: {
-                     show: true,
-                     lineWidth: 2,
-                     fill: true,
-                     fillColor: {
-                         colors: [
-                             {
-                                 opacity: 0.7
-                             },
-                             {
-                                 opacity: 0.5
-                             }
-                         ]
-                     }
-                 }
-             },
-             xaxis:{
-                  tickDecimals: 0
-              },
-              xaxes:
-
-            [
-                {
-                    mode: 'time'
+        $scope.min = 30.40;
+        var lineAreaOptions = {
+            series: {
+                lines: {
+                    show: true,
+                    lineWidth: 2,
+                    fill: true,
+                    fillColor: {
+                        colors: [
+                            {
+                                opacity: 0.7
+                            },
+                            {
+                                opacity: 0.5
+                            }
+                        ]
+                    }
                 }
-            ],
-             yaxis: {
-                 min: $scope.min
-             },
-             //yaxis: { min: 37.27, ticks: [37.275, 37.300, 37.325, 37.350, 37.375, 37.400, 37.425, 37.450, 37.475, 37.500, 37.525] },
-             colors: ["#ed5565"],
-             grid: {
-                 color: "#999999",
-                 hoverable: true,
-                 clickable: true,
-                 tickColor: "#D4D4D4",
-                 borderWidth: 0
-             },
-             legend: {
-                 show: false
-             },
-             tooltip: true,
-             tooltipOpts: {
-                 content: "time: %x, quoka: %y",
+            },
+            xaxis:{
+                tickDecimals: 0
+            },
+            xaxes:
+
+                [
+                    {
+                        mode: 'time'
+                    }
+                ],
+            yaxis: {
+                min: $scope.min
+            },
+            //yaxis: { min: 37.27, ticks: [37.275, 37.300, 37.325, 37.350, 37.375, 37.400, 37.425, 37.450, 37.475, 37.500, 37.525] },
+            colors: ["#ed5565"],
+            grid: {
+                color: "#999999",
+                hoverable: true,
+                clickable: true,
+                tickColor: "#D4D4D4",
+                borderWidth: 0
+            },
+            legend: {
+                show: false
+            },
+            tooltip: true,
+            tooltipOpts: {
+                content: "time: %x, quoka: %y",
                 //  xDateFormat: "%d-%m-%y",
-             }
-         };
+            }
+        };
         var dataF = [
-            [new Date(), 37.475], [new Date(), 37.48], [new Date(), 37.495], [new Date(), 37.47], [new Date(), 37.485], [new Date(), 37.47], [new Date(), 37.495], [new Date(), 37.47], [new Date(), 37.485], [new Date(), 37.475],  [new Date(), 37.49], [new Date(), 37.495], [13, 37.49]
+            [new Date(), 31.475], [new Date(), 32.48], [new Date(), 32.495], [new Date(), 32.47], [new Date(), 32.485], [new Date(), 32.47], [new Date(), 32.495], [new Date(), 32.47], [new Date(), 32.485], [new Date(), 32.475],  [new Date(), 32.49], [new Date(), 32.495], [13, 32.49]
         ];
-         var lineAreaData = [
-             {
-                 label: "line",
-                 data: dataF
-             }
-         ];
-         $scope.flotLineAreaOptions = lineAreaOptions;
-         $scope.flotLineAreaData = lineAreaData;
-         var container = $("#flot-line-chart-moving");
-         var maximum = container.outerWidth() / 2 || 300;
+        var lineAreaData = [
+            {
+                label: "line",
+                data: dataF
+            }
+        ];
+        $scope.flotLineAreaOptions = lineAreaOptions;
+        $scope.flotLineAreaData = lineAreaData;
+        var container = $("#flot-line-chart-moving");
+        var maximum = container.outerWidth() / 2 || 300;
 
-         function getRandomData() {
+        function getRandomData() {
 
-             if (dataF.length) {
-                 dataF = dataF.slice(1);
-                 }
+            if (dataF.length) {
+                dataF = dataF.slice(1);
+            }
 
-             while (dataF.length < maximum) {
-                 var previous = dataF.length ? dataF[dataF.length - 1] : 38;
-                     var y = previous + Math.random() * 10 - 5;
-                     dataF.push(y < 37 ? 37.1 : y > 38 ? 38 : y);
-                 }
+            while (dataF.length < maximum) {
+                var previous = dataF.length ? dataF[dataF.length - 1] : 38;
+                var y = previous + Math.random() * 10 - 5;
+                dataF.push(y < 37 ? 37.1 : y > 38 ? 38 : y);
+            }
 
-                 // zip the generated y values with the x values
+            // zip the generated y values with the x values
 
-                 var res = [];
-                 for (var i = 0; i < dataF.length; ++i) {
-                     res.push([i, dataF[i]]);
-                 }
+            var res = [];
+            for (var i = 0; i < dataF.length; ++i) {
+                res.push([i, dataF[i]]);
+            }
 
-                 return res;
-         }
+            return res;
+        }
         //unused
-         $scope.payment = {
-             fromAcc: {},
-             toAcc: {}
-         };
+        $scope.payment = {
+            fromAcc: {},
+            toAcc: {}
+        };
 
-         $scope.openModal = function (currency, action) {
-             //var m = new Mnemonic(96);
-             $rootScope.modal = {
-                 payment: $scope.payment,
-                 currency: currency,
-                 action: action,
-                 balance: 300,
-                 quoka: $scope.quoka,
-                 amount: 10,
-                 from: currency.Name.split('/')[0],
-                 to: currency.Name.split('/')[1],
-             }
+        $scope.openModal = function (currency, action) {
+            //var m = new Mnemonic(96);
+            $rootScope.modal = {
+                payment: $scope.payment,
+                currency: currency,
+                action: action,
+                balance: 300,
+                quoka: $scope.quoka,
+                amount: 10,
+                from: currency.Name.split('/')[0],
+                to: currency.Name.split('/')[1],
+            }
 
-             var modalInstance = $uibModal.open({
-                 templateUrl: '/Content/views/dashboard/quoka_payment.html',
-                 controller: modalCtrl
-             });
-         };
+            var modalInstance = $uibModal.open({
+                templateUrl: '/Content/views/dashboard/quoka_payment.html',
+                controller: modalCtrl
+            });
+        };
 
 
         var data = {
@@ -175,37 +175,37 @@
         vm.data = data;
 
         var data1 = [
-        [gd(2012, 1, 1), 7],
-        [gd(2012, 1, 2), 6],
-        [gd(2012, 1, 3), 4],
-        [gd(2012, 1, 4), 8],
-        [gd(2012, 1, 5), 9],
-        [gd(2012, 1, 6), 7],
-        [gd(2012, 1, 7), 5],
-        [gd(2012, 1, 8), 4],
-        [gd(2012, 1, 9), 7],
-        [gd(2012, 1, 10), 8],
-        [gd(2012, 1, 11), 9],
-        [gd(2012, 1, 12), 6],
-        [gd(2012, 1, 13), 4],
-        [gd(2012, 1, 14), 5],
-        [gd(2012, 1, 15), 11],
-        [gd(2012, 1, 16), 8],
-        [gd(2012, 1, 17), 8],
-        [gd(2012, 1, 18), 11],
-        [gd(2012, 1, 19), 11],
-        [gd(2012, 1, 20), 6],
-        [gd(2012, 1, 21), 6],
-        [gd(2012, 1, 22), 8],
-        [gd(2012, 1, 23), 11],
-        [gd(2012, 1, 24), 13],
-        [gd(2012, 1, 25), 7],
-        [gd(2012, 1, 26), 9],
-        [gd(2012, 1, 27), 9],
-        [gd(2012, 1, 28), 8],
-        [gd(2012, 1, 29), 5],
-        [gd(2012, 1, 30), 8],
-        [gd(2012, 1, 31), 25]
+            [gd(2012, 1, 1), 7],
+            [gd(2012, 1, 2), 6],
+            [gd(2012, 1, 3), 4],
+            [gd(2012, 1, 4), 8],
+            [gd(2012, 1, 5), 9],
+            [gd(2012, 1, 6), 7],
+            [gd(2012, 1, 7), 5],
+            [gd(2012, 1, 8), 4],
+            [gd(2012, 1, 9), 7],
+            [gd(2012, 1, 10), 8],
+            [gd(2012, 1, 11), 9],
+            [gd(2012, 1, 12), 6],
+            [gd(2012, 1, 13), 4],
+            [gd(2012, 1, 14), 5],
+            [gd(2012, 1, 15), 11],
+            [gd(2012, 1, 16), 8],
+            [gd(2012, 1, 17), 8],
+            [gd(2012, 1, 18), 11],
+            [gd(2012, 1, 19), 11],
+            [gd(2012, 1, 20), 6],
+            [gd(2012, 1, 21), 6],
+            [gd(2012, 1, 22), 8],
+            [gd(2012, 1, 23), 11],
+            [gd(2012, 1, 24), 13],
+            [gd(2012, 1, 25), 7],
+            [gd(2012, 1, 26), 9],
+            [gd(2012, 1, 27), 9],
+            [gd(2012, 1, 28), 8],
+            [gd(2012, 1, 29), 5],
+            [gd(2012, 1, 30), 8],
+            [gd(2012, 1, 31), 25]
         ];
 
         var data2 = [
@@ -397,24 +397,37 @@
         function getData(data) {
 
             if (dataF.length) {
-                dataF = dataF.slice(1);
+                dataF.shift(); //.slice(1);
             }
-
-            dataF.push([dataF.length, $scope.quoka]);
-            var res = [];
             var date = new Date();
+            var dt = date.setSeconds(date.getSeconds() + 1);
+            dataF.push([dt, $scope.quoka]);
+            //dataF.push([dataF.length, $scope.quoka]);
+
+            var res = [];
+            var arr = [];
+            date = new Date();
             for (var i = 0; i < dataF.length; ++i) {
-              var dt = date.setSeconds(date.getSeconds() + 1);
+                dt = date.setSeconds(date.getSeconds() + 1);
                 res.push([dt, dataF[i][1]]);
+                arr.push(dataF[i][1]);
             }
             //dataF = res;
+            $scope.flotLineAreaOptions.yaxis.min = Math.min.apply(null, arr)-0.5;
             return res;
         }
         function getMessageCount() {
+            //return dataservice.getYData().then(function (data) {
+            //    $scope.datayahoo = addStatus(data.data.query.results.rate);
+            //    $scope.quoka = dataservice.getQuoka($scope.datayahoo);
+            //    $scope.flotLineAreaData[0].data = getData($scope.flotLineAreaData[0].data);
+            //});
             return dataservice.getYData().then(function (data) {
-                $scope.datayahoo = addStatus(data.data.query.results.rate);
-                $scope.quoka = dataservice.getQuoka($scope.datayahoo);
-                $scope.flotLineAreaData[0].data = getData($scope.flotLineAreaData[0].data);
+                if (data.length > 0) {
+                    $scope.datayahoo = addStatus(data);
+                    $scope.quoka = dataservice.getQuoka(data);
+                    $scope.flotLineAreaData[0].data = getData($scope.flotLineAreaData[0].data);
+                }
             });
         }
     };

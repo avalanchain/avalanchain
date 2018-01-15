@@ -6,10 +6,9 @@
     function trader(common, $scope, dataservice) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
+        var vm = this;
+        vm.info = 'trader';
 
-        this.info = 'quoka trader';
-        this.helloText = 'Welcome in Avalanchain';
-        this.descriptionText = 'CASCADING REACTIVE BLOCKCHAINS';
         $scope.datayahoo = [];
         $scope.users = [1, 2, 3, 4];
         $scope.amount1 = [1000, 2100, 3330, 400];
@@ -18,6 +17,10 @@
         $scope.transactionPage = 1;
         $scope.isEdit = false;
 
+        // dataservice.getPrices().then(function (data) {
+        //     if(data.status==200)
+        //         $scope.prices = data.data;
+        // });
         setInterval(function updateRandom() {
             if (!$scope.isEdit)
                 getData();
@@ -47,7 +50,6 @@
         function addAmount(data) {
             var isFirst = $scope.users[0]["max"] >= 0 ? false : true;
             if (data) {
-
                 for (var i = 0; i < $scope.amount2.length; i++) {
                     if (dataprev.length === 0) dataprev = data;
 
@@ -121,7 +123,10 @@
 
         function getData() {
             return dataservice.getYData().then(function (data) {
-                $scope.users = addAmount(data.data.query.results.rate);
+                if (data.length > 0) {
+                    //var dt = dataservice.mapping(data.rate, $scope);
+                    $scope.users = addAmount(data);
+                }
             });
         }
         activate();
@@ -129,7 +134,12 @@
             common.activateController([getData()], controllerId)
                 .then(function () { log('Activated trader') });//log('Activated Admin View');
         }
+
+
+
     };
+
+
 
 
 })();
