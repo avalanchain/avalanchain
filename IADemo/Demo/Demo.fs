@@ -36,24 +36,32 @@ open Avalanchain.Chat
 open Chains
 open ChainDefs
 open DData
+open System.Threading
 
-let testPersistentStream node keyPair = 
+let testPersistentStream node endpoint keyPair = 
     //let mediator = node.Mediator
     let topic = "acTokens"
-    let source = distPubSubSource<string> node.System topic OverflowStrategy.DropNew 1000000
-
-    let transactions system pid = 
-        [| for i in 0 .. 999 -> "str" + i.ToString() |] 
-        |> Source.ofArray
-        |> Source.map Offer
-        //|> Source.alsoTo (persistSink system pid 100L)
-        |> Source.toMat(distPubSubSink node.System topic (Offer "complete")) Keep.none
-
-    transactions node.System "p1" |> Graph.run node.Mat 
+    let source = distPubSubSource<PersistCommand<JwtToken<string>>> node.System topic OverflowStrategy.DropNew 1000000
 
     let printer = source
+                |> Source.alsoToMat (persistSink<JwtToken<string>> node.System "processed" 500L) Keep.none
                 |> Source.runForEach (node.Mat) (printfn "Received AC Token: %A")
                 |> Async.Start
+
+    printfn "Press any key when ready, 'C' for exit"
+    
+    let mutable iteration = 0L
+    while ['C'; 'c'] |> List.contains (Console.ReadKey() |> fun c -> c.KeyChar) |> not do
+        let transactions system pid = 
+            [| for i in 1L .. 1000L -> iteration * 1000L + i |] 
+            |> Source.ofArray
+            |> Source.map (fun i -> "node_" + endpoint.Port.ToString() + "_" + i.ToString() |> toChainToken keyPair i |> Offer)
+            |> Source.alsoTo (persistSink system pid 500L)
+            |> Source.toMat(distPubSubSink node.System topic (Offer "complete")) Keep.none
+
+        transactions node.System "orders" |> Graph.run node.Mat 
+        iteration <- iteration + 1L
+
 
 
     //let ids = (node.Journal.Value).CurrentPersistenceIds() 
@@ -75,7 +83,6 @@ let main argv =
     printfn "Current dir %s" (Directory.GetCurrentDirectory())
     let cd = Path.Combine(__SOURCE_DIRECTORY__, "bin/Debug/net461")
     Directory.SetCurrentDirectory(cd)
-    Directory.CreateDirectory("db") |> ignore
 
     let keyStorage = fun kid -> { PublicKey = PublicKey "pubKey"; PrivateKey = PrivateKey "privKey"; Kid = kid }
 
@@ -97,55 +104,20 @@ let main argv =
     // let cdTokenDerived = chain chainDef2
 
     let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
-    let endpoint2 = { IP = "127.0.0.1"; Port = 5001us }
-    // let endpoint3 = { IP = "127.0.0.1"; Port = 5002us }
+    let endpoint2 = { IP = "127.0.0.1"; Port = 0us }
 
-    let node1 = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
+    let isMaster = argv.Length = 0
+
+    let endpoint =  if isMaster then endpoint1 
+                    else
+                        let (parsed, port) = argv.[0] |> UInt16.TryParse 
+                        { endpoint2 with Port = if parsed then port else (new Random()).Next(6000, 7000) |> uint16 }
+
+    let node = setupNode "ac" endpoint [endpoint1] (OverflowStrategy.DropNew) 1000 // None
     Threading.Thread.Sleep 3000
-    //let ddata = DistributedData.Get node1.System
-    //ddata.Replicator <! Subscribe 
 
-    let node2 = setupNode "ac2" endpoint2 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
-    Threading.Thread.Sleep 1000
-
-    let pr = testPersistentStream node1 keyPair
+    let pr = testPersistentStream node endpoint keyPair 
+    
     Console.ReadKey() |> ignore
 
-    //let trs = transactions<string> node1.System
-    //trs.Clear() |> Async.RunSynchronously
-    //[ for i in 0 .. 999 -> "str" + i.ToString() ] 
-    //|> trs.Add 
-    //|> Async.RunSynchronously
-    //let trsI1 = trs.Get() |> Async.RunSynchronously
-    //printfn "trs1 %A"
-
-
-    //let node2 = setupNode endpoint2 [endpoint2]
-    //Threading.Thread.Sleep 2000
-
-    //let node3 = setupNode endpoint3 [endpoint1; endpoint2]
-
-
-
-    //let source = distPubSub<string> node1 topic OverflowStrategy.DropNew 1000000
-
-    //source
-    //|> Source.runForEach mat (printfn "Piu: %A")
-    //|> Async.Start
-
-    //let mediator2 = DistributedPubSub.Get(node2).Mediator
-    //mediator2.Tell(Publish(topic, { Message = "msg 2" }))
-
-
-    //let mediator3 = DistributedPubSub.Get(node3).Mediator
-    //mediator3.Tell(Publish(topic, { Message = "msg 3" } ))
-
-    //let source3 = distPubSub<string> node3 topic OverflowStrategy.DropNew 1000000
-
-    //source3
-    //|> Source.runForEach mat (printfn "Piu: %A")
-    //|> Async.Start
-
-
-    // return an integer exit code
     0

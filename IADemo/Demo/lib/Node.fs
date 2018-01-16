@@ -146,8 +146,9 @@ module Node =
                         |> fun l -> "[" + String.Join(", ", l) + "]"
         printfn "%s" seedNodes
 
-        //let dbFolder = "./" + nodeName + "/db"
-        let dbFolder = "db"
+        let dbFolder = "./db_" + nodeName + "_" + endpoint.Port.ToString()
+        IO.Directory.CreateDirectory dbFolder |> ignore
+        //let dbFolder = "db"
         let sqliteSpec = 
             sprintf """
                 persistence {
@@ -166,7 +167,7 @@ module Node =
 
                 			# connection string used for database access
                             # "Filename=file:memdb-journal-" + counter.IncrementAndGet() + ".db;Mode=Memory;Cache=Shared"
-                			connection-string = "Filename=./db/streams.db"
+                			connection-string = "Filename=%s/streams.db"
                 			
                 			# connection string name for .config file used when no connection string has been provided
                 			connection-string-name = ""
@@ -214,7 +215,7 @@ module Node =
                 			plugin-dispatcher = "akka.actor.default-dispatcher"
 
                 			# connection string used for database access
-                			connection-string = "Filename=./db/snapshots.db"
+                			connection-string = "Filename=%s/snapshots.db"
 
                 			# connection string name for .config file used when no connection string has been provided
                 			connection-string-name = ""
@@ -248,7 +249,7 @@ module Node =
                       # are delivered downstreams.
                       max-buffer-size = 1000
                     }                    
-                }   """ //dbFolder dbFolder
+                }   """ dbFolder dbFolder
 
         let config = 
             sprintf """

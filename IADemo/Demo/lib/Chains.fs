@@ -81,9 +81,6 @@ module Chains =
             | a -> __.Log.Info ("Unhandled command: {0}", a)    
 
     let persistActorProps<'T> pid (snapshotInterval: int64) : Props<PersistCommand<'T>> =
-        // system.ActorOf (Props.Create(fun () -> new PersistentActor<'T>(pid)), pid)
-        //<@ fun () -> new PersistentActor<'T>(pid, snapshotInterval) @>
-        //|> Props.Create
         Props.Create<PersistentActor<'T>>(pid, snapshotInterval)
         |> Props.From
 
@@ -93,8 +90,8 @@ module Chains =
 
     let persistSink2 pid snapshotInterval = Sink.ofProps(persistActorProps pid snapshotInterval)
 
-    let spawnIfNotExists system name spawner =
-        let selection = select system name
+    let spawnIfNotExists (system: IActorRefFactory) name spawner =
+        let selection = select system ((if system :? ActorSystem then "/user/" else "") + name)
         async {
             let! reply = selection <? Identify("correlation-id")
             return match reply with
@@ -107,17 +104,12 @@ module Chains =
     let rec sinkHolder<'T> (snapshotInterval: int64) (context: Actor<SinkActorMessage>) = 
         function
         | GetSinkActorRef pid -> 
-            //let act = context.ActorOf pid
-            //if act :? EmptyLocalActorRef then 
-            //    let act = persistActor<'T> context pid snapshotInterval
-            //    context.Sender() <! act
-            //else context.Sender() <! act
             let act = spawnIfNotExists context pid (fun ctx -> persistActor<'T> ctx pid snapshotInterval)
             context.Sender() <! act
             ignored ()
 
     let spawnSinkHolder<'T> system (snapshotInterval: int64) = 
-        let name = Regex("[\[\]`]").Replace(typedefof<'T>.Name, "_")
+        let name = "_" + Regex("[\[\]`]").Replace(typedefof<'T>.Name, "_")
         spawnIfNotExists system name (fun ctx -> spawn ctx name <| props (actorOf2 (sinkHolder<'T> snapshotInterval)))
             
     let getSinkActor<'T> system (snapshotInterval: int64) pid =

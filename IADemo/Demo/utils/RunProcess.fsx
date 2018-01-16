@@ -4,7 +4,7 @@ open System.Diagnostics
 let runProcess filename args startDir = 
     let timer = Stopwatch.StartNew()
     let procStartInfo = 
-        ProcessStartInfo(
+        ProcessStartInfo (
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,

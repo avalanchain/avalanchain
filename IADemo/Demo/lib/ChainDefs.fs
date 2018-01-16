@@ -197,6 +197,7 @@ module ChainDefs =
     let internal chainDefToHeader keyPair = fun () -> { kid = keyPair.Kid; pos = -1L }
     let internal chainDefFromHeader: JwtFromHeader = fun dc -> { kid = Convert.ToUInt16(dc.["kid"]); pos = -1L }
 
+    let toChainToken keyPair = fun pos ->  toJwt (fun () -> { kid = keyPair.Kid; pos = pos }) keyPair
     let toChainDefToken keyPair = toJwt (chainDefToHeader keyPair) keyPair
     let fromChainDefToken<'T> = fromJwt<'T> chainDefFromHeader
 
