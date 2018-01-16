@@ -286,11 +286,11 @@ module Node =
                         }
                     }
                     cluster {
-                        auto-down-unreachable-after = 240s
+                        auto-down-unreachable-after = 5s
                         seed-nodes = %s
                         #gossip-time-to-live = 10s
-                        #unreachable-nodes-reaper-interval = 10s
-                        #publish-stats-interval = 5s
+                        unreachable-nodes-reaper-interval = 10s
+                        publish-stats-interval = 5s
                         #failure-detector {
                         #    heartbeat-interval = 5 s
                         #    min-std-deviation = 2 s
@@ -300,7 +300,7 @@ module Node =
 
                         pub-sub {
                             # Actor name of the mediator actor, /system/distributedPubSubMediator
-                            name = distributedPubSubMediator
+                            name = acMassSend
 
                             # Start the mediator on members tagged with this role.
                             # All members are used if undefined or empty.

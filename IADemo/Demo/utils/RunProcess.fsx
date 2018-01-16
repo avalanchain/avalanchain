@@ -1,10 +1,32 @@
 open System
 open System.Diagnostics
 
-let runProcess filename args startDir = 
+let runProcess  filename args startDir = 
     let timer = Stopwatch.StartNew()
     let procStartInfo = 
-        ProcessStartInfo (
+        ProcessStartInfo(
+            RedirectStandardOutput = false,
+            RedirectStandardError = false,
+            UseShellExecute = true,
+            FileName = filename,
+            Arguments = args
+        )
+    match startDir with | Some d -> procStartInfo.WorkingDirectory <- d | _ -> ()
+
+    new Process(StartInfo = procStartInfo)
+
+let killProcesses (processes: Process seq) = for p in processes do p.Kill()
+
+
+let pr = runProcess "Demo.exe" "" (Some """C:\GitHub\avalanchain2\avalanchain\IADemo\Demo\bin\Debug\net461\""")
+pr.Start()
+let processes = [ for port in 5501 .. 5002 -> 
+                    runProcess "Demo.exe" (port.ToString()) (Some """C:\GitHub\avalanchain2\avalanchain\IADemo\Demo\bin\Debug\net461\""")]
+
+let runProcessBackground  filename args startDir = 
+    let timer = Stopwatch.StartNew()
+    let procStartInfo = 
+        ProcessStartInfo(
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
