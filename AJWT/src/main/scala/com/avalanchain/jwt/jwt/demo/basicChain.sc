@@ -58,79 +58,11 @@ val res = time {
 }
 
 
-class FileTokenStorage(val folder: Path, val id: String, batchSize: Int = 100, timeWindow: FiniteDuration = 1 second,
-                       implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) extends FrameTokenStorage {
-  val location = folder.resolve(id)
-  val sigMap = new ConcurrentHashMap[FrameRef, FrameToken].asScala
-
-  Files.createDirectories(location)
-
-  private var groupIdx = -1
-
-  val fileSinkDef: Sink[FrameToken, NotUsed] = Flow[FrameToken]
-    .groupedWithin(batchSize, timeWindow)
-    .map(g => { groupIdx += 1; (groupIdx, g) })
-    .to(Sink.foreach(b => {
-      val fileName = location.resolve(f"${b._1}%08d")
-      Files.deleteIfExists(fileName)
-      Files.write(fileName, b._2.map(_.toString).asJavaCollection, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)
-    }))
-
-  val queueDef = Source.queue[FrameToken](batchSize, OverflowStrategy.backpressure)
-
-  val (queue, broadcastQueue) = queueDef.toMat(BroadcastHub.sink(bufferSize = 256))(Keep.both).run()
-
-  val fileSink = broadcastQueue.runWith(fileSinkDef)
-
-  override def add(frameToken: FrameToken): Try[Unit] = {
-    queue.offer(frameToken)
-    sigMap += (FrameRef(frameToken) -> frameToken)
-    Success()
-  }
-
-  override def get(frameRef: FrameRef): Option[FrameToken] = sigMap.get(frameRef)
-
-  def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
-    Source.fromIterator[Path](() => Files.newDirectoryStream(location).iterator().asScala.toList.sorted.iterator)
-      .mapConcat[String](f => Files.readAllLines(f).asScala.toList).map(s => new TypedJwtToken[Frame](s))
-//      .fold(ArrayBuffer[FrameToken]())((acc: ArrayBuffer[FrameToken], ft) => { acc += ft; acc }) // TODO: Uncomment for pos sorting within the files
-//      .mapConcat(a => a.sortBy(_.payload.get.pos).toList)
-      .filter(_.payload.get.pos >= fromPosition)
-      .takeWhile(_.payload.get.pos <= toPosition)
-  }
-
-  def getFrom(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
-    getFromSnapshot(fromPosition, toPosition).concat(broadcastQueue).takeWhile(_.payload.get.pos <= toPosition)
-  }
-}
-
-
-class PersistenceTokenStorage(pid: String, implicit val system: ActorSystem, implicit val materializer: ActorMaterializer) extends FrameTokenStorage {
-  val readJournal: InMemoryReadJournal = PersistenceQuery(system).readJournalFor[InMemoryReadJournal](InMemoryReadJournal.Identifier)
-
-  override def add(frameToken: FrameToken): Try[Unit] = {
-    //queue.offer(frameToken)
-    //sigMap += (FrameRef(frameToken) -> frameToken)
-    Success()
-  }
-
-  override def get(frameRef: FrameRef): Option[FrameToken] = ???
-
-  def getFromSnapshot(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
-    readJournal.eventsByPersistenceId(pid, fromPosition, toPosition).map(_.event.asInstanceOf[FrameToken])
-  }
-
-  def getFrom(fromPosition: Position, toPosition: Position)(implicit decoder: Decoder[Frame]): Source[FrameToken, NotUsed] = {
-    getFromSnapshot(fromPosition, toPosition)
-  }
-}
 
 
 val fts = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString, 1000, 1 second, system, materializer)
 val cr = new ChainRegistry(savedKeys(), fts)
-val nc = cr.newChain()
-
-//println(s"Token count: ${fts.frameTokens.toList.length}")
+val nc = cr.newChain(JwtAlgo.HS512)
 
 case class Data(int: Int, string: String, double: Double)
 
@@ -138,9 +70,6 @@ def runSimple() =
   Future {
     time {
       val r = Source(0 until 100000)
-        //  var idx = 0
-        //  def getIdx = {idx += 1; idx }
-        //  val r = Source.tick(10 microseconds, 10 microseconds, getIdx)
         .map(i => (i, nc.add(Data(i, s"Number ${i}", i * Math.PI).asJson)))
         .map(i => {
           if (i._1 % 100 == 99) println(i._1); i
@@ -173,34 +102,34 @@ runPeriodic()
    //println(s"Token count: ${fts.getFrom(0).toList.length}")
 
 Future {
-    fts.getFromSnapshot(1000).runForeach(e => println(s"Token: '${e}'"))
+    fts.getFromSnapshot(1000, 2000).runForeach(e => println(s"Token: '${e}'"))
 }
 
 
 Future {
   val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString, 1000, 1 second, system, materializer)
   val cr1 = new ChainRegistry(savedKeys(), fts1)
-  val nc1 = cr1.newChain()
+  val nc1 = cr1.newChain(JwtAlgo.HS512)
 
-  fts.getFromSnapshot(0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
+  fts.getFromSnapshot(0, 2000).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
 }
 
 
 Future {
   val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString + "_filter", 1000, 1 second, system, materializer)
   val cr1 = new ChainRegistry(savedKeys(), fts1)
-  val nc1 = cr1.newChain()
+  val nc1 = cr1.newChain(JwtAlgo.HS512)
 
-  fts.getFrom(0).filter(e => e.payload.get.pos % 2 == 0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
+  fts.getFrom(0, 2000).filter(e => e.payload.get.pos % 2 == 0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
 }
 
 
 Future {
   val fts1 = new FileTokenStorage(Paths.get("""C:\tmp\AJWT\"""), UUID.randomUUID().toString + "_filter2", 1000, 1 second, system, materializer)
   val cr1 = new ChainRegistry(savedKeys(), fts1)
-  val nc1 = cr1.newChain()
+  val nc1 = cr1.newChain(JwtAlgo.HS512)
 
-  fts.getFrom(0).filter(e => e.payload.get.pos % 20 == 0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
+  fts.getFrom(0, 2000).filter(e => e.payload.get.pos % 20 == 0).map(e => nc1.add(e.payload.get.v)).runWith(Sink.ignore)
 }
 
 

@@ -10,9 +10,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
 import akka.stream.actor.ActorPublisher
 import com.avalanchain.jwt.basicChain._
+import com.avalanchain.jwt.jwt.account.{User, UserData}
 import com.avalanchain.jwt.jwt.actors.ActorNode
 import com.avalanchain.jwt.jwt.actors.network.{DerivedChain, NewChain, NodeStatus}
-import com.avalanchain.jwt.jwt.demo.{StockTick, YahooFinSource}
+import com.avalanchain.jwt.jwt.demo.{StockTick, FinSource}
 import com.avalanchain.jwt.utils.CirceCodecs
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventProcessor._
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventSource
@@ -21,6 +22,7 @@ import com.typesafe.config.ConfigFactory
 import io.circe.Json
 import io.circe.syntax._
 import io.circe.parser._
+import pdi.jwt.{Jwt, JwtAlgorithm}
 
 import scala.concurrent.{Awaitable, Future}
 //import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -32,7 +34,6 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import com.avalanchain.jwt.basicChain.ChainDefToken
 import com.avalanchain.jwt.jwt.CurveContext
-import com.avalanchain.jwt.jwt.account.principals.{User, UserData}
 import com.avalanchain.jwt.jwt.actors.ChainNode
 import com.avalanchain.jwt.jwt.demo.DemoNode
 import com.avalanchain.jwt.utils.Config
@@ -96,6 +97,8 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
     User(UUID.randomUUID(), user)
   }
 
+  def toToken(i: StockTick) = Jwt.encode(i.asJson.noSpaces, "srt", JwtAlgorithm.HS256)
+
   val greeterWebSocketService =
     Flow[Message].collect {
       case tm: TextMessage =>
@@ -142,6 +145,13 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
     } ~
+    path("accountEventJwts") {
+      val src = chainNode.currencyNode.accountSourceToken.map(i => TextMessage(i.asJson.noSpaces))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
 //    path("accounts") {
       //      val src = chainNode.currencyNode.accountsSource.map(i => TextMessage(i.asJson.noSpaces))
       //
@@ -156,8 +166,22 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
     } ~
-    path("yahoo") {
-      val src = YahooFinSource().map(i => TextMessage(i.asJson.noSpaces))
+    path("transactionJwts") {
+      val src = chainNode.currencyNode.transactionSourceToken.map(i => TextMessage(i.token))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
+    path("curpairs") {
+      val src = FinSource().map(i => TextMessage(i.asJson.noSpaces))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    }~
+    path("curpairsJwt") {
+      val src = FinSource().map(i => TextMessage(toToken(i)))
 
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))

@@ -19,26 +19,27 @@ import akka.util.ByteString
 import com.avalanchain.jwt.basicChain.{JwtPayload, TypedJwtToken}
 import com.avalanchain.jwt.utils.CirceCodecs
 import com.typesafe.config.ConfigFactory
-import org.joda.time.DateTime
 import yahoofinance.YahooFinance
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.syntax._
 import io.circe.parser._
 import io.circe.generic.JsonCodec
 import io.circe.generic.auto._
+import pdi.jwt.{Jwt, JwtAlgorithm}
 
 import collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class StockTick(symbol: String, bid: BigDecimal, ask: BigDecimal, dt: OffsetDateTime) extends JwtPayload.Sym
+final case class StockTick(symbol: String, bid: BigDecimal, ask: BigDecimal, dt: OffsetDateTime) extends JwtPayload.Sym
 
 trait StockPriceClient {
   type Response[T] = Future[Either[(StatusCode, String), T]]
 
   def stocks(symbols: Array[String]): List[StockTick]
 }
+
 
 /**
   * Retrieves historical service.stock prices from Yahoo Finance.
@@ -56,14 +57,15 @@ class YahooStockPriceClient() extends StockPriceClient with CirceCodecs
       .toList
 }
 
-object YahooFinSource {
+object FinSource {
   type StockTickToken = TypedJwtToken[StockTick]
 
-  def apply(maxRequests: Int = Int.MaxValue, duration: FiniteDuration = 1 second) : Source[StockTick, NotUsed] = {
+  def apply(maxRequests: Int = Int.MaxValue, duration: FiniteDuration = 1 second): Source[StockTick, NotUsed] = {
     val client = new YahooStockPriceClient()
     Source(1 to maxRequests)
       .throttle(1, duration, 1, ThrottleMode.shaping)
-      .mapConcat(i => client.stocks())
-      //.groupBy(25, e => e.symbol)
+//      .mapConcat(i => client.stocks())
+      .mapConcat(i => Nil)
+    ////.groupBy(25, e => e.symbol)
   }
 }

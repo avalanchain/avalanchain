@@ -1,6 +1,6 @@
 import java.util.UUID
 
-import com.avalanchain.jwt.basicChain.{ChainDef, JwtAlgo, TypedJwtToken}
+import com.avalanchain.jwt.basicChain.{ChainDef, JwtAlgo, ResourceGroup, TypedJwtToken}
 import com.avalanchain.jwt.jwt.CurveContext
 import com.avalanchain.jwt.jwt.actors.ActorNode
 import com.avalanchain.jwt.jwt.actors.ChainNode.NewChain
@@ -16,7 +16,7 @@ import io.circe.generic.auto._
 val keyPair = CurveContext.currentKeys
 
 def newChain(jwtAlgo: JwtAlgo = JwtAlgo.HS512, initValue: Option[Json] = Some(Json.fromString("{}"))) = {
-  val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID(), keyPair.getPublic, initValue.map(_.asString.getOrElse("{}")))
+  val chainDef: ChainDef = ChainDef.New(jwtAlgo, UUID.randomUUID().toString, keyPair.getPublic, ResourceGroup.ALL, initValue.map(_.asString.getOrElse("{}")))
   val chainDefToken = TypedJwtToken[ChainDef](chainDef, keyPair.getPrivate)
   chainDefToken
 }
@@ -28,4 +28,5 @@ object ActorNode extends ActorNode {
 }
 
 
-val nc = new com.avalanchain.jwt.jwt.actors.network.NewChain("ANC", chainDefToken, keyPair, ActorNode.system, ActorNode.materializer)
+val nc = new com.avalanchain.jwt.jwt.actors.network.NewChain("ANC", chainDefToken, keyPair)
+  (ActorNode.system, ActorNode.materializer)

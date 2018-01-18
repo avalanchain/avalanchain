@@ -21,7 +21,7 @@ import com.avalanchain.jwt.jwt.demo.account.AccountCommand._
 import com.avalanchain.jwt.utils.{CirceCodecs, CirceSimpleCodecs}
 import com.rbmhtechnology.eventuate.DurableEvent
 import com.rbmhtechnology.eventuate.adapter.stream.DurableEventWriter
-import org.joda.time.field.OffsetDateTimeField
+//import org.joda.time.field.OffsetDateTimeField
 
 import scala.collection.immutable.Seq
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}

@@ -13,8 +13,8 @@ scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 resolvers += "Eventuate Releases" at "https://dl.bintray.com/rbmhtechnology/maven"
 
 libraryDependencies ++= {
-  val akkaVersion = "2.4.12"
-  val akkaHttpVersion = "2.4.11"
+  val akkaVersion = "2.5.8"
+  val akkaHttpVersion = "10.0.11"
   val eventuateVersion = "0.8.1"
 
   Seq(
@@ -35,15 +35,15 @@ libraryDependencies ++= {
     "com.typesafe.akka" %% "akka-stream"                                % akkaVersion,
     "com.typesafe.akka" %% "akka-stream-testkit"                        % akkaVersion,
     "com.typesafe.akka" %% "akka-testkit"                               % akkaVersion % "test",
-    "com.typesafe.akka" %% "akka-distributed-data-experimental"         % akkaVersion,
-    "com.typesafe.akka" %% "akka-typed-experimental"                    % akkaVersion,
-    "com.typesafe.akka" %% "akka-persistence-query-experimental"        % akkaVersion,
+    "com.typesafe.akka" %% "akka-distributed-data"                      % akkaVersion,
+    "com.typesafe.akka" %% "akka-typed"                                 % akkaVersion,
+    "com.typesafe.akka" %% "akka-persistence-query"                     % akkaVersion,
 
     "com.typesafe.akka" %% "akka-http-core"                             % akkaHttpVersion,
-    "com.typesafe.akka" %% "akka-http-experimental"                     % akkaHttpVersion,
-    "com.typesafe.akka" %% "akka-http-jackson-experimental"             % akkaHttpVersion,
-    "com.typesafe.akka" %% "akka-http-spray-json-experimental"          % akkaHttpVersion,
-    "com.typesafe.akka" %% "akka-http-xml-experimental"                 % akkaHttpVersion,
+    "com.typesafe.akka" %% "akka-http"                                  % akkaHttpVersion,
+    "com.typesafe.akka" %% "akka-http-jackson"                          % akkaHttpVersion,
+    "com.typesafe.akka" %% "akka-http-spray-json"                       % akkaHttpVersion,
+    "com.typesafe.akka" %% "akka-http-xml"                              % akkaHttpVersion,
     "com.typesafe.akka" %% "akka-http-testkit"                          % akkaHttpVersion,
 
     "org.iq80.leveldb"            % "leveldb"                           % "0.7",
@@ -55,7 +55,7 @@ libraryDependencies ++= {
     "org.scalatest"     %% "scalatest"                                  % "2.2.5" % "test",
     "ch.qos.logback"    % "logback-classic"                             % "1.1.3",
     "io.swagger"        % "swagger-core"                                % "1.5.10",
-    "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.7.3",
+    "com.github.swagger-akka-http" %% "swagger-akka-http"               % "0.11.0",
 
     "org.typelevel"     %% "cats"                                       % "0.8.1",
 
@@ -66,15 +66,15 @@ libraryDependencies ++= {
     "io.circe"          %% "circe-parser"                               % circeVersion,
     "io.circe"          %% "circe-java8"                                % circeVersion,
 
-    "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.8.4",
-    "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.8.4",
+    "com.fasterxml.jackson.core"   %  "jackson-databind"                % "2.9.0",
+    "com.fasterxml.jackson.module" %% "jackson-module-scala"            % "2.9.0",
 
     "de.heikoseeberger" %% "akka-http-circe"                            % "1.11.0-M4",
 
     "com.nrinaudo"      %% "kantan.csv-cats"                            % "0.1.15",
     "org.scalaj"        %% "scalaj-http"                                % "2.3.0",
 
-    "com.yahoofinance-api" % "YahooFinanceAPI"                          % "3.2.0",
+    "com.yahoofinance-api" % "YahooFinanceAPI"                          % "3.12.3",
 
     "com.rbmhtechnology" %% "eventuate-core"                            % eventuateVersion,
     "com.rbmhtechnology" %% "eventuate-crdt"                            % eventuateVersion,

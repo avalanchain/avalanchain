@@ -227,7 +227,7 @@ package object basicChain {
 
   }
 
-  class ChainRegistry(keyPair: KeyPair)
+  class ChainRegistry(keyPair: KeyPair, fts: FrameTokenStorage = new MapFrameTokenStorage())
                      (implicit actorRefFactory: ActorRefFactory, encoder: Encoder[ChainDef], decoder: Decoder[ChainDef]) {
     private val privateKey = keyPair.getPrivate
     val publicKey = keyPair.getPublic
@@ -240,7 +240,7 @@ package object basicChain {
     private def addChainDef(chainDef: ChainDef) = {
       val chainDefToken = TypedJwtToken[ChainDef](chainDef, privateKey)
       val chainRef = ChainRef(chainDefToken)
-      val newChain = new Chain3(chainDefToken, keyPair, new MapFrameTokenStorage())
+      val newChain = new Chain3(chainDefToken, keyPair, fts)
       chains += (chainRef -> newChain)
       newChain
     }

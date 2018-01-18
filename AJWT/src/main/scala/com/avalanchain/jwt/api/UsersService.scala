@@ -5,13 +5,12 @@ import javax.ws.rs.Path
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives
 import akka.util.Timeout
-import com.avalanchain.jwt.jwt.account.principals.{User, UserData}
+import com.avalanchain.jwt.jwt.account.{User, UserData}
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 import io.swagger.annotations._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-
 import io.circe.generic.auto._
 import io.circe.{Decoder, Encoder}
 
