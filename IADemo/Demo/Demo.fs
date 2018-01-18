@@ -39,7 +39,6 @@ open DData
 open System.Threading
 
 let testPersistentStream node endpoint keyPair = 
-    //let mediator = node.Mediator
     let topic = "acTokens"
     let source = distPubSubSource<PersistCommand<JwtToken<string>>> node.System topic OverflowStrategy.DropNew 1000000
 
@@ -62,17 +61,6 @@ let testPersistentStream node endpoint keyPair =
         transactions node.System "orders" |> Graph.run node.Mat 
         iteration <- iteration + 1L
 
-
-
-    //let ids = (node.Journal.Value).CurrentPersistenceIds() 
-    //            |> Source.runWith node.Mat (Sink.Seq()) 
-    //            |> Async.AwaitTask 
-    //            |> Async.RunSynchronously
-
-    //let events = 
-    //    currentEventsSource keyPair node.System (ids.[0]) 0L 1000L
-
-    //()
     printer
 
 
@@ -97,11 +85,7 @@ let main argv =
     }
 
     let chainDefs = [ for _ in 0 .. 19 -> newChainDef() |> toChainDefToken keyPair ]
-
-    // let cdToken = chainDef |> toChainDefToken keyPair 
-    // cdToken.Payload
-
-    // let cdTokenDerived = chain chainDef2
+    printfn "ChainDefs: %A" chainDefs
 
     let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
     let endpoint2 = { IP = "127.0.0.1"; Port = 0us }

@@ -13,15 +13,12 @@ let runProcess  filename args startDir =
         )
     match startDir with | Some d -> procStartInfo.WorkingDirectory <- d | _ -> ()
 
-    new Process(StartInfo = procStartInfo)
+    let pr = new Process(StartInfo = procStartInfo)
+    pr.Start() |> ignore
+    pr
 
 let killProcesses (processes: Process seq) = for p in processes do p.Kill()
 
-
-let pr = runProcess "Demo.exe" "" (Some """C:\GitHub\avalanchain2\avalanchain\IADemo\Demo\bin\Debug\net461\""")
-pr.Start()
-let processes = [ for port in 5501 .. 5002 -> 
-                    runProcess "Demo.exe" (port.ToString()) (Some """C:\GitHub\avalanchain2\avalanchain\IADemo\Demo\bin\Debug\net461\""")]
 
 let runProcessBackground  filename args startDir = 
     let timer = Stopwatch.StartNew()
@@ -55,5 +52,7 @@ let runProcessBackground  filename args startDir =
     p.WaitForExit()
     timer.Stop()
     printfn "Finished %s after %A milliseconds" filename timer.ElapsedMilliseconds
-    let cleanOut l = l |> Seq.filter (fun o -> String.IsNullOrEmpty o |> not)
+    let cleanOut l = l |> Seq.filter (String.IsNullOrEmpty >> not)
     cleanOut outputs,cleanOut errors
+
+let dir = Some """C:\GitHub\avalanchain2\avalanchain\IADemo\Demo\bin\Debug\net461\"""
