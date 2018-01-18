@@ -150,8 +150,8 @@ module ChainDefs =
         kid: uint16
         pos: int64
         // cty: string
-        // alg: string
-        // enc: string
+        alg: string
+        enc: bool
     }
 
     type JwtToken<'t> = {
@@ -194,17 +194,17 @@ module ChainDefs =
 
 
     type ChainDefToken = JwtToken<ChainDef>
-    let internal chainDefToHeader keyPair = fun () -> { kid = keyPair.Kid; pos = -1L }
-    let internal chainDefFromHeader: JwtFromHeader = fun dc -> { kid = Convert.ToUInt16(dc.["kid"]); pos = -1L }
+    let internal chainDefToHeader keyPair = fun () -> { kid = keyPair.Kid; pos = -1L; alg = JwtAlgoAsym.ES384.ToString(); enc = false }
+    let internal chainDefFromHeader: JwtFromHeader = fun dc -> { kid = Convert.ToUInt16(dc.["kid"]); pos = -1L; alg = JwtAlgoAsym.ES384.ToString(); enc = false }
 
-    let toChainToken keyPair = fun pos ->  toJwt (fun () -> { kid = keyPair.Kid; pos = pos }) keyPair
+    let toChainToken keyPair = fun pos ->  toJwt (fun () -> { kid = keyPair.Kid; pos = pos; alg = JwtAlgoAsym.ES384.ToString(); enc = false }) keyPair
     let toChainDefToken keyPair = toJwt (chainDefToHeader keyPair) keyPair
     let fromChainDefToken<'T> = fromJwt<'T> chainDefFromHeader
 
 
     type ChainItemToken<'T> = JwtToken<'T>
-    let internal chainItemToHeader keyPair pos = fun () -> { kid = keyPair.Kid; pos = pos }
-    let internal chainItemFromHeader: JwtFromHeader = fun dc -> { kid = Convert.ToUInt16(dc.["kid"]); pos = Convert.ToInt64(dc.["pos"]) }
+    let internal chainItemToHeader keyPair pos = fun () -> { kid = keyPair.Kid; pos = pos; alg = JwtAlgoAsym.ES384.ToString(); enc = false }
+    let internal chainItemFromHeader: JwtFromHeader = fun dc -> { kid = Convert.ToUInt16(dc.["kid"]); pos = Convert.ToInt64(dc.["pos"]); alg = JwtAlgoAsym.ES384.ToString(); enc = false }
 
     let toChainItemToken keyPair pos = toJwt (chainItemToHeader keyPair pos) keyPair
     let fromChainItemToken<'T> = fromJwt<'T> chainItemFromHeader

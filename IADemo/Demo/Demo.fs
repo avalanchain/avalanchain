@@ -40,6 +40,8 @@ open System.Threading
 
 let testPersistentStream node endpoint keyPair = 
     let topic = "acTokens"
+    let nid = Guid.NewGuid().ToString("N")
+    let rnd = Random()
     let source = distPubSubSource<PersistCommand<JwtToken<string>>> node.System topic OverflowStrategy.DropNew 1000000
 
     let printer = source
@@ -54,7 +56,7 @@ let testPersistentStream node endpoint keyPair =
         let transactions system pid = 
             [| for i in 1L .. 1000L -> iteration * 1000L + i |] 
             |> Source.ofArray
-            |> Source.map (fun i -> "node_" + endpoint.Port.ToString() + "_" + i.ToString() |> toChainToken keyPair i |> Offer)
+            |> Source.map (fun i -> sprintf """{ "ccyPair": "%s", "rate": "%.4f", "node": "%s_%d", "dt": "%s" }""" "USDAUD" (0.8 + (rnd.NextDouble() - 0.5)/100.) nid endpoint.Port (DateTimeOffset.Now.ToString()) |> toChainToken keyPair i |> Offer)
             |> Source.alsoTo (persistSink system pid 500L)
             |> Source.toMat(distPubSubSink node.System topic (Offer "complete")) Keep.none
 

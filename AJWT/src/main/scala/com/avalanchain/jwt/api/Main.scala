@@ -140,6 +140,13 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
       }
     } ~
+    path("accountEventJwts") {
+      val src = chainNode.currencyNode.accountSourceToken.map(i => TextMessage(i.asJson.noSpaces))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
 //    path("accounts") {
       //      val src = chainNode.currencyNode.accountsSource.map(i => TextMessage(i.asJson.noSpaces))
       //
@@ -149,6 +156,13 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
       //    } ~
     path("transactions") {
       val src = chainNode.currencyNode.transactionSource.map(i => TextMessage(i.asJson.noSpaces))
+
+      extractUpgradeToWebSocket { upgrade =>
+        complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
+      }
+    } ~
+    path("transactionJwts") {
+      val src = chainNode.currencyNode.transactionSourceToken.map(i => TextMessage(i.token))
 
       extractUpgradeToWebSocket { upgrade =>
         complete(upgrade.handleMessagesWithSinkSource(Sink.ignore, src))
@@ -201,6 +215,7 @@ class Main(port: Int) extends Config with CorsSupport with CirceSupport with Cir
     bindingFuture
   }
 
+  for (i <- 1 to 10) chainNode.newChain2()
   val httpServer = chainNode.localport.flatMap(port => startHttp(port))
   StdIn.readLine() // let it run until user presses return
   httpServer
