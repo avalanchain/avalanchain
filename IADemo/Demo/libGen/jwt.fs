@@ -3,8 +3,6 @@
 module Jwt =
     open System
     open FSharp.Reflection
-    open FSharpLu.Json
-
     open System.Security.Cryptography
     
     open Jose
