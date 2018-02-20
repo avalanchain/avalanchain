@@ -132,6 +132,7 @@ module Payments =
         From: AccountRef
         To: AccountRef
         Amount: Amount
+        Tk: Token
     }
 
     type TransactionRef = Sig
@@ -139,7 +140,6 @@ module Payments =
     type TransactionRequest = {
         T: Transaction
         Ref: TransactionRef
-        Tk: Token
     }
 
     type RejectionReason =
@@ -147,12 +147,19 @@ module Payments =
         | WrongSignature
         | FromAccountNotExists of AccountRef
         | UnexpectedNegativeAmount of Amount
+        | SameAccountTransactionsNotSupported
+        | IncorrectTransactionRequestFormat
+        | UnmatchedAsset of UnmatchedAsset
         | NotEnoughFunds of NotEnoughFunds
         | FailedConflictResolution
     and NotEnoughFunds = {
         Available: Amount
         Expected: Amount
     } 
+    and UnmatchedAsset = {
+        Supplied: Token
+        Expected: Token
+    }
 
     type TransactionAccepted = {
         Tr: TransactionRequest
@@ -220,20 +227,57 @@ module Payments =
     //     member __.A0
     
     type TransactionDAG =  // TODO: Validate CRDT data structure
-        Transaction list
+        TransactionRequest list
+    and PendingTransactionsBag = Set<Transaction> // TODO: Add per-account indexing
 
-    type Balances = {
-        Balances: Map<AccountRef, AccountState>
-    }
-    and AccountState = {
+    type [<RequireQualifiedAccess>] AccountStatus = | Active | Inactive | Conflict | Blocked | Deleted
+    type AccountState = {
         ARef: AccountRef
+        Clock: VClock 
+        Amount: Amount
+        Tk: Token       
         Status: AccountStatus
         PendingTransactions: PendingTransactionsBag
         AcknowledgedTransactions: TransactionDAG
     } with 
-        member __.GetBalance(): Amount * VClock = failwith "Not implemented"
-    and [<RequireQualifiedAccess>] AccountStatus = | Active | Inactive | Conflict | Blocked | Deleted
-    and PendingTransactionsBag = Set<Transaction> // TODO: Add per-account indexing
+        static member CreateNew aRef clock tk = {
+            ARef = aRef
+            Clock = clock
+            Amount = 0M<amount>
+            Tk = tk
+            Status = AccountStatus.Active
+            PendingTransactions = Set []
+            AcknowledgedTransactions = []
+        }
+        member __.GetBalance(): Amount * VClock = __.Amount, __.Clock
+        member private __.UpdateAmount tr delta = { __ with Amount = __.Amount - delta; 
+                                                            AcknowledgedTransactions = tr :: __.AcknowledgedTransactions 
+                                                            Clock = __.Clock |> VClock.inc __.ARef.Address }
+        member __.AddTransaction (tr: TransactionRequest): Result<AccountState, RejectionReason> = 
+            if __.Tk <> tr.T.Tk then Error(UnmatchedAsset { Expected = __.Tk; Supplied = tr.T.Tk })
+            elif tr.T.From = tr.T.To then Error SameAccountTransactionsNotSupported
+            elif __.ARef = tr.T.From then
+                if __.Amount < tr.T.Amount then Error(NotEnoughFunds { Expected = __.Amount; Available = tr.T.Amount })
+                else Ok (__.UpdateAmount tr (- tr.T.Amount))
+            elif __.ARef = tr.T.To then Ok (__.UpdateAmount tr tr.T.Amount)
+            else Error IncorrectTransactionRequestFormat
+
+    type Balances = {
+        NRef: NodeRef
+        Clock: VClock 
+        Balances: Map<AccountRef, AccountState>
+    } with
+        member __.AddTransaction (tr: TransactionRequest): Result<Balances, RejectionReason list> = 
+            let fromState = __.Balances |> Map.tryFind tr.T.From |> Option.defaultWith (fun () -> AccountState.CreateNew tr.T.From __.Clock tr.T.Tk) // TODO: Revisit this, using Balances clock and lazy creation in general is probably a bad idea
+            let toState = __.Balances |> Map.tryFind tr.T.To |> Option.defaultWith (fun () -> AccountState.CreateNew tr.T.To __.Clock tr.T.Tk) // TODO: Revisit this, using Balances clock and lazy creation in general is probably a bad idea
+            let updatedFromState = fromState.AddTransaction tr
+            let updatedToState = toState.AddTransaction tr
+            match updatedFromState, updatedToState with 
+            | Ok fs, Ok ts -> Ok { __ with Balances = __.Balances.Add(fs.ARef, fs).Add(ts.ARef, ts); Clock = __.Clock |> VClock.inc __.NRef.Nid }
+            | Error fr, Ok _ -> Error [ fr ]
+            | Ok _, Error tr -> Error [ tr ]
+            | Error fr, Error tr -> Error [ fr; tr ]
+
 
 
 
