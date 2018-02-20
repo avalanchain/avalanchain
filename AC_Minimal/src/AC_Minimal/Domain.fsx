@@ -148,6 +148,7 @@ module Payments =
         | FromAccountNotExists of AccountRef
         | UnexpectedNegativeAmount of Amount
         | NotEnoughFunds of NotEnoughFunds
+        | FailedConflictResolution
     and NotEnoughFunds = {
         Available: Amount
         Expected: Amount
@@ -156,6 +157,7 @@ module Payments =
     type TransactionAccepted = {
         Tr: TransactionRequest
         APrf: AccountProof
+        NPrf: NodeProof
     }
 
     type TransactionNodeRejected = {
@@ -171,16 +173,22 @@ module Payments =
     }
 
     type TransactionNodeConfirmation = {
-        Tref: TransactionRef
+        TRef: TransactionRef
         NPrf: NodeProof
-    }    
+    } 
+
+    [<RequireQualifiedAccess>]
+    type TransactionRejected = 
+        | Account of TransactionAccountRejected
+        | Node of TransactionNodeRejected
+
+    type TransactionResult = Result<TransactionAccepted, TransactionRejected>
+
+    type TransactionNotification =
+        | Replayed of Transaction // TODO: Add proofs
+        | Cancelled of Transaction // TODO: Add proofs
 
     //type HashedPT = SignedProof<Transaction>
-
-    type Balances = {
-        Balances: BalancesData
-    }
-    and BalancesData = Map<AccountRef, Amount>
 
     // type StoredTransaction = {
     //     Result: Result<Transaction, RejectionStatus>
@@ -189,11 +197,44 @@ module Payments =
     // }
 
     type Account = {
-        Ref: AccountRef
+        ARef: AccountRef
         PublicKey: SigningPublicKey
         Name: string
         //CryptoContext: CryptoContext
+    } with 
+        member __.Acknowledge (transaction: TransactionRequest): TransactionAccepted = failwith "Not implemented"
+        member __.Reject (transaction: TransactionRequest): TransactionRejected = failwith "Not implemented"
+    
+
+    type Wallet = {
+        Accounts: Map<AccountRef, Account>
     }
+
+    // type AccountStateSnapshot = {
+    //     ARef: AccountRef
+    //     Transactions: TransactionDAG
+    // }
+
+    // type TransactionDAG() =  // TODO: Validate CRDT data structure
+    //     (VClock * Transaction) list
+    //     member __.A0
+    
+    type TransactionDAG =  // TODO: Validate CRDT data structure
+        Transaction list
+
+    type Balances = {
+        Balances: Map<AccountRef, AccountState>
+    }
+    and AccountState = {
+        ARef: AccountRef
+        Status: AccountStatus
+        PendingTransactions: PendingTransactionsBag
+        AcknowledgedTransactions: TransactionDAG
+    } with 
+        member __.GetBalance(): Amount * VClock = failwith "Not implemented"
+    and [<RequireQualifiedAccess>] AccountStatus = | Active | Inactive | Conflict | Blocked | Deleted
+    and PendingTransactionsBag = Set<Transaction> // TODO: Add per-account indexing
+
 
 
 module Communication = 
@@ -226,14 +267,14 @@ module Communication =
         | ObserverRemoved of NodeInfo
     and NodeInfo = MTPlcHld
 
+    // type WorldState = {
+
+    // }
 
     type Node = {
         Ref: NodeRef
-        CurrentClock: unit -> VClock
-        SubscribeToMessages: (unit -> ChainMessage) -> IDisposable
-        //UnsubscribeFromMessages: unit 
-        GetMessageByUid: Uid -> ChainMessage
-        SendPayment: Payments.Account -> Payments.AccountRef -> Payments.Amount
+        Wallets: Payments.Wallet list
+        SendPayment: Payments.Account -> Payments.AccountRef -> Payments.Amount -> Async<Payments.TransactionResult>
     }
 
 
@@ -242,3 +283,12 @@ module Communication =
     // let b = [| for i in 1 .. 10000000 -> i |] |> List.ofArray |> Array.ofList
     // b.[9999999] <- 0
     // a = b
+
+open Crdt
+#time
+
+let rec incTest (vclock: VClock) iteration =
+    if iteration > 0 then incTest (vclock |> VClock.inc (sprintf "rep%d" (iteration % 100))) (iteration - 1)
+    else printfn "%A" vclock
+
+incTest (Map []) 1000000
