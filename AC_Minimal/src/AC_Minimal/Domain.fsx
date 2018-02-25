@@ -1,4 +1,4 @@
-
+#r "System.Collections.Immutable"
 
 open System
 open System.Security.Cryptography
@@ -23,6 +23,7 @@ module Crdt =
                 match Map.tryFind ka acc with
                 | Some vb -> Map.add ka (max va vb) acc
                 | None    -> Map.add ka va acc) b
+                
 
     type Ord =  
     | Lt = -1  // lower
@@ -30,7 +31,7 @@ module Crdt =
     | Gt = 1   // greater
     | Cc = 2   // concurrent
 
-    type VClock = GCounter.GCounter  
+    type VClock = GCounter.GCounter
     module VClock =  
         let zero = GCounter.zero
         let inc = GCounter.inc
@@ -103,7 +104,7 @@ module Chain =
 
     type ChainRef = { Cid: string }
 
-    type Token = { Token: string }
+    type Asset = { Asset: string }
 
     // type DVVClock = {
     //     Nodes: Map<NodeRef, Pos>
@@ -112,7 +113,6 @@ module Chain =
 open Chain    
 open Crdt
 
-[<RequireQualifiedAccess>]
 module Payments = 
     type AccountRef = { Address: string }
     type AccountProof = { ARef: AccountRef; Sig: Sig }
@@ -132,7 +132,7 @@ module Payments =
         From: AccountRef
         To: AccountRef
         Amount: Amount
-        Tk: Token
+        Asset: Asset
     }
 
     type TransactionRef = Sig
@@ -149,16 +149,18 @@ module Payments =
         | UnexpectedNegativeAmount of Amount
         | SameAccountTransactionsNotSupported
         | IncorrectTransactionRequestFormat
+        | MissingAcknowledgement
         | UnmatchedAsset of UnmatchedAsset
         | NotEnoughFunds of NotEnoughFunds
+        | PendingTransactionAlreadyProcessed of TransactionRef
         | FailedConflictResolution
     and NotEnoughFunds = {
         Available: Amount
         Expected: Amount
     } 
     and UnmatchedAsset = {
-        Supplied: Token
-        Expected: Token
+        Supplied: Asset
+        Expected: Asset
     }
 
     type TransactionAccepted = {
@@ -207,11 +209,33 @@ module Payments =
         ARef: AccountRef
         PublicKey: SigningPublicKey
         Name: string
+        NextClock: unit -> VClock
+        Asset: Asset
         //CryptoContext: CryptoContext
     } with 
-        member __.Acknowledge (transaction: TransactionRequest): TransactionAccepted = failwith "Not implemented"
-        member __.Reject (transaction: TransactionRequest): TransactionRejected = failwith "Not implemented"
-    
+        member __.Sign<'T> (payload: 'T) = { Sig = sprintf "<'%s' '%s' Sig '%s'>" __.Name __.ARef.Address (payload.ToString()) }  // TODO: Change signing
+        member __.Proof<'T> (payload: 'T) = { ARef = __.ARef; Sig = __.Sign payload }
+        member __.Acknowledge (tr: TransactionRequest): TransactionRequest * AccountProof = tr, __.Proof tr
+        member __.Reject (tr: TransactionRequest) reason: TransactionAccountRejected = 
+            {   Tr = tr
+                Reason = reason
+                APrf = __.Proof tr }
+
+        member __.PayTo toARef amount: TransactionRequest = 
+            let t = {   From = __.ARef
+                        To = toARef
+                        Asset = __.Asset 
+                        Amount = amount
+                        Clock = __.NextClock() } 
+            { T = t; Ref = __.Sign t }
+
+    module Account =
+        let create asset aref name nextClock = {ARef = aref
+                                                PublicKey = [||]
+                                                Name = name
+                                                NextClock = nextClock
+                                                Asset = asset }
+
 
     type Wallet = {
         Accounts: Map<AccountRef, Account>
@@ -225,55 +249,104 @@ module Payments =
     // type TransactionDAG() =  // TODO: Validate CRDT data structure
     //     (VClock * Transaction) list
     //     member __.A0
-    
-    type TransactionDAG =  // TODO: Validate CRDT data structure
-        TransactionRequest list
-    and PendingTransactionsBag = Set<Transaction> // TODO: Add per-account indexing
 
-    type [<RequireQualifiedAccess>] AccountStatus = | Active | Inactive | Conflict | Blocked | Deleted
+    [<RequireQualifiedAccess>]
+    type Acknowledge = 
+        | Auto 
+        | Manual of AccountProof
+    
+    [<RequireQualifiedAccess>]
+    type Acknowledged = 
+        | Auto of VClock
+        | Manual of VClock * AccountProof
+    module AcknowledgeType = 
+        let ofAck clock = function
+                            | Acknowledge.Auto -> Acknowledged.Auto clock
+                            | Acknowledge.Manual proof -> Acknowledged.Manual (clock, proof)
+
+    type TransactionDAGItem = {
+        Tr: TransactionRequest
+        Acknowledged: Acknowledged
+    }
+
+    type TransactionDAG = TransactionDAGItem list // TODO: Validate CRDT data structure
+
+    type PendingTransactionsBag = Map<TransactionRef, TransactionRequest> // TODO: Add per-account indexing
+
+    [<RequireQualifiedAccess>]
+    type AccountStatus = | Active | Inactive | Conflict | Blocked | Deleted
+    
     type AccountState = {
         ARef: AccountRef
         Clock: VClock 
         Amount: Amount
-        Tk: Token       
+        Asset: Asset       
         Status: AccountStatus
         PendingTransactions: PendingTransactionsBag
         AcknowledgedTransactions: TransactionDAG
-    } with 
-        static member CreateNew aRef clock tk = {
+    }
+
+    module AccountState =
+        let inline create amount aRef asset clock = {
             ARef = aRef
             Clock = clock
-            Amount = 0M<amount>
-            Tk = tk
+            Amount = amount
+            Asset = asset
             Status = AccountStatus.Active
-            PendingTransactions = Set []
+            PendingTransactions = Map.empty
             AcknowledgedTransactions = []
         }
-        member __.GetBalance(): Amount * VClock = __.Amount, __.Clock
-        member private __.UpdateAmount tr delta = { __ with Amount = __.Amount - delta; 
-                                                            AcknowledgedTransactions = tr :: __.AcknowledgedTransactions 
-                                                            Clock = __.Clock |> VClock.inc __.ARef.Address }
-        member __.AddTransaction (tr: TransactionRequest): Result<AccountState, RejectionReason> = 
-            if __.Tk <> tr.T.Tk then Error(UnmatchedAsset { Expected = __.Tk; Supplied = tr.T.Tk })
+        let inline createZero aRef asset clock = create 0M<amount> aRef asset clock
+        let inline balance (state: AccountState): Amount * VClock = state.Amount, state.Clock
+        let inline private updateClock (state: AccountState) = 
+            {   state with Clock = state.Clock |> VClock.inc state.ARef.Address }
+        let inline private updateAcknowledged acked (tr: TransactionRequest) delta (state: AccountState) = 
+            {   state with  Amount = state.Amount + delta
+                            AcknowledgedTransactions =  { Tr = tr; Acknowledged = acked } :: state.AcknowledgedTransactions }
+            |> updateClock
+        let inline private updatePending (tr: TransactionRequest) (state: AccountState) = 
+            {   state with  PendingTransactions = state.PendingTransactions |> Map.add tr.Ref tr }
+            |> updateClock
+        let inline private applyTransaction ackedOpt (tr: TransactionRequest) (state: AccountState): Result<AccountState, RejectionReason> = 
+            if state.Asset <> tr.T.Asset then Error(UnmatchedAsset { Expected = state.Asset; Supplied = tr.T.Asset })
             elif tr.T.From = tr.T.To then Error SameAccountTransactionsNotSupported
-            elif __.ARef = tr.T.From then
-                if __.Amount < tr.T.Amount then Error(NotEnoughFunds { Expected = __.Amount; Available = tr.T.Amount })
-                else Ok (__.UpdateAmount tr (- tr.T.Amount))
-            elif __.ARef = tr.T.To then Ok (__.UpdateAmount tr tr.T.Amount)
+            elif state.ARef = tr.T.From then
+                if state.Amount < tr.T.Amount then Error(NotEnoughFunds { Expected = tr.T.Amount; Available = state.Amount })
+                else match ackedOpt with
+                        | Some acked -> state |> updateAcknowledged acked tr (- tr.T.Amount) |> Ok
+                        | None -> MissingAcknowledgement |> Error
+            elif state.ARef = tr.T.To then match ackedOpt with
+                                            | Some acked -> state |> updateAcknowledged acked tr tr.T.Amount |> Ok
+                                            | None -> state |> updatePending tr |> Ok
             else Error IncorrectTransactionRequestFormat
+
+        let addTransaction = applyTransaction 
+
+        let inline acceptPending proof tref (state: AccountState): Result<AccountState, RejectionReason> =
+            match state.PendingTransactions |> Map.tryFind tref with
+            | Some tr ->    { state with PendingTransactions = state.PendingTransactions |> Map.remove tref }
+                            |> applyTransaction (Acknowledged.Manual proof |> Some) tr 
+            | None -> PendingTransactionAlreadyProcessed tref |> Error
+
+
 
     type Balances = {
         NRef: NodeRef
         Clock: VClock 
         Balances: Map<AccountRef, AccountState>
-    } with
-        member __.AddTransaction (tr: TransactionRequest): Result<Balances, RejectionReason list> = 
-            let fromState = __.Balances |> Map.tryFind tr.T.From |> Option.defaultWith (fun () -> AccountState.CreateNew tr.T.From __.Clock tr.T.Tk) // TODO: Revisit this, using Balances clock and lazy creation in general is probably a bad idea
-            let toState = __.Balances |> Map.tryFind tr.T.To |> Option.defaultWith (fun () -> AccountState.CreateNew tr.T.To __.Clock tr.T.Tk) // TODO: Revisit this, using Balances clock and lazy creation in general is probably a bad idea
-            let updatedFromState = fromState.AddTransaction tr
-            let updatedToState = toState.AddTransaction tr
+    }
+    module Balances = 
+        let create nid = {  NRef = { Nid = nid }
+                            Clock = VClock.zero
+                            Balances = Map.empty }
+        let addAccount accState balances = { balances with Balances = balances.Balances |> Map.add accState.ARef accState }
+        let addTransaction ackedOpt (tr: TransactionRequest) balances: Result<Balances, RejectionReason list> = 
+            let fromState = balances.Balances |> Map.tryFind tr.T.From |> Option.defaultWith (fun () -> AccountState.createZero tr.T.From tr.T.Asset balances.Clock) // TODO: Revisit this, using Balances clock and lazy creation in general is probably a bad idea
+            let toState = balances.Balances |> Map.tryFind tr.T.To |> Option.defaultWith (fun () -> AccountState.createZero tr.T.To tr.T.Asset balances.Clock) // TODO: Revisit this, using Balances clock and lazy creation in general is probably a bad idea
+            let updatedFromState = fromState |> AccountState.addTransaction ackedOpt tr
+            let updatedToState = toState |> AccountState.addTransaction ackedOpt tr
             match updatedFromState, updatedToState with 
-            | Ok fs, Ok ts -> Ok { __ with Balances = __.Balances.Add(fs.ARef, fs).Add(ts.ARef, ts); Clock = __.Clock |> VClock.inc __.NRef.Nid }
+            | Ok fs, Ok ts -> Ok { balances with Balances = balances.Balances.Add(fs.ARef, fs).Add(ts.ARef, ts); Clock = balances.Clock |> VClock.inc balances.NRef.Nid }
             | Error fr, Ok _ -> Error [ fr ]
             | Ok _, Error tr -> Error [ tr ]
             | Error fr, Error tr -> Error [ fr; tr ]
@@ -290,7 +363,7 @@ module Communication =
         | PaymentMessage of PaymentMessage
     and SystemMessage = 
         | AdminMessage of AdminMessage
-        | NodeMessage
+        | NodeMessage of NodeMessage
     and AdminMessage =
         | RegisterAccountAccepted of MTPlcHld
         | RegisterAccountRejected of MTPlcHld
@@ -328,11 +401,69 @@ module Communication =
     // b.[9999999] <- 0
     // a = b
 
+///////////////////// Tests
+
 open Crdt
+open System.Collections.Generic
+
+open Payments
+
+let aim = { Asset = "AIM" }
+let aref1 = { Address = "acc1" }
+let aref2 = { Address = "acc2" }
+
+let mutable accState1 = (AccountState.create 100000000M<amount> aref1 aim VClock.zero)
+let mutable accState2 = (AccountState.createZero aref2 aim VClock.zero)
+
+let bals = "node1" 
+            |> Balances.create
+            |> Balances.addAccount accState1 
+            |> Balances.addAccount accState2
+
+let mutable clock = VClock.zero
+let createAccount aref name = Account.create aim aref name (fun () -> clock <- clock |> VClock.inc aref.Address; clock )
+
+let account1 = createAccount aref1 "ac1"
+let account2 = createAccount aref2 "ac2"
+
+let rec testTransfer amount iterations (bals: Balances) =
+    if iterations > 0 then
+        match bals |> Balances.addTransaction (Acknowledged.Auto VClock.zero |> Some) (account1.PayTo aref2 amount) with
+        | Ok b -> testTransfer amount (iterations - 1) b
+        | Error _ as er -> er
+    else Ok bals
+
 #time
+
+let t1 = testTransfer 100M<amount> 10000 bals
+
 
 let rec incTest (vclock: VClock) iteration =
     if iteration > 0 then incTest (vclock |> VClock.inc (sprintf "rep%d" (iteration % 100))) (iteration - 1)
     else printfn "%A" vclock
 
-incTest (Map []) 1000000
+// incTest VClock.zero 1000000
+
+
+let rec incTest2 wide (vclock: System.Collections.Generic.Dictionary<ReplicaId, Pos>) iteration =
+    if iteration > 0 then 
+        vclock.[sprintf "rep%d" (iteration % wide)] <- 1UL
+        incTest2 wide vclock (iteration - 1)
+    else printfn "%A" vclock
+
+incTest2 100 (new System.Collections.Generic.Dictionary<ReplicaId, Pos>()) 1000000
+
+let rec incTest3 wide (vclock: System.Collections.Concurrent.ConcurrentDictionary<ReplicaId, Pos>) iteration =
+    if iteration > 0 then 
+        vclock.[sprintf "rep%d" (iteration % wide)] <- 1UL
+        incTest3 wide vclock (iteration - 1)
+    else printfn "%A" vclock
+
+incTest3 100 (new System.Collections.Concurrent.ConcurrentDictionary<ReplicaId, Pos>()) 1000000
+
+
+let rec incTest4 wide (vclock: System.Collections.Immutable.ImmutableDictionary<ReplicaId, Pos>) iteration =
+    if iteration > 0 then incTest4 wide (vclock.Add ((sprintf "rep%d" (iteration % wide)), 1UL)) (iteration - 1)
+    else printfn "%A" vclock
+
+incTest3 100 (new System.Collections.Concurrent.ConcurrentDictionary<ReplicaId, Pos>()) 1000000
