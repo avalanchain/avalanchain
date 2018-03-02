@@ -8,7 +8,6 @@ open Quotations.DerivedPatterns
 open Quotations.ExprShape
 open Quotations.Patterns
 open Microsoft.FSharp.Reflection
-open FSharp.Quotations.Evaluator
 open Microsoft.AspNetCore.Http
 open Giraffe
 open Common

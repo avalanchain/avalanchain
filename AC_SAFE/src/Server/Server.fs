@@ -1,5 +1,6 @@
 ﻿open System
 open System.IO
+open System.Threading
 open System.Threading.Tasks
 open Microsoft.AspNetCore
 open Microsoft.AspNetCore.Builder
@@ -12,8 +13,8 @@ open Giraffe.Swagger.Common
 open Giraffe.Swagger.Analyzer
 open Giraffe.Swagger.Generator
 open Giraffe.Swagger.Dsl
-open Analyzer
 open SwaggerUi
+open Giraffe.WebSocket
 
 open Fable.Remoting.Giraffe
 
@@ -21,6 +22,8 @@ open Shared
 
 let clientPath = Path.Combine("..","Client") |> Path.GetFullPath
 let port = 8085us
+
+let wsConnectionManager = ConnectionManager()
 
 let docAddendums =
     fun (route:Analyzer.RouteInfos) (path:string,verb:HttpVerb,pathDef:PathDefinition) ->
@@ -66,7 +69,8 @@ let docsConfig c =
 let getInitCounter () : Task<Counter> = task { return 42 }
 
 
-let webApp : HttpHandler =
+
+let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandler =
   let counterProcotol = 
     { getInitCounter = getInitCounter >> Async.AwaitTask }
   // creates a HttpHandler for the given implementation
@@ -78,14 +82,20 @@ let webApp : HttpHandler =
                               route  "/"           >=> text "index" 
                               route  "/ping"       >=> text "pong"]
             ]) |> withConfig docsConfig
+          route "/wsecho" >=> (wsConnectionManager.CreateSocket(
+                                (fun _ref -> task { return () }),
+                                (fun ref msg -> ref.SendTextAsync(msg,cancellationToken)),
+                                cancellationToken=cancellationToken)) 
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
                       
 
 let configureApp  (app : IApplicationBuilder) =
-  app.UseStaticFiles()
-     .UseGiraffe webApp
+  app
+    .UseStaticFiles()
+    .UseWebSockets()
+    .UseGiraffe (webApp wsConnectionManager CancellationToken.None)
 
 let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore
