@@ -63,7 +63,12 @@ module.exports = {
           loader: 'babel-loader',
           options: babelOptions
         },
-      }
+      },
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/
+      }      
     ]
   },
   plugins : isProduction ? [] : [

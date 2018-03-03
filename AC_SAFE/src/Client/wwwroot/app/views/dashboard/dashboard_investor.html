@@ -1,0 +1,283 @@
+﻿<div class="wrapper wrapper-content" ng-controller="dashboard_investor as dashboard">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Timeline</h5>
+
+
+                </div>
+                <div class="ibox-content">
+
+                    <!-- <button  class="btn btn-danger  dim " id="toggleButton">Next</button> -->
+
+                    <ul class="timeline" id="timeline">
+                        <li class="li" ng-class="{'complete': period.complete}" data-ng-repeat="period in dashboard.periods">
+                            <div class="timestamp">
+                                <span class="author">{{period.currency}}{{$last==true?'+': ''}} BTC</span>
+                                <!-- <span class="date">11/15/2014<span> -->
+                            </div>
+                            <div class="status">
+                                <h4> {{period.percent}} %</h4>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="ibox float-e-margins">
+                <!-- <div class="ibox-title">
+                <h5>Invest</h5>
+            </div> -->
+                <div class="ibox-content">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="m-b-md">
+                                <!--<a href="" class="btn btn-white btn-xs pull-right">Edit project</a>-->
+
+                                <h2>Invest</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-lg-9 col-md-9">
+                            <dl class="dl-horizontal">
+                                <dt>Current discount:</dt>
+                                <dd>
+                                    <span class="label label-active">12.5%</span>
+                                </dd>
+                                <br/>
+                                <dt>Сurrency:</dt>
+                                <dd>
+                                    <select chosen style="width:100px;" class="form-control" ng-model="currency" ng-options="currency.currency for currency in currencies"></select>
+                                </dd>
+                                <br/>
+                                <dt>Amount:</dt>
+                                <dd>
+                                    <div class="col-lg-6 no-side-padding"><input id="demo3" type="text" name="demo1" touch-spin spin-options="dashboard.spinOption" ng-model="dashboard.amount"></div>
+                                    <div class="col-lg-6 "><a class="btn btn-danger btn-sm"> ACQUIRE </a></div>
+                                </dd>
+                                <br/>
+                                <dt>AVCOIN:</dt>
+                                <dd>
+                                    {{dashboard.amount*300 | number}}</dd>
+                                <br/>
+                                <dt>Discount(AVCOINs):</dt>
+                                <dd>
+                                    {{dashboard.amount*300*0.125 | number}}</dd>
+
+                            </dl>
+                        </div>
+                        <div class="col-lg-3 col-md-3" id="cluster_info">
+                            <ul class="stat-list">
+                                <li>
+                                    <h2 class="no-margins ">5431.34567 BTC</h2>
+                                    <small>Total income</small>
+                                    <div class="stat-percent">52% <i class="fa fa-bolt text-navy"></i>
+                                    </div>
+                                    <div class="progress progress-mini">
+                                        <div style="width: 52%;" class="progress-bar-success"></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <h2 class="no-margins">16</h2>
+                                    <small>Total days left</small>
+
+                                    <div class="progress progress-mini">
+                                        <div style="width: 48%;" class="progress-bar"></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <h2 class="no-margins ">20</h2>
+                                    <small>Participants in lst week</small>
+                                    <div class="progress progress-mini">
+                                        <div style="width: 60%;" class="progress-bar-success"></div>
+                                    </div>
+                                </li>
+
+                            </ul>
+                            <!-- <div>
+                                <c3chart bindto-id="gauge-plot1-chart">
+                                    <chart-column column-id="QUOKA" column-color="#1ab394" column-values="25" column-type="gauge" />
+                                    <chart-gauge min="0" max="100" units=" EARNED QUOKA" width="39" />
+                                </c3chart>
+                            </div> -->
+                        </div>
+                    </div>
+                    <div class="row">
+                        <!-- <div class="col-lg-9">
+                            <img alt="image" style="height: 45px;" src="/assets/img/logo.png">
+                            <div class="row">
+                                <div class="col-md-12">
+
+                                    <h2 class="no-margins ">Current discount: 12.5%</h2>
+                                </div>
+                                <div class="col-md-4">
+                                    <p class="font-bold">
+                                        Example with postfix
+                                    </p>
+                                    <input id="demo3" type="text" name="demo1" touch-spin spin-options="vm.spinOption" ng-model="inputteresxcs">
+                                </div>
+                                <div class="col-md-4">
+
+                                    <p class="font-bold">
+                                        Example with vertical button alignment:
+                                    </p>
+                                    <input id="demo2" type="text" name="demo1" touch-spin spin-options="vm.spinOption" ng-model="inputteresxcs">
+                                </div>
+                            </div>
+                        </div> -->
+                        <!-- <div class="col-lg-3">
+                            <ul class="stat-list">
+                                <li>
+                                    <h2 class="no-margins ">5431.34567 BTC</h2>
+                                    <small>Total income</small>
+                                    <div class="stat-percent">52% <i class="fa fa-bolt text-navy"></i>
+                                    </div>
+                                    <div class="progress progress-mini">
+                                        <div style="width: 52%;" class="progress-bar-success"></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <h2 class="no-margins">16</h2>
+                                    <small>Total days left</small>
+
+                                    <div class="progress progress-mini">
+                                        <div style="width: 48%;" class="progress-bar"></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <h2 class="no-margins ">20</h2>
+                                    <small>Participants in lst week</small>
+                                    <div class="progress progress-mini">
+                                        <div style="width: 60%;" class="progress-bar-success"></div>
+                                    </div>
+                                </li>
+
+                            </ul>
+                        </div> -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>AVCOIN PRICE</h5>
+                    <div ibox-tools></div>
+                </div>
+                <div class="ibox-content">
+
+                    <table class="table table-hover margin bottom">
+                        <thead>
+                            <tr>
+                                <th class="text-center">Sign</th>
+                                <th class="text-center">Name</th>
+                                <th class="text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-center">
+                                    <i class="fa fa-usd fa-2x"></i>
+                                </td>
+                                <td class="text-center">USD</td>
+                                <td class="text-right"><span class="label label-info">5.20</span> <img alt="image" style="height: 21px;filter: grayscale(100%);"
+                                        src="/assets/img/logo.png"></td>
+
+                            </tr>
+                            <tr>
+                                <td class="text-center">
+                                    <i class="fa fa-btc fa-2x"></i>
+                                </td>
+                                <td class="text-center">BTC</td>
+                                <td class="text-right"><span class="label label-info">11532.00</span> <img alt="image" style="height: 21px;filter: grayscale(100%);"
+                                        src="/assets/img/logo.png"></td>
+
+                            </tr>
+                            <tr>
+                                <td class="text-center">
+                                    <img alt="image" style="height: 30px;" src="/assets/img/eth-sm.png">
+                                </td>
+                                <td class="text-center">ETH</td>
+                                <td class="text-right"><span class="label label-info">1125.00</span> <img alt="image" style="height: 21px;filter: grayscale(100%);"
+                                        src="/assets/img/logo.png"></td>
+
+                            </tr>
+
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Investors</h5>
+
+                    <div class="pull-right">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-xs btn-white active">Today</button>
+                            <button type="button" class="btn btn-xs btn-white">Monthly</button>
+                            <button type="button" class="btn btn-xs btn-white">Annual</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="row">
+                        <div class="col-lg-9">
+                            <div class="flot-chart">
+                                <div flot class="flot-chart-content" dataset="dashboard.flotData" options="dashboard.flotOptions"></div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <ul class="stat-list">
+                                <li>
+                                    <h2 class="no-margins">2,346</h2>
+                                    <small>Total orders in period</small>
+                                    <div class="stat-percent">48% <i class="fa fa-level-up text-navy"></i>
+                                    </div>
+                                    <div class="progress progress-mini">
+                                        <div style="width: 48%;" class="progress-bar-success"></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <h2 class="no-margins ">4,422</h2>
+                                    <small>Orders in last month</small>
+                                    <div class="stat-percent">60% <i class="fa fa-level-down text-navy"></i>
+                                    </div>
+                                    <div class="progress progress-mini">
+                                        <div style="width: 60%;" class="progress-bar-success"></div>
+                                    </div>
+                                </li>
+                                <li>
+                                    <h2 class="no-margins ">9,180</h2>
+                                    <small>Monthly income from orders</small>
+                                    <div class="stat-percent">22% <i class="fa fa-bolt text-navy"></i>
+                                    </div>
+                                    <div class="progress progress-mini">
+                                        <div style="width: 22%;" class="progress-bar-success"></div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+
+</div>

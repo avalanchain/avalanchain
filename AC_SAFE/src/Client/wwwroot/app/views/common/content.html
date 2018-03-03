@@ -1,0 +1,31 @@
+<!-- Wrapper-->
+<div id="wrapper">
+
+    <!-- Navigation -->
+    <div ng-include="'/app/views/common/navigation.html'"></div>
+
+    <!-- Page wraper -->
+    <!-- ng-class with current state name give you the ability to extended customization your view -->
+    <div id="page-wrapper" class="gray-bg {{$state.current.name}}">
+
+        <!-- Page wrapper -->
+        <div ng-include="'/app/views/common/topnavbar.html'"></div>
+
+        <!-- Breadcrumb -->
+        <!-- <div ng-include="'/app/views/common/breadcrumb.html'"></div> -->
+        <div ncy-breadcrumb></div>
+        
+        <!-- Main view  -->
+        <div ui-view></div>
+
+        <!-- Chat -->
+        <div ng-include="'/app/views/common/chat.html'"></div>
+
+        <!-- Footer -->
+        <div class="footer" ng-include="'/app/views/common/footer.html'"></div>
+
+    </div>
+    <!-- End page wrapper-->
+
+</div>
+<!-- End wrapper-->

@@ -1,0 +1,226 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="Exchangedashboard as vm">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="col-lg-3">
+                <div class="widget style1 blue-bg">
+                    <div class="row">
+                        <div class="col-xs-4">
+                            <i class="fa fa-hand-o-down fa-5x"></i>
+                        </div>
+                        <div class="col-xs-8 text-right">
+                            <span>ALL Orders</span>
+
+                            <h2 class="font-bold">{{vm.orderCommandsCount}}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="widget style1 lazur-bg">
+                    <div class="row">
+                        <div class="col-xs-4">
+                            <i class="fa fa-flash fa-5x"></i>
+                        </div>
+                        <div class="col-xs-8 text-right">
+                            <span>ALL Events</span>
+
+                            <h2 class="font-bold">{{vm.orderEventsCount}}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3">
+                <div class="widget style1 yellow-bg">
+                    <div class="row">
+                        <div class="col-xs-4">
+                            <i class="fa fa-files-o fa-5x"></i>
+                        </div>
+                        <div class="col-xs-8 text-right">
+                            <span>ALL Full Orders</span>
+                            <h2 class="font-bold">{{vm.fullOrdersCount}}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3">
+                <div class="widget style1 text-navy">
+                    <div class="row">
+                        <div class="col-xs-4 text-center">
+                            <i class="fa fa-money fa-5x"></i>
+                        </div>
+                        <div class="col-xs-8 text-right">
+                            <span>Main Symbol </span>
+                            <h2 class="font-bold">{{vm.symbol}}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-warning pull-right">Top symbols</span>
+                    <h5>Symbols</h5>
+                </div>
+                <div class="ibox-content" >
+                    <div class="row">
+                        <!--<div class="col-xs-2" style="cursor: pointer" ng-repeat="symbol in vm.symbols" ng-click="vm.showSymbol(symbol)"> 
+                            <small class="stats-label">Currency / Page</small>
+                            <h2>{{symbol}}</h2>
+                        </div>-->
+                        <div class="col-md-2" style="cursor: pointer" ng-repeat="symbol in vm.symbols" ng-click="vm.showSymbol(symbol)">
+                            <div class="ibox">
+                                <div class="ibox-content product-box">
+
+                                    <!--<div class="product-imitation">
+                                        [ SYMBOL ]
+                                    </div>-->
+                                    <div class="product-desc">
+                                        <!--<span class="product-price">
+                                            $10
+                                        </span>-->
+                                        <small class="text-muted">Category</small>
+                                        <strong class="product-name"> {{symbol}}</strong>
+
+
+
+                                        <!--<div class="small m-t-xs">
+                                            Many desktop publishing packages and web page editors now.
+                                        </div>-->
+                                        <div class="m-t text-righ">
+
+                                            <a href="#" class="btn btn-xs btn-outline btn-primary">OPEN <i class="fa fa-long-arrow-right"></i> </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--<div class="col-xs-4">
+                            <small class="stats-label">% New Visits</small>
+                            <h4>46.11%</h4>
+                        </div>
+                        <div class="col-xs-4">
+                            <small class="stats-label">Last week</small>
+                            <h4>432.021</h4>
+                        </div>-->
+                    </div>
+                </div>
+                <!--<div class="ibox-content">
+                    <div class="row">
+                        <div class="col-xs-4">
+                            <small class="stats-label">Pages / Visit</small>
+                            <h4>643 321.10</h4>
+                        </div>
+
+                        <div class="col-xs-4">
+                            <small class="stats-label">% New Visits</small>
+                            <h4>92.43%</h4>
+                        </div>
+                        <div class="col-xs-4">
+                            <small class="stats-label">Last week</small>
+                            <h4>564.554</h4>
+                        </div>
+                    </div>
+                </div>-->
+                <!--<div class="ibox-content">
+                    <div class="row">
+                        <div class="col-xs-4">
+                            <small class="stats-label">Pages / Visit</small>
+                            <h4>436 547.20</h4>
+                        </div>
+
+                        <div class="col-xs-4">
+                            <small class="stats-label">% New Visits</small>
+                            <h4>150.23%</h4>
+                        </div>
+                        <div class="col-xs-4">
+                            <small class="stats-label">Last week</small>
+                            <h4>124.990</h4>
+                        </div>
+                    </div>
+                </div>-->
+            </div>
+        </div>
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Orders </h5>
+
+                    <div ibox-tools></div>
+                </div>
+                <div class="ibox-content">
+                    <div class="row m-t-sm">
+                        <div class="col-lg-12">
+                            <div class="panel blank-panel ui-tab">
+                                <div class="project-list">
+                                    <!--<tab heading="Last activity" active="tab.active" class="dsads">-->
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>ID</th>
+                                                <th>Symbol</th>
+                                                <th>Limit</th>
+                                                <th>Market Side</th>
+                                                <th>Account</th>
+                                                <th>Quantity</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="order in vm.orders | pagination:(ordersPage-1)*10 | limitTo:10">
+                                                <td class="project-title">
+                                                    {{$index+1+((ordersPage-1)*10)}}
+                                                </td>
+                                                <td class="project-title">
+                                                    <strong>{{order.id}}</strong>
+                                                </td>
+                                                <td class="project-title">
+                                                    <span class="label label-primary">{{order.orderData.symbol.symbol}}</span>
+                                                    <!--{{order}}-->
+                                                </td>
+                                                <td class="project-title">
+                                                    <small>{{order.orderData.orderType.limit}}</small>
+                                                </td>
+
+                                                <td class="project-title">
+                                                    <i ng-show="order.orderData.marketSide =='bid'" class="fa fa-play fa-rotate-270 text-navy"></i>
+                                                    <i ng-hide="order.orderData.marketSide =='bid'" class="fa fa-play fa-rotate-90 text-danger"></i>
+                                                    {{order.orderData.marketSide}}
+                                                </td>
+
+                                                <td class="project-title">
+                                                    <span class="label label-info">{{order.orderData.account.tradingAccount}}</span>
+                                                </td>
+                                                <td class="project-title">
+                                                    <small>{{order.orderData.quantity}}</small>
+                                                </td>
+                                                <td class="project-title">
+                                                    <p class="small">
+                                                        {{order.orderData.createdTime | date : 'short'}}
+                                                    </p>
+                                                </td>
+
+                                            </tr>
+
+                                        </tbody>
+                                    </table>
+                                    <!--</tab>-->
+                                    <uib-pagination total-items="vm.orders.length" ng-model="ordersPage" boundary-link-numbers="true" max-size="5" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+
+</div>

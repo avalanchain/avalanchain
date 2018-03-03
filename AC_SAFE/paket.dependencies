@@ -5,6 +5,7 @@ group Server
   nuget Microsoft.AspNetCore
   nuget Microsoft.AspNetCore.StaticFiles
   nuget Fable.Remoting.Giraffe
+  nuget Fable.JsonConverter
 
   clitool Microsoft.DotNet.Watcher.Tools
 

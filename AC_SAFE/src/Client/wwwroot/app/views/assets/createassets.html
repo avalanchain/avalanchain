@@ -1,0 +1,95 @@
+<div class="wrapper wrapper-content animated fadeInRight" ng-controller="createassets as vm">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="row">
+
+                <div class="col-lg-12">
+                    <div class="ibox float-e-margins">
+                        <div class="ibox-title">
+                            <h5> Asset Creation
+                                <!-- <small>Simple to do</small> -->
+                            </h5>
+                            <div ibox-tools="" class="ng-scope">
+                                <div class="ibox-tools dropdown" uib-dropdown="">
+                                    <a ng-click="showhide()"> <i class="fa fa-chevron-up"></i></a>
+                                    <a href="" uib-dropdown-toggle="" class="dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa fa-wrench"></i>
+                            </a>
+                                    <ul uib-dropdown-menu="" class="dropdown-menu">
+                                        <li><a href="">Config option 1</a>
+                                        </li>
+                                        <li><a href="">Config option 2</a>
+                                        </li>
+                                    </ul>
+                                    <a ng-click="closebox()"><i class="fa fa-times"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ibox-content">
+                            <div class="row">
+                                <div class="col-lg-8 b-r">
+                                    <!-- <h3 class="m-t-none m-b">Sign in</h3> -->
+
+                                    <!-- <p>Sign in today for more expirience.</p> -->
+
+                                    <form role="form" name="caForm" class="form-horizontal">
+                                        <div class="form-group"><label class="col-sm-2 control-label">Name</label>
+
+                                            <div class="col-sm-10"><input ng-model="asset.name" type="text" class="form-control" required> <span class="help-block m-b-none">Chose a name for your Tokens</span>
+                                            </div>
+                                        </div>
+                                        <div class="hr-line-dashed"></div>
+                                        <div class="form-group"><label class="col-sm-2 control-label">Description</label>
+                                            <div class="col-sm-10"><input ng-model="asset.description" type="text" class="form-control" required> <span class="help-block m-b-none">Enter a brief description.</span>
+                                            </div>
+                                        </div>
+                                        <div class="hr-line-dashed"></div>
+                                        <div class="form-group"><label class="col-sm-2 control-label">Total Tokens</label>
+                                            <div class="col-sm-10">
+                                                <!-- <input type="text" ng-model="asset.amount"class="form-control">  -->
+                                                <input ng-model="asset.amount" type="number" name="demo1" touch-spin spin-options="vm.spinOption" required>
+                                                <span class="help-block m-b-none">Enter a total supply.</span>
+                                            </div>
+                                        </div>
+                                        <div class="hr-line-dashed"></div>
+                                        <div class="form-group"><label class="col-sm-2 control-label">Tokens Decimals</label>
+                                            <div class="col-sm-10">
+                                                    <!-- <input ng-model="asset.decimals" type="text" class="form-control"> -->
+                                                 <input ng-model="asset.decimals" type="number" name="demo1" touch-spin spin-options="vm.spinOption" required>
+                                                 <span class="help-block m-b-none">Assign a number of Decimals.(For example if you select 8 your token will be divisible by 1 followed by 8 zeros)</span>
+                                            </div>
+                                        </div>
+                                        <div class="hr-line-dashed"></div>
+                                        <div class="form-group"><label class="col-sm-2 control-label">Re-Issuable</label>
+                                            <div class="col-sm-10">
+                                                    <input icheck type="checkbox" ng-model="asset.reissuable" />
+                                                <span class="help-block m-b-none">possibility of increasing the total supply of your  tokens in future.</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <button ng-click="caForm.$valid && vm.createAsset(asset)" class="btn btn-sm btn-primary pull-right m-t-n-xs" type="submit"><strong>Create</strong></button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="col-lg-4">
+                                    <h4>Assets icon</h4>
+
+                                    <p>You can load your asset icon:</p>
+
+                                    <p class="text-center">
+                                        <a href=""><i class="fa fa-upload big-icon"></i></a>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+
+
+</div>

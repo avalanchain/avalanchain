@@ -1,0 +1,179 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="Dashboard as vm">
+    <div class="row">
+            <div class="col-lg-12">
+                    <div class="text-center m-t-lg">
+                        <div class="ibox-content m-b-sm border-bottom">
+                            <div class="text-center p-lg">
+                                <h2>Create Assets</h2>
+                                <span>Create your own assets
+                                </span>
+                                <button ui-sref="assets.createassets" class="btn btn-danger  dim " type="button">
+                                    <i class="fa fa-plus"></i>
+                                    <span  class="bold">Create</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                        <div class="animated fadeInUp">
+            
+                            <div class="ibox">
+                                <div class="ibox-title">
+                                    <h5>All Assets</h5>
+            
+                                    <!-- <div class="ibox-tools">
+                                        <a href="" class="btn btn-primary btn-xs">Create new project</a>
+                                    </div> -->
+                                </div>
+                                <div class="ibox-content">
+                                    <!-- <div class="row m-b-sm m-t-sm">
+                                        <div class="col-md-1">
+                                            <button type="button" id="loading-example-btn" class="btn btn-white btn-sm"><i class="fa fa-refresh"></i> Refresh</button>
+                                        </div>
+                                        <div class="col-md-11">
+                                            <div class="input-group"><input type="text" placeholder="Search" class="input-sm form-control"> <span class="input-group-btn">
+                                                                    <button type="button" class="btn btn-sm btn-primary"> Go!</button> </span></div>
+                                        </div>
+                                    </div> -->
+            
+                                    <div class="project-list">
+            
+                                            <table class="table table-hover">
+                                                    <thead>
+                                                        <tr>
+                        
+                                                            <!-- <th>#</th> -->
+                                                            <th>Status </th>
+                                                            <th>Name </th>
+                                                            <th>Description </th>
+                                                            <th>Progress</th>
+                                                            <th>Total tokens </th>
+                                                            <th class="text-center">Re-Issuable</th>
+                                                            <th>Rised</th>
+                                                            <th>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr data-ng-repeat="asset in vm.assets">
+                                                            <td class="project-status">
+                                                                <span class="label label-primary">{{asset.status}}</span>
+                                                            </td>
+                                                            <td class="project-title">
+                                                                <a>{{asset.name}}</a>
+                                                            </td>
+                                                            <td class="project-title">
+                                                                <a>{{asset.description}}</a>
+                                                                <br/>
+                                                                <small>{{asset.id}}</small>
+                                                            </td>
+                                                            <td class="project-completion">
+                                                                <small>Completion with: {{asset.completion}}%</small>
+                                                                <div class="progress progress-mini">
+                                                                    <div style="width: {{asset.completion}}%;" class="progress-bar-success"></div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="project-title">
+                                                                {{asset.amount}}
+                                                            </td>
+                                                            <td class="project-title text-center">
+
+                                                                <i ng-show="asset.reissuable" class="fa fa-check text-navy"></i>
+                                                                <i ng-hide="asset.reissuable" class="fa fa-times text-danger"></i>
+                        
+                                                            </td>
+                                                            <td class="project-title">
+                                                                    ${{(asset.completion*50000)/($index+1) | number:2}} <i class="fa fa-level-up text-navy"></i>
+                                                            </td>
+                                                            <td class="project-title">
+                                                                <!-- <a href="" class="btn btn-white btn-sm"><i class="fa fa-folder"></i> View </a> -->
+                                                                <a class="btn btn-white btn-sm"> Follow </a>
+                                                            </td>
+                                                        </tr>
+                        
+                        
+                                                    </tbody>
+                                                </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+        <div class="col-lg-3">
+            <div ui-sref="index.accounts" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-primary pull-right">Today</span>
+                    <h5>Accounts</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">{{mdata.accounts.length}}</h1>
+
+                    <div class="stat-percent font-bold text-navy">20% <i class="fa fa-level-down"></i></div>
+                    <small>New users</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div ui-sref="index.clusters" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-info pull-right">Monthly</span>
+                    <h5>Clusters</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">{{mdata.clusters.length}}</h1>
+
+                    <div class="stat-percent font-bold text-info">40% <i class="fa fa-level-up"></i></div>
+                    <small>Amount</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div ui-sref="index.nodes" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-success pull-right">Monthly</span>
+                    <h5>Nodes</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">{{mdata.nodes.length}}</h1>
+
+                    <div class="stat-percent font-bold text-success">98% <i class="fa fa-bolt"></i></div>
+                    <small>Total income</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div ui-sref="index.chains" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-warning pull-right">Annual</span>
+                    <h5>Chains</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins">{{mdata.streams.length}}</h1>
+
+                    <div class="stat-percent font-bold text-warning">16% <i class="fa fa-level-up"></i></div>
+                    <small>New chains</small>
+                    {{mdata.streams.length/2}}
+                    
+                    <!-- {{vm.system.length}},
+                    {{vm.users.length}} -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Transactions</h5>
+
+                    <div ibox-tools></div>
+                </div>
+                <div class="ibox-content">
+                    <div class="flot-chart">
+                        <div flot class="flot-chart-content" dataset="vm.flotMultiData" options="vm.flotMultiOptions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

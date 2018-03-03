@@ -1,0 +1,113 @@
+<div class="wrapper wrapper-content animated fadeInRight" data-ng-controller="chat as vm">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+
+                    <strong>Chat panel
+                    </strong>
+                    can be used to create new nodes in your app. You can also use a small chat in the right corner to provide live discussion.
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+
+            <div class="ibox chat-view">
+
+                <div class="ibox-title">
+                    <small class="pull-right text-muted">Last message: {{vm.lastMessage | date : 'medium'}}</small>
+                    Chat panel
+                </div>
+
+                <div class="ibox-content">
+
+                    <div class="row">
+
+                        <div class="col-md-9 " style="height: 400px">
+                            <div class="chat-discussion"  scroll-glue full-scroll>
+
+                                <div class="chat-message {{message.side}}" data-ng-repeat="message in vm.messages">
+                                    <i class="message-avatar fa fa-user fa-3x"></i>
+                                    <!-- <img class="message-avatar" src="img/a1.jpg" alt="" > -->
+                                    <div class="message">
+                                        <a class="message-author">
+                                            {{message.name}}
+                                        </a>
+                                        <span class="message-date">
+                                            {{message.date | date : medium}}
+                                        </span>
+                                        <span class="message-content">
+                                            {{message.message}}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="chat-users">
+
+                                <div class="users-list">
+                                    <div class="chat-user" data-ng-repeat="user in vm.users">
+                                        <span class="pull-right label label-primary">Online</span>
+                                        <i class="chat-avatar fa fa-user fa-3x"></i>
+                                        <div class="chat-user-name">
+                                            <a href="#">{{user.name}}</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- <div class="col-sm-12">  <div class="hr-line-dashed"></div></div> -->
+                        <div class="col-sm-12">
+                          <form ng-submit="vm.send(vm.message)">
+                            <div class="input-group" style="    padding: 10px;"><input type="text" name="message" ng-model="vm.message" placeholder="Enter message text" class="form-control">
+                                <span class="input-group-btn" ng-click="vm.send(vm.message)">
+                                    <button type="button" class="btn btn-primary">
+                                      <i class="fa fa-send-o"></i>
+                                    </button>
+                                </span>
+                            </div>
+                             </form>
+                        </div>
+                    </div>
+                    <!-- <div class="row">
+                        <div class="col-lg-12">
+
+                            <div class="col-sm-12">
+                                <div class="input-group"><input type="text" class="form-control"> <span class="input-group-btn"> <button type="button" class="btn btn-primary">Go!
+                                </button> </span></div>
+                            </div>
+                        </div>
+                            <div class="chat-message-form">
+
+                                <div class="form-group">
+
+                                    <textarea class="form-control message-input" name="message" placeholder="Enter message text"></textarea>
+                                </div>
+
+                            </div>
+                        </div> -->
+                </div>
+                <!-- <irontec-simple-chat
+                      messages="vm.messages"
+                      username="vm.username"
+                      input-placeholder-text="You can write here"
+                      submit-button-text="Send your message"
+                      title="Super Awesome Chat"
+                      theme="material"
+                      submit-function="vm.sendMessage"
+                      visible="vm.visible"
+                      expand-on-new="vm.expandOnNew">
+                    </irontec-simple-chat> -->
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+</div>

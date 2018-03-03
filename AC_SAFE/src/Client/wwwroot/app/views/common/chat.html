@@ -1,0 +1,48 @@
+<div  data-ng-controller="chat as vm">
+
+<div class="small-chat-box ng-small-chat fadeInRight animated" ng-show="openChat">
+
+    <div class="heading" draggable="true">
+        <small class="chat-date pull-right">
+            {{vm.lastMessage | date : 'medium'}}
+        </small>
+        Small chat
+    </div>
+
+    <div class="content" chat-slim-scroll scroll-glue>
+
+        <div class="{{message.side}}" data-ng-repeat="message in vm.messages">
+            <div class="author-name">
+                {{message.name}} <small class="chat-date">
+                    {{message.date | date : medium}}
+                </small>
+            </div>
+            <div class="chat-message active">
+                {{message.message}}
+            </div>
+
+        </div>
+
+
+    </div>
+    <div class="form-chat">
+        <div class="input-group input-group-sm">
+            <input type="text" class="form-control" ng-model="vm.message"> <span class="input-group-btn">
+                <button class="btn btn-primary" ng-click="vm.send(vm.message)" type="button">
+                    Send
+                </button>
+            </span>
+        </div>
+    </div>
+
+</div>
+<div id="small-chat" ng-click="openChat = !openChat">
+
+    <span class="badge badge-warning pull-right">{{vm.messages.length}}</span>
+    <a class="open-small-chat">
+        <i class="fa fa-comments"></i>
+
+    </a>
+</div>
+
+</div>

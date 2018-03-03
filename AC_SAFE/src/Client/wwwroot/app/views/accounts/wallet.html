@@ -1,0 +1,182 @@
+<div data-ng-controller="wallet as vm">
+    <div class="row animated fadeInUp">
+        <div class="col-lg-8">
+            <!--<div class="col-lg-9">-->
+            <div class="wrapper wrapper-content ">
+                <div class="ibox">
+                    <div class="ibox-content">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="m-b-md">
+                                    <!--<a href="" class="btn btn-white btn-xs pull-right">Edit project</a>-->
+
+                                    <h2>Wallet Client</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-7 col-md-8">
+                                <dl class="dl-horizontal">
+                                    <dt>Status:</dt>
+                                    <dd>
+                                        <span class="label label-active">Active</span>
+                                    </dd>
+                                    <br/>
+                                    <dt>ID:</dt>
+                                    <dd>{{current.name}}</dd>
+                                    <br/>
+                                    <dt>Home currency:</dt>
+                                    <dd>
+                                        <select chosen style="width:100px;" class="form-control" ng-model="currency" ng-options="currency.currency for currency in currencies"></select>
+                                    </dd>
+                                    <dt>Balance:</dt>
+                                    <dd>
+                                        <b style="font-size:large">{{current.balance | number}}</b>
+                                        </dd>
+
+                                </dl>
+                            </div>
+                            <div class="col-lg-5 col-md-4" id="cluster_info">
+                                <div>
+                                    <c3chart bindto-id="gauge-plot1-chart">
+                                        <chart-column column-id="AVCOIN" column-color="#1ab394" column-values="25" column-type="gauge"/>
+                                        <chart-gauge min="0" max="100" units=" EARNED AVCOIN" width="39"/>
+                                    </c3chart>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row m-t-sm">
+                            <div class="col-lg-12">
+                                <div class="col-lg-12">
+                                    <div class="m-b-md">
+                                        <!--<a href="" class="btn btn-white btn-xs pull-right">Edit project</a>-->
+
+                                        <h2>Currencies</h2>
+                                    </div>
+                                </div>
+                                <div class="panel blank-panel ui-tab">
+                                    <div class="project-list">
+                                        <!--<tab heading="Last activity" active="tab.active" class="dsads">-->
+                                        <table class="table table-striped col-lg-12">
+                                            <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Status</th>
+                                                    <th>Name</th>
+                                                    <th>Currency</th>
+                                                    <th>Ammount</th>
+                                                    <th>Home Currency</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr ng-repeat="currency in currencies | pagination:(transactionPage-1)*10 | limitTo:10">
+                                                    <td class="project-title">
+                                                        <small>{{$index+1}}<small/>
+                                                        </td>
+                                                        <td class="project-title">
+                                                            <span class="label label-success">ACTIVE<span/>
+                                                            </td>
+                                                            <!-- <td class="project-title">
+                                                  <span class="label label-success">ACTIVE<span/>
+                                                    <small>ACTIVE</small>
+                                                </td> -->
+                                                            <td class="project-title">
+                                                                <small>{{currency.name}}</small>
+                                                            </td>
+                                                            <!-- <td class="project-title">
+                                                    <small>{{transaction.account}}</small>
+                                                </td> -->
+
+                                                            <td class="project-title">
+                                                                <small>{{currency.currency}}</small>
+                                                            </td>
+
+                                                            <td class="project-title">
+                                                                <small>{{($index+1)*22}}</small>
+                                                            </td>
+                                                            <td class="project-title">
+                                                                <small>{{($index+1)*137}}</small>
+                                                            </td>
+                                                            <td class="project-title">
+                                                              <a ng-click="openSend(currency)" class="btn btn-white btn-sm"> Send </a>
+                                                              <a ng-click="openExchange(currency)" class="btn btn-white btn-sm"> Exchange </a>
+                                                            </td>
+                                                        </tr>
+
+                                                        <tr>
+                                                            <td class="project-title">
+                                                                <b>Total:</b>
+                                                                </td>
+                                                                <td class="project-title">
+
+                                                                    </td>
+                                                                    <td class="project-title">
+
+                                                                    </td>
+                                                                    <td class="project-title">
+                                                                    </td>
+
+                                                                    <td class="project-title">
+
+                                                                    </td>
+                                                                    <td class="project-title">
+                                                                        <b>{{8*137}} $</b>
+                                                                    </td>
+                                                                    <td class="project-title">
+
+                                                                    </td>
+                                                                </tr>
+
+                                                    </tbody>
+                                                </table>
+                                                <!--</tab>-->
+                                                <uib-pagination total-items="transactions.length" ng-model="transactionPage" max-size="maxSize" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="wrapper wrapper-content animated fadeInUp">
+                    <div class="col-lg-12">
+                        <div class="ibox float-e-margins">
+                            <div class="ibox-title">
+                                <span class="label label-success pull-right">Monthly</span>
+                                <h5>Income</h5>
+                            </div>
+                            <div class="ibox-content">
+                                <h1 class="no-margins">408</h1>
+
+                                <div class="stat-percent font-bold text-success">USD
+                                    <i class="fa fa-usd"></i>
+                                </div>
+                                <small>Total income</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-12">
+                        <div class="ibox float-e-margins">
+                            <div class="ibox-title">
+                                <span class="label label-info pull-right">Annual</span>
+                                <h5>Spend</h5>
+                            </div>
+                            <div class="ibox-content">
+                                <h1 class="no-margins">275</h1>
+
+                                <div class="stat-percent font-bold text-info">USD
+                                    <i class="fa fa-usd"></i>
+                                </div>
+                                <small>Total spending</small>
+                            </div>
+                        </div>
+                    </div>
+                      </div>
+                </div>
+
+            </div>
+        </div>

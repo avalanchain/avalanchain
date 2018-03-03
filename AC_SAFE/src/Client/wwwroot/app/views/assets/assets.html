@@ -1,0 +1,93 @@
+<div class="wrapper wrapper-content animated fadeInRight" ng-controller="assets as vm">
+    <div class="row">
+        <div class="col-lg-12">
+
+            <div class="ibox">
+                <div class="ibox-title">
+                    <h5>All Assets</h5>
+
+                    <div class="ibox-tools">
+                        <a ui-sref="assets.createassets" class="btn btn-primary btn-xs">Create Assets</a>
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <div class="row m-b-sm m-t-sm">
+                        <div class="col-md-1">
+                            <button type="button" id="loading-example-btn" class="btn btn-white btn-sm"><i class="fa fa-refresh"></i> Refresh</button>
+                        </div>
+                        <div class="col-md-11">
+                            <div class="input-group">
+                                <input type="text" ng-model="asset" uib-typeahead="asset.name for asset in vm.assets | filter:$viewValue | limitTo:8"
+                                    id="top-search" placeholder="Search " class="input-sm form-control">
+                                <!-- <input type="text" placeholder="Search" class="input-sm form-control">  -->
+                                <span class="input-group-btn">
+                                    <button type="button" class="btn btn-sm btn-primary"><i class="fa fa-search"></i> Search</button> 
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="project-list">
+
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+
+                                    <!-- <th>#</th> -->
+                                    <th>Status </th>
+                                    <th>Name </th>
+                                    <th>Description </th>
+                                    <th>Progress</th>
+                                    <th>Total tokens </th>
+                                    <th class="text-center">Re-Issuable</th>
+                                    <th>Rised</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-ng-repeat="asset in vm.assets | filter:{name : asset}">
+                                    <td class="project-status">
+                                        <span class="label label-primary">{{asset.status}}</span>
+                                    </td>
+                                    <td class="project-title">
+                                        <a>{{asset.name}}</a>
+                                    </td>
+                                    <td class="project-title">
+                                        <a>{{asset.description}}</a>
+                                        <br/>
+                                        <small>{{asset.id}}</small>
+                                    </td>
+                                    <td class="project-completion">
+                                        <small>Completion with: {{asset.completion}}%</small>
+                                        <div class="progress progress-mini">
+                                            <div style="width: {{asset.completion}}%;" class="progress-bar-success"></div>
+                                        </div>
+                                    </td>
+                                    <td class="project-title">
+                                        {{asset.amount}}
+                                    </td>
+                                    <td class="project-title text-center">
+                                            
+                                            <i ng-show="asset.reissuable" class="fa fa-check text-navy"></i>
+                                            <i ng-hide="asset.reissuable" class="fa fa-times text-danger"></i>
+    
+                                        </td>
+                                    <td class="project-title">
+                                        ${{(asset.completion*50000)/($index+1) | number:2}} <i class="fa fa-level-up text-navy"></i>
+                                    </td>
+                                    <td class="project-title">
+                                        <!-- <a href="" class="btn btn-white btn-sm"><i class="fa fa-folder"></i> View </a> -->
+                                        <a class="btn btn-white btn-sm"> Follow </a>
+                                    </td>
+                                </tr>
+
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

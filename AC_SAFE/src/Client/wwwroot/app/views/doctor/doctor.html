@@ -1,0 +1,378 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="Doctor as doctor">
+    <div class="row wrapper border-bottom white-bg page-heading">
+        <div class="col-lg-8">
+            <h2>Doctor Page</h2>
+            <ol class="breadcrumb">
+                <li>
+                    Doctor
+                </li>
+                <li ng-hide="doctor.val">
+                    Patients
+                </li>
+                <li ng-show="doctor.val">
+                    X-RAYS
+                </li>
+                <li class="active" ng-show="doctor.valinside">
+                    <strong>Details</strong>
+                </li>
+            </ol>
+        </div>
+        <div class="col-lg-4">
+            <div class="title-action">
+                <!--<a href="#" class="btn btn-white"><i class="fa fa-pencil"></i> Edit </a>
+                <a href="#" class="btn btn-white"><i class="fa fa-check "></i> Save </a>-->
+                <button ng-click="doctor.valinside=!doctor.valinside" target="_blank" ng-show="doctor.valinside" class="btn btn-primary"><i class="fa fa-arrow-left"></i> Back </button>
+            </div>
+        </div>
+    </div>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="text-center m-t-lg">
+            <h1>
+                {{doctor.info}}
+            </h1>
+
+        </div>
+    </div>
+</div>
+<div ng-hide="doctor.valinside">
+    <div class="row ">
+        <div class="col-lg-3 col-lg-offset-3">
+            <div class="widget style1 navy-bg" ng-click="doctor.hideShowPatPhot(false)" style="cursor: pointer">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-users fa-5x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span> Patients </span>
+
+                        <h2 class="font-bold">{{doctor.patientsCount}}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="widget style1 navy-bg" ng-click="doctor.hideShowPatPhot(true)" style="cursor: pointer">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-picture-o fa-5x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span> X-RAYS </span>
+
+                        <h2 class="font-bold">{{doctor.photoCount}}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--<div class="col-lg-3">
+            <div ng-click="doctor.hideShowPatPhot(false)" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Patients</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins"><i class="fa fa-users"></i>{{ doctor.patientsCount}}
+                    </h1>
+
+                    <div class="stat-percent font-bold text-navy">20% <i class="fa fa-level-down"></i>
+                    </div>
+                    <small>New patients</small>
+                </div>
+            </div>
+        </div>-->
+        <!--<div class="col-lg-3">
+            <div ng-click="doctor.hideShowPatPhot(true)" style="cursor: pointer" class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>X-RAYS</h5>
+                </div>
+                <div class="ibox-content">
+                    <h1 class="no-margins"><i class="fa fa-picture-o"></i>{{ doctor.photoCount}}
+                    </h1>
+
+                    <div class="stat-percent font-bold text-info">40% <i class="fa fa-level-up"></i>
+                    </div>
+                    <small>New photos</small>
+                </div>
+            </div>
+        </div>-->
+
+    </div>
+
+    <div class="row" ng-hide="doctor.val">
+        <div class="col-lg-12">
+            <div class="row">
+                <div class="col-md-3" ng-repeat="patient in doctor.patients | limitTo:40" style="cursor: pointer" ng-click="doctor.showPatDecript(patient)">
+                    <div class="ibox">
+                        <div class="ibox-content product-box">
+
+                            <div class="product-imitation">
+                                <!--<i style="color: #C7413E;" class="fa fa-user fa-3x "></i>-->
+                                <img src="{{patient.icon}}"/>
+                            </div>
+                            <div class="product-desc">
+                                <span class="product-price">
+                                        {{patient.photos.length}}
+                                    </span>
+                                <small class="text-muted">Category: arm brake</small>
+                                <a href="#" class="product-name">Name: {{patient.name}}</a>
+
+                                <div class="small m-t-xs">
+                                    <b>Doctor: </b> {{patient.doctor}}
+                                </div>
+                                <div class="m-t text-righ">
+
+                                    <a href="#" class="btn btn-xs btn-outline btn-primary">Info <i class="fa fa-long-arrow-right"></i> </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row" ng-show="doctor.val">
+        <div class="col-lg-12">
+            <div class="row">
+                <div class="file-box" ng-repeat="photo in doctor.photos track by $index | limitTo:40">
+                    <div class="file">
+                        <a href="">
+                            <span class="corner"></span>
+
+                            <div class="image">
+                                <img alt="image" class="img-responsive" src="{{photo}}">
+                            </div>
+                            <div class="file-name">
+                                arm brake_{{$index+1}}.jpg
+                                <br/>
+                                <small>Added: Jan 6, 2015</small>
+                            </div>
+                        </a>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Patient Info-->
+<div class="row" ng-show="doctor.valinside">
+<div class="row">
+    <div class="col-lg-12">
+        <div class="text-center m-t-lg">
+            <h3>
+                {{doctor.descriptionText}}
+            </h3>
+
+        </div>
+    </div>
+</div>
+<!--<div class="row">
+    <div class="col-lg-3 col-lg-offset-11">
+        <div class="m-t-lg">
+            <button type="button" ng-click="doctor.valinside=!doctor.valinside" class="btn btn-primary btn-sm">Back</button>
+
+        </div>
+    </div>
+</div>-->
+<div class="col-lg-9" style="cursor: pointer">
+    <!--<div class="col-lg-9">-->
+    <div class="wrapper wrapper-content animated fadeInUp">
+        <div class="ibox">
+            <div class="ibox-content">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="m-b-md">
+                            <a href="" class="btn btn-white btn-xs pull-right">Edit project</a>
+
+                            <h2>Medical Card</h2>
+                        </div>
+                        <dl class="dl-horizontal">
+                            <dt>Status:</dt>
+                            <dd><span class="label label-primary">Active</span></dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-5">
+                        <dl class="dl-horizontal">
+
+                            <dt>Name:</dt>
+                            <dd>{{doctor.current.name}}</dd>
+                            <dt>Visits:</dt>
+                            <dd> {{doctor.current.photos.length}}</dd>
+                            <dt>Doctor:</dt>
+                            <dd><a href="" class="text-navy"> John Galt</a></dd>
+                            <dt>Version:</dt>
+                            <dd> v1.4.2</dd>
+                        </dl>
+                    </div>
+                    <div class="col-lg-7" id="cluster_info">
+                        <dl class="dl-horizontal">
+
+                            <dt>Last Updated:</dt>
+                            <dd>16.08.2014 12:15:57</dd>
+                            <dt>Created:</dt>
+                            <dd> 10.07.2014 23:36:57</dd>
+                            <dt>Participants:</dt>
+                            <dd class="project-people">
+                                <a href=""><img alt="image" class="img-circle" src="/Content/img/3.png"></a>
+                                <a href=""><img alt="image" class="img-circle" src="/Content/img/1.png"></a>
+                                <a href=""><img alt="image" class="img-circle" src="/Content/img/2.png"></a>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+                <!--<div class="row">
+                    <div class="col-lg-12">
+                        <dl class="dl-horizontal">
+                            <dt>Completed:</dt>
+                            <dd>
+                                <div class="progress progress-striped active m-b-sm">
+                                    <div style="width: 60%;" class="progress-bar"></div>
+                                </div>
+                                <small>Project completed in <strong>60%</strong>. Remaining close the project, sign a contract and invoice.</small>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>-->
+                <div class="row m-t-sm">
+                    <div class="col-lg-12">
+                        <div class="panel blank-panel ui-tab">
+
+                            <tabset>
+
+                                <tab heading="Last activity" active="tab.active" class="dsads">
+                                    <table class="table table-striped">
+                                        <thead>
+                                        <tr>
+                                            <th>Status</th>
+                                            <th>Title</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                            <th>Comments</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr>
+                                            <td>
+                                                <span class="label label-primary"><i class="fa fa-check"></i> Completed</span>
+                                            </td>
+                                            <td>
+                                                Last visit
+                                            </td>
+                                            <td>
+                                                12.07.2014 10:10:1
+                                            </td>
+                                            <td>
+                                                14.07.2014 10:16:36
+                                            </td>
+                                            <td>
+                                                <p class="small">
+                                                    cured
+                                                </p>
+                                            </td>
+
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <span class="label label-primary"><i class="fa fa-check"></i> Accepted</span>
+                                            </td>
+                                            <td>
+                                                Second visit
+                                            </td>
+                                            <td>
+                                                12.07.2014 10:10:1
+                                            </td>
+                                            <td>
+                                                14.07.2014 10:16:36
+                                            </td>
+                                            <td>
+                                                <p class="small">
+                                                    Not bad
+                                                </p>
+                                            </td>
+
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <span class="label label-primary"><i class="fa fa-check"></i> Sent</span>
+                                            </td>
+                                            <td>
+                                                First visit
+                                            </td>
+                                            <td>
+                                                12.07.2014 10:10:1
+                                            </td>
+                                            <td>
+                                                14.07.2014 10:16:36
+                                            </td>
+                                            <td>
+                                                <p class="small">
+                                                    Bad
+                                                </p>
+                                            </td>
+
+                                        </tr>
+
+
+                                        </tbody>
+                                    </table>
+                                </tab>
+
+                            </tabset>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!--<div class="ibox">
+                <div class="ibox-content product-box">
+
+                    <div class="product-imitation">
+                        <img src="{{doctor.current.icon}}"/>
+                    </div>
+                    <div class="product-desc">
+                        <span class="product-price">
+                            {{doctor.current.photos.length}}
+                        </span>
+                        <small class="text-muted">Category: arm brake</small>
+                        <a href="#" class="product-name">Name: {{doctor.current.name}}</a>
+
+                        <div class="small m-t-xs">
+                            <b>Doctor: </b> {{doctor.current.doctor}}
+                        </div>
+                        <div class="m-t text-righ">
+
+                            <a href="#" class="btn btn-xs btn-outline btn-primary">Info <i class="fa fa-long-arrow-right"></i> </a>
+                        </div>
+                    </div>
+                </div>
+            </div>-->
+        </div>
+    </div>
+</div>
+<div class="col-lg-3">
+    <div class="file-box" ng-repeat="photo in doctor.current.photos track by $index">
+        <div class="file">
+            <a href="">
+                <span class="corner"></span>
+
+                <div class="image">
+                    <img alt="image" class="img-responsive" src="{{photo}}">
+                </div>
+                <div class="file-name">
+                    arm brake_{{$index+1}}.jpg
+                    <br/>
+                    <small>Added: Jan 6, 2015</small>
+                </div>
+            </a>
+
+        </div>
+    </div>
+</div>
+
+</div>
+</div>

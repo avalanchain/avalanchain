@@ -6,6 +6,9 @@ open Microsoft.AspNetCore
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Logging
+
+open Newtonsoft.Json
 
 open Giraffe
 open Giraffe.Swagger
@@ -15,6 +18,7 @@ open Giraffe.Swagger.Generator
 open Giraffe.Swagger.Dsl
 open SwaggerUi
 open Giraffe.WebSocket
+open Giraffe.Serialization.Json
 
 open Fable.Remoting.Giraffe
 
@@ -84,8 +88,8 @@ let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandl
             ]) |> withConfig docsConfig
           route "/wsecho" >=> (wsConnectionManager.CreateSocket(
                                 (fun _ref -> task { return () }),
-                                (fun ref msg -> ref.SendTextAsync(msg,cancellationToken)),
-                                cancellationToken=cancellationToken)) 
+                                (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),
+                                cancellationToken = cancellationToken)) 
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
@@ -99,13 +103,42 @@ let configureApp  (app : IApplicationBuilder) =
 
 let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore
+    // Configure JsonSerializer to use Fable.JsonConverter
+    let fableJsonSettings = JsonSerializerSettings()
+    fableJsonSettings.Converters.Add(Fable.JsonConverter())
 
-WebHost
-  .CreateDefaultBuilder()
-  .UseWebRoot(clientPath)
-  .UseContentRoot(clientPath)
-  .Configure(Action<IApplicationBuilder> configureApp)
-  .ConfigureServices(configureServices)
-  .UseUrls("http://0.0.0.0:" + port.ToString() + "/")
-  .Build()
-  .Run()
+    services.AddSingleton<IJsonSerializer>(
+        NewtonsoftJsonSerializer(fableJsonSettings)) |> ignore
+    
+let configureLogging (loggerBuilder : ILoggingBuilder) =
+    loggerBuilder.AddFilter(fun lvl -> lvl.Equals LogLevel.Error)
+                 .AddConsole()
+                 .AddDebug() |> ignore
+
+let getPortsOrDefault defaultVal = defaultVal
+
+[<EntryPoint>]
+let main args =
+    try
+        let port = getPortsOrDefault 8085us
+
+        WebHost
+          .CreateDefaultBuilder()
+          .UseWebRoot(clientPath)
+          .UseContentRoot(clientPath)
+          .ConfigureLogging(configureLogging)
+          .Configure(Action<IApplicationBuilder> configureApp)
+          .ConfigureServices(configureServices)
+          .UseUrls("http://localhost:" + port.ToString() + "/")
+          .Build()
+          .Run()
+            
+        0
+    with
+    | exn ->
+        let color = Console.ForegroundColor
+        Console.ForegroundColor <- System.ConsoleColor.Red
+        Console.WriteLine(exn.Message)
+        Console.ForegroundColor <- color
+        1
+  

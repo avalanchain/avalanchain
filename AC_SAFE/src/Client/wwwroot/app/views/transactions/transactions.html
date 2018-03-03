@@ -1,0 +1,114 @@
+<div  ng-controller="transactions as vm">
+
+      <div class="wrapper wrapper-content animated fadeInUp">
+
+      <div class="row" >
+        <div class="col-lg-12">
+          <div class="ibox-content m-b-sm border-bottom">
+              <div class="row">
+                  <div class="col-sm-3">
+                      <div class="form-group">
+                          <label class="control-label" for="product_name">Cluster</label>
+                          <select chosen class="chosen-select" data-ng-model="current.cluster" data-ng-options="cluster.id for cluster in data.clusters">
+                                                      <option value="">All</option> </select>
+                      </div>
+                  </div>
+                  <div class="col-sm-3">
+                      <div class="form-group">
+                          <label class="control-label" for="price">Node</label>
+                          <select chosen class="chosen-select" data-ng-model="current.node" data-ng-options="node.id for node in data.nodes">
+                                                      <option value="">All</option> </select>
+                      </div>
+                  </div>
+                  <div class="col-sm-3">
+                      <div class="form-group">
+                          <label class="control-label" for="quantity">Chains</label>
+                          <select chosen class="chosen-select " data-ng-model="current.stream" data-ng-options="stream.id for stream in data.streams">
+                                                      <option value="">All</option> </select>
+                      </div>
+                  </div>
+                  <div class="col-sm-3">
+                      <div class="form-group">
+                          <label class="control-label" for="status">Account</label>
+                          <select chosen class="chosen-select " ng-model="current.account" ng-options="account.name for account in data.accounts">
+                            <option value="">All</option>
+                          </select>
+                      </div>
+                  </div>
+              </div>
+
+          </div>
+        </div>
+      </div>
+      <div class="row">
+          <div class="col-lg-12">
+              <div class="ibox ">
+                  <div class="ibox-content">
+                      <div class="row m-t-sm">
+                          <div class="col-lg-12">
+                              <div class="panel blank-panel ui-tab">
+                                  <div class="project-list">
+                                      <!--<tab heading="Last activity" active="tab.active" class="dsads">-->
+                                      <table class="table table-striped">
+                                          <thead>
+                                              <tr>
+                                                  <th>Type</th>
+                                                  <th>ID</th>
+                                                  <th>public key</th>
+                                                  <th>Account</th>
+                                                  <th>Node</th>
+                                                  <th>Action</th>
+                                                  <th>Type Name</th>
+                                                  <th>Time</th>
+                                              </tr>
+                                          </thead>
+                                          <tbody>
+                                              <tr ng-repeat="transaction in transactions | filter:{node: current.node.id} | filter:{account : current.account.ref.address} | pagination:(transactionPage-1)*10 | limitTo:10">
+                                                  <td class="project-title">
+                                                      <span class="label {{transaction.type == 'system'? 'label-active': 'label-info'}}">{{transaction.type}}</span>
+                                                  </td>
+                                                  <td class="project-title">
+                                                      <small>{{transaction.id}}</small>
+                                                  </td>
+                                                  <td class="project-title">
+                                                      <small>{{transaction.publicKey}}</small>
+                                                  </td>
+                                                  <td class="project-list">
+                                                      <small ng-if="transaction.account == 'system'">{{transaction.account}}</small>
+                                                      <small ng-if="transaction.account != 'system'"><a  href="#/accounts/{{transaction.account}}">{{transaction.account}}</a></small>
+                                                  </td>
+
+                                                  <td class="project-title">
+                                                      <small>{{transaction.node}}</small>
+                                                  </td>
+
+                                                  <td class="project-title">
+                                                      <small>{{transaction.action}}</small>
+                                                  </td>
+                                                  <td class="project-title">
+                                                      <span class="label {{transaction.typename == 'Warning'? 'label-warning': transaction.typename == 'Error'? 'label-danger' :'label-success'}}">{{transaction.typename}}<span/>
+                                                      </td>
+                                                      <td class="project-title">
+                                                          <small>
+                                                              {{transaction.date | date : 'short'}}
+                                                          </small>
+                                                      </td>
+
+                                                  </tr>
+
+                                              </tbody>
+                                          </table>
+                                          <!--</tab>-->
+                                          <uib-pagination total-items="transactions.length" ng-model="transactionPage" max-size="maxSize" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                                      </div>
+
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+      </div>
+  </div>

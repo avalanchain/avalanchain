@@ -2,5 +2,6 @@ group Server
   FSharp.Core
   Microsoft.AspNetCore
   Microsoft.AspNetCore.StaticFiles
+  Fable.JsonConverter
   Fable.Remoting.Giraffe
   Microsoft.DotNet.Watcher.Tools

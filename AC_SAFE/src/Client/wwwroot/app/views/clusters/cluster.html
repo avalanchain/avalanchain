@@ -1,0 +1,101 @@
+<div data-ng-controller="cluster as vm">
+    <div class="wrapper wrapper-content animated fadeInUp">
+      <div class="col-md-4">
+          <div class="ibox float-e-margins" ui-sref="index.nodes">
+              <div class="ibox-title">
+                  <span class="label label-info pull-right">All Time</span>
+                  <h5>Nodes</h5>
+              </div>
+              <div class="ibox-content">
+                  <h1 class="no-margins">{{vm.nodes.length}}</h1>
+
+                  <div class="stat-percent font-bold text-info">20%
+                      <i class="fa fa-level-up"></i>
+                  </div>
+                  <small>system</small>
+              </div>
+          </div>
+      </div>
+      <div class="col-md-4">
+          <div class="ibox float-e-margins" ui-sref="index.chains">
+              <div class="ibox-title">
+                  <span class="label label-info pull-right">All Time</span>
+                  <h5>Chains</h5>
+              </div>
+              <div class="ibox-content">
+                  <h1 class="no-margins">{{vm.streams.length}}</h1>
+
+                  <div class="stat-percent font-bold text-info">20%
+                      <i class="fa fa-level-up"></i>
+                  </div>
+                  <small>users</small>
+              </div>
+          </div>
+      </div>
+      <div class="col-md-4">
+          <div class="ibox float-e-margins" ui-sref="index.transactions">
+              <div class="ibox-title">
+                  <span class="label label-info pull-right">All Time</span>
+                  <h5>Transactions</h5>
+              </div>
+              <div class="ibox-content">
+                  <h1 class="no-margins">{{vm.transactions.length}}</h1>
+
+                  <div class="stat-percent font-bold text-info">20%
+                      <i class="fa fa-level-up"></i>
+                  </div>
+                  <small>Total</small>
+              </div>
+          </div>
+      </div>
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>Transactions Cluster</h5>
+                        <div ibox-tools></div>
+                    </div>
+                    <div class="ibox-content">
+
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <table class="table table-hover margin bottom">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 1%" class="text-center">No.</th>
+                                            <th>Transaction</th>
+                                            <th class="text-center">Date</th>
+                                            <th class="text-center">Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr data-ng-repeat="transaction in vm.transactions | pagination:(vm.transactionPage-1)*6 | limitTo:6 track by $index">
+                                            <td class="text-center">{{($index-5)+(vm.transactionPage*6)}}</td>
+                                            <td>
+                                                {{transaction.action}}
+                                            </td>
+                                            <td class="text-center small">{{transaction.date | date : 'short'}}</td>
+                                            <td class="text-center">
+                                                <span class="label {{transaction.type == 'system'? 'label-active': 'label-info'}}">{{transaction.type}}</span>
+                                            </td>
+
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+                                <uib-pagination total-items="vm.transactions.length" ng-model="vm.transactionPage" max-size="vm.maxSize" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="flot-chart">
+                                    <!-- ng-show="vm.pieData.length>0" -->
+                                    <div flot class="flot-chart-content" dataset="vm.pieData" options="vm.pieOptions"></div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

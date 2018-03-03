@@ -1,0 +1,109 @@
+<div class="wrapper wrapper-content animated fadeInRight" ng-controller="streams as vm">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox ">
+                <div class="ibox-content">
+                    <div class="row m-t-sm">
+                        <div class="col-lg-12">
+                            <div class="panel blank-panel ui-tab">
+                                <div class="project-list">
+                                    <div class="row m-b-sm m-t-sm">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label class="radio-inline">
+                                                    <input icheck type="radio" name="radio" value="true" ng-model="vm.encode">
+                                                    Encoded
+                                                </label>
+                                                <label class="radio-inline">
+                                                    <input icheck type="radio" name="radio" value="false" ng-model="vm.encode">
+                                                    Decoded
+                                                </label>
+
+                                            </div>
+
+                                        </div>
+
+                                        <!-- <div class="col-md-8">
+                                            <div class="input-group">
+                                                <input type="text" placeholder="Search" class="input-sm form-control" ng-model="searchAccounts">
+                                                <span class="input-group-btn">
+                                                    <button type="button" class="btn btn-sm btn-primary" ng-click="vm.test()">
+                                                        Clean</button>
+                                                </span>
+                                            </div>
+                                        </div> -->
+                                    </div>
+                                    <table class="table table-striped" ng-show="vm.encode=='true'">
+                                        <thead>
+                                            <tr>
+                                                <th>Token</th>
+                                                <th>Verified</th>
+
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="token in vm.tokens | pagination:(vm.page-1)*10 | limitTo:10">
+                                                <td class="project-title">
+                                                    <span>{{token.token| limitTo: 150}}...</span>
+                                                </td>
+                                                <td class="project-title">
+                                                    <span class="label {{token.verified == true ? 'label-active': 'label-warning'}}">
+                                                      <i class="fa {{token.verified == true ? 'fa-check-square-o': 'remove'}}" aria-hidden="true"></i>
+                                                      {{token.verified== true ? 'verified': 'error'}}</span>
+                                                </td>
+
+                                                </tr>
+
+                                            </tbody>
+                                        </table>
+                                        <table class="table table-striped" ng-hide="vm.encode=='true'">
+                                            <thead>
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <th>ID</th>
+                                                    <th>public key</th>
+                                                    <th>Node</th>
+                                                    <th>Type Name</th>
+                                                    <th>Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr ng-repeat="stream in vm.streams | pagination:(vm.page-1)*10 | limitTo:10">
+                                                    <td class="project-title">
+                                                        <span class="label {{stream.type == 'system'? 'label-active': 'label-info'}}">{{stream.type}}</span>
+                                                    </td>
+                                                    <td class="project-title">
+                                                        <small>{{stream.id}}</small>
+                                                    </td>
+                                                    <td class="project-title">
+                                                        <small>{{stream.publicKey}}</small>
+                                                    </td>
+                                                    <td class="project-list">
+                                                        <small>
+                                                            <a href="#/nodes/{{stream.node}}">{{stream.node}}</a>
+                                                        </small>
+                                                    </td>
+                                                    <td class="project-title">
+                                                        <span class="label {{transacstreamtion.typename == 'Warning'? 'label-warning': stream.typename == 'Error'? 'label-danger' :'label-success'}}">{{stream.typename}}<span/>
+                                                        </td>
+                                                        <td class="project-title">
+                                                            <small>
+                                                                {{stream.date | date : 'short'}}
+                                                            </small>
+                                                        </td>
+
+                                                    </tr>
+
+                                                </tbody>
+                                            </table>
+                                        <uib-pagination total-items="vm.streams.length" ng-model="vm.page" max-size="vm.maxSize" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>

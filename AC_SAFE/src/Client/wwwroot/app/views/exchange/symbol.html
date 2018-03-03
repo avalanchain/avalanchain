@@ -1,0 +1,330 @@
+﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="symbol as vm">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Price</h5>
+                    <div class="text-success pull-right"> <strong>{{vm.symbol}}</strong> </div>
+                </div>
+                <div class="ibox-content">
+                    <nvd3 options="options" data="data"></nvd3>
+                </div>
+            </div>
+            <div class="row">
+                
+            <div class=" float-e-margins col-lg-6">
+                <div class="ibox-title">
+                    <h4 style="display: inline-block;">BUY</h4>
+                    <h4 class="font-bold text-navy pull-right"><small>Lowest ask: </small> {{vm.lowestAsk}}</h4>
+                </div>
+                <div class="ibox-content">
+                    <!--<h3 class="font-bold">Send money</h3>-->
+
+                    <form class="form-horizontal">
+                        <!--<p>You can send money from one account to another</p>-->
+
+                        <div class="form-group">
+                            <label class="col-lg-2 control-label">Price</label>
+
+                            <div class="col-lg-10 input-group">
+                                <input type="number" ng-model="vm.bidOrder.price" placeholder="0" class="form-control">
+                                <span class="input-group-addon">{{vm.symbol}} / {{vm.exchangeSymbol}}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-lg-2 control-label">Quantity</label>
+
+                            <div class="col-lg-10 input-group">
+                                <input type="number" ng-model="vm.bidOrder.quantity" placeholder="0" class="form-control">
+                            </div>
+                        </div>
+                        <!--<div class="form-group">
+                            <label class="col-lg-2 control-label">Total</label>
+
+                            <div class="col-lg-10">
+                                <input type="number" ng-model="vm.bidOrder.total" placeholder="0" class="form-control">
+                            </div>
+                        </div>-->
+                        <div class="form-group">
+                            <div class="col-lg-offset-2 col-lg-10">
+                                <button class="btn btn-primary pull-right" type="button" ng-click="vm.submitOrder(vm.bidOrder,'bid')">
+                                    <span class="bold">BUY</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+            <div class=" float-e-margins col-lg-6">
+                <div class="ibox-title">
+                    <h4 style="display: inline-block;">SELL</h4>
+                    <!--<div class="text-success pull-right"> <strong>{{vm.symbol}}</strong> </div>-->
+                    <h4 class="font-bold text-navy pull-right"><small>Highest bid: </small> {{vm.highestBid}}</h4>
+                </div>
+                <div class="ibox-content">
+                    <!--<h3 class="font-bold">Send money</h3>-->
+
+                    <form class="form-horizontal">
+                        <!--<p>You can send money from one account to another</p>-->
+
+                        <div class="form-group">
+                            <label class="col-lg-2 control-label">Price</label>
+
+                            <div class="col-lg-10 input-group">
+                                <input type="number" ng-model="vm.askOrder.price" placeholder="0" class="form-control">
+                                <span class="input-group-addon">{{vm.symbol}} / {{vm.exchangeSymbol}}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-lg-2 control-label">Quantity</label>
+
+                            <div class="col-lg-10  input-group">
+                                <input type="number" ng-model="vm.askOrder.quantity" placeholder="0" class="form-control">
+                            </div>
+                        </div>
+                        <!--<div class="form-group">
+                            <label class="col-lg-2 control-label">Total</label>
+
+                            <div class="col-lg-10">
+                                <input type="number" ng-model="vm.askOrder.total" placeholder="0" class="form-control">
+                            </div>
+                        </div>-->
+
+                        <div class="form-group">
+                            <div class="col-lg-offset-2 col-lg-10">
+                                <button class="btn btn-danger pull-right" type="button" ng-click="vm.submitOrder(vm.askOrder,'ask')">
+                                    <span class="bold">SELL</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+            </div>
+        </div>
+        <div class="col-lg-4 animated fadeInRight">
+
+            <div class="ibox float-e-margins">
+                <div class="ibox-content">
+                    <div class="row">
+                        <div class="col-xs-3">
+                            <span class="h4 font-bold  block">{{vm.symbol}}</span>
+                            <small class="text-muted  block">Current Symbol</small>
+                        </div>
+                        <div class="col-xs-3">
+                            <span class="h4 font-bold  block">{{vm.symbolOrderCommandsCount}}</span>
+                            <small class="text-muted  block">Orders</small>
+                        </div>
+                        <div class="col-xs-3">
+                            <span class="h4 font-bold  block">{{vm.orderEventsCount}}</span>
+                            <small class="text-muted  block">Events</small>
+                        </div>
+                        <div class="col-xs-3">
+                            <span class="h4 font-bold  block">{{vm.fullOrdersCount}}</span>
+                            <small class="text-muted  block">Full Orders</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5><i class="fa fa-play fa-rotate-90 text-danger"></i> Ask</h5>
+                </div>
+                <div class="ibox-content">
+                    <div class="full-height-scroll" style="max-height: 280px" slim-scroll>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Price</th>
+                                        <th>Quantity</th>
+                                        <th>Sum</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="askOrder in vm.askOrders" ng-click="vm.fillOrders(askOrder,'ask')">
+                                        <td>
+                                            <small>{{$index+1}}</small>
+                                        </td>
+                                        <td>
+                                            <strong>{{askOrder.price}}</strong>
+                                        </td>
+                                        <td>{{askOrder.quantity}}</td>
+                                        <td>{{askOrder.sum}}</td>
+                                        <td class="text-danger">{{askOrder.total}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5><i class="fa fa-play fa-rotate-270  text-navy"></i> Bid</h5>
+                </div>
+                <div class="ibox-content">
+                    <div class="full-height-scroll" style="max-height: 280px" slim-scroll>
+                        <table class="table table-hover no-margins">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Sum</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="bidOrder in vm.bidOrders" ng-click="vm.fillOrders(bidOrder,'bid')">
+                                    <td>
+                                        <small>{{$index+1}}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{bidOrder.price}}</strong>
+                                    </td>
+                                    <td>{{bidOrder.quantity}}</td>
+                                    <td>{{bidOrder.sum}}</td>
+                                    <td class="text-navy">{{bidOrder.total}}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-lg-12"></div>
+        <div class="col-lg-12">
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Commands</h5>
+                </div>
+                <div class="ibox-content">
+                    <table class="table table-hover no-margins">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Symbol</th>
+                                <th>Account</th>
+                                <th>Market Side</th>
+                                <th>Date</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <tr ng-repeat="orderCommand in vm.symbolOrderCommands | pagination:(orderCommandPage-1)*10 | limitTo:10">
+                            <td>
+                                {{$index+1+((orderCommandPage-1)*10)}}
+                            </td>
+                            <td>
+                                <span class="label label-primary">{{orderCommand.create.symbol.symbol}}</span>
+                            </td>
+                            <td>
+                                {{orderCommand.create.account.tradingAccount}}
+                            </td>
+                            <td>
+                                <i ng-show="orderCommand.create.marketSide =='bid'" class="fa fa-play fa-rotate-270 text-navy"></i>
+                                <i ng-hide="orderCommand.create.marketSide =='bid'" class="fa fa-play fa-rotate-90 text-danger"></i>
+                                {{orderCommand.create.marketSide}}
+                            </td>
+                            <td>
+                                {{orderCommand.create.createdTime | date: 'short'}}
+                            </td>
+
+                            <td>{{orderCommand.create.quantity}}</td>
+                            <!--<td class="text-navy"><i class="fa fa-level-up"></i> 24%</td>-->
+                        </tr>
+                        </tbody>
+                    </table>
+                    <uib-pagination total-items="vm.symbolOrderCommands.length" ng-model="orderCommandPage" boundary-link-numbers="true" max-size="5" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Events</h5>
+                </div>
+                <div class="ibox-content">
+                    <table class="table table-hover no-margins">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Symbol</th>
+                                <th>Account</th>
+                                <th>Market Side</th>
+                                <th>Acceptence Time</th>
+                                <th>Last Update</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Match Type</th>
+                                <th>Fully Allocated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="orderEvent in vm.symbolOrderEvents  | pagination:(orderEventPage-1)*10 | limitTo:10">
+                                <td>
+                                    {{$index+1+((orderEventPage-1)*10)}}
+                                </td>
+                                <!--<td>
+                                    {{orderEvent.created.id}}
+                                </td>-->
+
+
+                                <td>
+                                    <span class="label label-primary">{{orderEvent.created.symbol.symbol}}</span>
+                                </td>
+                                <td>
+                                    {{orderEvent.created.account.tradingAccount}}
+                                </td>
+                                <td>
+                                    <i ng-show="orderEvent.created.marketSide =='bid'" class="fa fa-play fa-rotate-270 text-navy"></i>
+                                    <i ng-hide="orderEvent.created.marketSide =='bid'" class="fa fa-play fa-rotate-90 text-danger"></i>
+                                    {{orderEvent.created.marketSide}}
+                                </td>
+                                <td>
+                                    {{orderEvent.created.acceptenceTime | date: 'short'}}
+                                </td>
+                                <td>
+                                    {{orderEvent.created.lastUpdateTime | date: 'short'}}
+                                </td>
+
+                                <td>{{orderEvent.created.originalQuantity}}</td>
+
+                                <td>{{orderEvent.created.price}}</td>
+
+                                <td>
+                                    <span class="label label-info">{{orderEvent.created.matchType}}</span>
+                                </td>
+                                <td>
+                                    <i ng-show="orderEvent.created.fullyAllocated" class="fa fa-check text-navy"></i>
+                                    <i ng-hide="orderEvent.created.fullyAllocated" class="fa fa-times text-danger"></i>
+                                </td>
+                                <!--<td class="text-navy"><i class="fa fa-level-up"></i> 24%</td>-->
+                            </tr>
+                        </tbody>
+                    </table>
+                    <uib-pagination total-items="vm.symbolOrderEvents.length" ng-model="orderEventPage" boundary-link-numbers="true" max-size="5" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+
+</div>

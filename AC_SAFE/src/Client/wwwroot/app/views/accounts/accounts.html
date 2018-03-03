@@ -1,0 +1,111 @@
+﻿<div ng-controller="accounts as vm">
+    <!-- <div class="row wrapper border-bottom white-bg page-heading">
+        <div class="col-lg-8">
+            <h2>Accounts</h2>
+            <ol class="breadcrumb">
+                <li>
+                    Home
+                </li>
+                <li data-ng-class="{'active' : !isAccountPage}">
+                    <a href="#/index/accounts">Account list</a>
+                </li>
+                <li class="active" ng-show="isAccountPage">
+                    <strong>Account</strong>
+                </li>
+            </ol>
+        </div>
+        <div class="col-lg-4">
+            <div class="title-action">
+                <a href="#" class="btn btn-white"><i class="fa fa-pencil"></i> Edit </a>
+                <a href="#" class="btn btn-white"><i class="fa fa-check "></i> Save </a>
+                <button ng-click="isAccountPage=!isAccountPage" target="_blank" ng-show="isAccountPage" class="btn btn-primary"><i class="fa fa-arrow-left"></i> Back </button>
+            </div>
+        </div>
+    </div> -->
+    <div class="row" >
+        <div class="col-lg-12">
+            <div class="wrapper wrapper-content animated fadeInUp">
+
+                <div class="ibox">
+                    <div class="ibox-title">
+                        <h5>All accounts assigned to this admin</h5>
+
+                        <div class="ibox-tools">
+                            <a href="" class="btn btn-primary btn-xs" ng-click="openModal()">Create new account</a>
+                            <!--<a href="" class="btn btn-primary btn-xs" ng-click="toggleModal()">test</a>-->
+                        </div>
+                        <!--<modal title="Login form" template-url="/Content/views/accounts/create_account.html" visible="showModal">
+                        </modal>-->
+                    </div>
+                    <div class="ibox-content">
+                        <div class="row m-b-sm m-t-sm">
+                            <div class="col-md-1">
+                                <button type="button" id="loading-example-btn" class="btn btn-white btn-sm" ng-click="refresh()"><i class="fa fa-refresh"></i> Refresh</button>
+                            </div>
+                            <div class="col-md-11">
+                                <div class="input-group">
+                                    <input type="text" placeholder="Search" class="input-sm form-control" ng-model="searchAccounts"> <span class="input-group-btn">
+                                        <button type="button" class="btn btn-sm btn-primary" ng-click="clean()"> Clean</button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="project-list">
+
+                            <table class="table table-hover">
+                              <thead>
+                              <tr>
+
+                                  <th>#</th>
+                                  <th>Status </th>
+                                  <th>ID </th>
+                                  <th>Public Key </th>
+                                  <th>Balance </th>
+                                  <th class="text-center">Signed </th>
+                                  <th>Expired</th>
+                                  <th>Action</th>
+                              </tr>
+                              </thead>
+                                <tbody>
+                                <tr ng-click="showAccount(account)" style="cursor: pointer" ng-repeat="account in accounts | filter:{name : searchAccounts} | pagination:(currentPage-1)*10 | limitTo:10" >
+                                  <td class="project-title">
+                                      {{($index-9)+(currentPage*10)}}
+                                  </td>
+                                    <td class="project-status">
+                                        <span class="label {{account.status == 1? 'label-active': 'label-primary'}}">{{account.status == 1? 'Active': account.status == 2? 'Disabled':'Blocked'}}</span>
+                                    </td>
+                                    <td class="project-title">
+                                        <strong>{{account.name}}</strong>
+                                        <!-- <br/>
+                                        <small><label class="label label-warning">Address:</label>{{account.ref.address}}</small> -->
+                                    </td>
+                                    <td class="project-completion">
+                                        <label class="label label-info"></label><strong> {{ account.publicKey | limitTo: 40}}...</strong>
+                                    </td>
+                                    <td class="project-title">
+                                         {{account.balance | number}}
+                                    </td>
+                                    <td class="project-title text-center">
+                                        <i class="fa fa-check text-navy"></i>
+                                    </td>
+                                    <td class="project-title">
+                                        Jul 14, 2016
+                                    </td>
+                                    <td >
+                                        <a ng-click="showAccount(account)" class="btn btn-white btn-sm"> Open </a>
+                                        <a ng-click="showWallet(account)" class="btn btn-white btn-sm"> Wallet </a>
+                                    </td>
+                                </tr>
+
+                                </tbody>
+                            </table>
+                            <uib-pagination total-items="totalItems" ng-model="currentPage" max-size="maxSize" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
