@@ -7,6 +7,7 @@ open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
+open Microsoft.AspNetCore.Http
 
 open Newtonsoft.Json
 
@@ -19,10 +20,13 @@ open Giraffe.Swagger.Dsl
 open SwaggerUi
 open Giraffe.WebSocket
 open Giraffe.Serialization.Json
+open Giraffe.ModelBinding
 
 open Fable.Remoting.Giraffe
 
 open Shared
+open avalanchain.Common.MatchingEngine
+open System
 
 let clientPath = Path.Combine("..","Client") |> Path.GetFullPath
 let port = 8085us
@@ -36,16 +40,42 @@ let docAddendums =
         let changeParamName oldName newName (parameters:ParamDefinition list) =
             parameters |> Seq.find (fun p -> p.Name = oldName) |> fun p -> { p with Name = newName }
     
-        match path,verb,pathDef with
-        | _,_, def when def.OperationId = "say_hello_in_french" ->
+        let tagPartitioner (pathPrefix: string) tag (path: string, verb, pathDef: PathDefinition) = 
+            let pathDef = if path.ToLowerInvariant().StartsWith (pathPrefix.ToLowerInvariant()) then { pathDef with Tags=[ tag ] } else pathDef
+            path, verb, pathDef
+
+        let adjustOperationId (path: string, verb, pathDef: PathDefinition) = 
+            path, verb, { pathDef with OperationId = path.Substring(1).Replace("/", "_").ToLowerInvariant() }
+
+        let addQueryParam (subPaths: string list) name typ required (path: string, verb, pathDef: PathDefinition) = 
+            let pathDef =   if subPaths |> List.exists (fun spath -> path.ToLowerInvariant().Contains (spath.ToLowerInvariant())) 
+                            then 
+                                let param = { ParamDefinition.Name = name
+                                              Type = Primitive (typ, "") |> Some
+                                              In = "query"
+                                              Required = required }
+                                { pathDef with Parameters = param :: pathDef.Parameters } 
+                            else pathDef
+            path, verb, pathDef
+
+        let (path,verb,pathDef) = 
+            (path,verb,pathDef) 
+            |> adjustOperationId
+            |> tagPartitioner "/api/exchange/" "Exchange"
+            |> addQueryParam ["OrderStack"; "OrderStackView"] "symbol" "string" false
+            |> addQueryParam ["OrderStackView"] "maxDepth" "integer" false
+
+        match path, verb, pathDef with
+        | _, _, def when def.OperationId = "say_hello_in_french" ->
             let firstname = def.Parameters |> changeParamName "arg0" "Firstname"
             let lastname = def.Parameters |> changeParamName "arg1" "Lastname"
-            "/hello/{Firstname}/{Lastname}", verb, { def with Parameters = [firstname; lastname] }
-        | "/", HttpVerb.Get,def ->
+            "/hello/{Firstname}/{Lastname}", verb, { def with Parameters = [ firstname; lastname ] }
+
+        | "/", HttpVerb.Get, def ->
             // This is another solution to add operation id or other infos
-            path, verb, { def with OperationId = "Home"; Tags=["home page"] }
-        
-        | _ -> path,verb,pathDef
+            path, verb, { def with OperationId = "Home"; Tags=["Home Page"] }
+       
+        | _ -> path, verb, pathDef
 
 
 let docsConfig c = 
@@ -70,8 +100,39 @@ let docsConfig c =
                 )))
     }
 
+
 let getInitCounter () : Task<Counter> = task { return 42 }
 
+let matchingService = Facade.MatchingService(5M<price>, 100UL, false)
+
+let parsingError (err : string) = RequestErrors.BAD_REQUEST err
+type [<CLIMutable>] SymbolQuery = { symbol: string option }
+type [<CLIMutable>] SymbolMaxDepthQuery = { symbol: string option; maxDepth: int option }
+
+// let exchangeRoutes =
+  
+// let bindQueryDefault<'T> (defaultT: 'T)
+//                         (successhandler      : 'T -> HttpHandler) : HttpHandler =
+//     fun (next : HttpFunc) (ctx : HttpContext) ->
+//         let result = ctx.TryBindQueryString<'T>()
+//         (match result with
+//         | Error msg -> successhandler defaultT
+//         | Ok model  -> successhandler model) next ctx
+
+// let queryParam name : HttpHandler =
+//     fun (next : HttpFunc) (ctx : HttpContext) ->
+//         let someValue =
+//             match ctx.TryGetQueryStringValue "q" with
+//             | None   -> "default value"
+//             | Some q -> q
+
+// let bindSymbolQuery successHandler = bindQueryDefault<SymbolQuery> { symbol = Some "" } successHandler
+
+let bindSymbolQuery successHandler = 
+    bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> json |> Successful.ok)
+
+let bindSymbolMaxDepthQuery successHandler = 
+    bindQuery<SymbolMaxDepthQuery> None (fun qs -> (successHandler (qs.symbol |> Option.defaultValue "" |> Symbol) (qs.maxDepth |> Option.defaultValue 10)) |> json |> Successful.ok)
 
 
 let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandler =
@@ -80,11 +141,27 @@ let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandl
   // creates a HttpHandler for the given implementation
   choose [swaggerOf
             (choose [ route  "/test"       >=> text "test" 
-                      route  "/test2"       >=> text "test12" 
+                      route  "/test2"       >=> text "test12"
+                      subRouteCi "/api" (
+                        subRouteCi "/Exchange" (
+                          choose [
+                            POST >=> 
+                                routeCi  "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
+                                    bindJson<OrderCommand> (matchingService.SubmitOrder >> Successful.OK )
+                            GET >=>
+                              choose [
+                                route  "/OrderStack"      >=> bindSymbolQuery matchingService.OrderStack
+                                route  "/OrderStackView"  >=> bindSymbolMaxDepthQuery matchingService.OrderStackView
+                                route  "/MainSymbol"      >=> json matchingService.MainSymbol |> Successful.ok
+                                route  "/Symbols"         >=> json matchingService.Symbols |> Successful.ok
+                              ]
+                          ])
+                      ) 
                       GET >=>
                          choose [
                               route  "/"           >=> text "index" 
-                              route  "/ping"       >=> text "pong"]
+                              route  "/ping"       >=> text "pong"
+                    ]
             ]) |> withConfig docsConfig
           route "/wsecho" >=> (wsConnectionManager.CreateSocket(
                                 (fun _ref -> task { return () }),
