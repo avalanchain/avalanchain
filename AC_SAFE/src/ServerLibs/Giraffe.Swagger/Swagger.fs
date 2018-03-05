@@ -33,11 +33,19 @@ module Dsl =
     fun (next : HttpFunc) (ctx : HttpContext) ->
         task {
             let paths = documentRoutes docCtx.Routes addendums
-            let definitions = 
+            let consumesDefinitions = 
+              paths
+              |> Seq.collect(fun p -> p.Value |> Seq.collect (fun v -> v.Value.Parameters |> Seq.choose(fun p ->  if p.In = ParamContainer.Body.ToString() 
+                                                                                                                  then p.Type |> Option.map (function
+                                                                                                                                            | Primitive _ -> None
+                                                                                                                                            | Ref o -> Some o) |> Option.flatten
+                                                                                                                  else None))) 
+              |> Seq.toList
+            let responseDefinitions = 
               paths
               |> Seq.collect(fun p -> p.Value |> Seq.collect (fun v -> v.Value.Responses |> Seq.choose(fun r -> r.Value.Schema))) 
               |> Seq.toList
-              |> List.distinct
+            let definitions = consumesDefinitions |> List.append responseDefinitions |> List.distinct
             let doc =
                 { Swagger="2.0"
                   Info=description ApiDescription.Empty

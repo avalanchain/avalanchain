@@ -33,6 +33,36 @@ let port = 8085us
 
 let wsConnectionManager = ConnectionManager()
 
+module ParamHelper =
+    let tagPartitioner (pathPrefix: string) tag (path: string, verb, pathDef: PathDefinition) = 
+        let pathDef = if path.ToLowerInvariant().StartsWith (pathPrefix.ToLowerInvariant()) then { pathDef with Tags=[ tag ] } else pathDef
+        path, verb, pathDef
+
+    let adjustOperationId (path: string, verb, pathDef: PathDefinition) = 
+        path, verb, { pathDef with OperationId = path.Substring(1).Replace("/", "_").ToLowerInvariant() }
+
+    let addParam (paramIn: ParamContainer) paramType name required (pathPostfixes: string list) (path: string, verb, pathDef: PathDefinition) = 
+        let pathDef =   if pathPostfixes |> List.exists (fun spath -> path.ToLowerInvariant().EndsWith (spath.ToLowerInvariant())) 
+                        then 
+                            let param = { ParamDefinition.Name = name
+                                          Type = paramType |> Some
+                                          In = paramIn.ToString()
+                                          Required = required }
+                            { pathDef with Parameters = param :: pathDef.Parameters } 
+                        else pathDef
+        path, verb, pathDef
+
+    let addQueryParam typ = addParam ParamContainer.Query (Primitive (typ, ""))
+    let addBodyParam<'T> = addParam ParamContainer.Body (Ref (typeof<'T>.Describes()))
+    let addBodyParam2<'T> name (pathPostfixes: string list) (path: string, verb, pathDef: PathDefinition) = 
+        let pathDef =   if pathPostfixes |> List.exists (fun spath -> path.ToLowerInvariant().EndsWith (spath.ToLowerInvariant())) 
+                        then 
+                            pathDef.AddConsume name "application/json" ParamContainer.Body typeof<'T>
+                        else pathDef
+        path, verb, pathDef
+
+open ParamHelper
+
 let docAddendums =
     fun (route:Analyzer.RouteInfos) (path:string,verb:HttpVerb,pathDef:PathDefinition) ->
     
@@ -40,31 +70,23 @@ let docAddendums =
         let changeParamName oldName newName (parameters:ParamDefinition list) =
             parameters |> Seq.find (fun p -> p.Name = oldName) |> fun p -> { p with Name = newName }
     
-        let tagPartitioner (pathPrefix: string) tag (path: string, verb, pathDef: PathDefinition) = 
-            let pathDef = if path.ToLowerInvariant().StartsWith (pathPrefix.ToLowerInvariant()) then { pathDef with Tags=[ tag ] } else pathDef
-            path, verb, pathDef
-
-        let adjustOperationId (path: string, verb, pathDef: PathDefinition) = 
-            path, verb, { pathDef with OperationId = path.Substring(1).Replace("/", "_").ToLowerInvariant() }
-
-        let addQueryParam (subPaths: string list) name typ required (path: string, verb, pathDef: PathDefinition) = 
-            let pathDef =   if subPaths |> List.exists (fun spath -> path.ToLowerInvariant().Contains (spath.ToLowerInvariant())) 
-                            then 
-                                let param = { ParamDefinition.Name = name
-                                              Type = Primitive (typ, "") |> Some
-                                              In = "query"
-                                              Required = required }
-                                { pathDef with Parameters = param :: pathDef.Parameters } 
-                            else pathDef
-            path, verb, pathDef
-
         let (path,verb,pathDef) = 
             (path,verb,pathDef) 
             |> adjustOperationId
             |> tagPartitioner "/api/exchange/" "Exchange"
-            |> addQueryParam ["OrderStack"; "OrderStackView"] "symbol" "string" false
-            |> addQueryParam ["OrderStackView"] "maxDepth" "integer" false
-            |> addQueryParam ["GetOrder"; "GetOrder2"] "orderID" "string" true
+            |> addQueryParam "string" "symbol" false   ["OrderStack"; "OrderStackView";
+                                                        "SymbolOrderCommands"; "SymbolOrderEvents"; "SymbolFullOrders";
+                                                        "SymbolLastOrderCommands"; "SymbolLastOrderEvents"; "SymbolLastFullOrders";
+                                                        "SymbolOrderCommandsCount"; "SymbolOrderEventsCount"; "SymbolFullOrdersCount"] 
+            |> addQueryParam "integer" "maxDepth" false["OrderStackView"]
+            |> addQueryParam "string" "orderID" true   ["GetOrder"; "GetOrder2"] 
+            |> addQueryParam "long" "startIndex" false ["OrderCommands"; "OrderEvents"; "FullOrders";
+                                                        "SymbolOrderCommands"; "SymbolOrderEvents"; "SymbolFullOrders"]
+            |> addQueryParam "integer" "pageSize" true ["OrderCommands"; "OrderEvents"; "FullOrders"; 
+                                                        "LastOrderCommands"; "LastOrderEvents"; "LastFullOrders"; 
+                                                        "SymbolOrderCommands"; "SymbolOrderEvents"; "SymbolFullOrders";
+                                                        "SymbolLastOrderCommands"; "SymbolLastOrderEvents"; "SymbolLastFullOrders"]
+            |> addBodyParam2<OrderCommand> "orderCommand" ["SubmitOrder"]                                                        
 
         match path, verb, pathDef with
         | _, _, def when def.OperationId = "say_hello_in_french" ->
@@ -154,7 +176,7 @@ let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandl
                           choose [
                             POST >=> 
                                 routeCi  "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
-                                    bindJson<OrderCommand> (matchingService.SubmitOrder >> Successful.OK )
+                                        bindJson<OrderCommand> (matchingService.SubmitOrder >> Successful.OK )
                             GET >=>
                               choose [
                                 route  "/OrderStack"      >=> bindSymbolQuery matchingService.OrderStack

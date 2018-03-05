@@ -45,7 +45,7 @@ let swaggerUiHandler (swaggerUiPath:string) swJsonPath =
         |> r.CurrentEncoding.GetBytes
       setBody bytes next ctx
     | None ->
-        (setStatusCode 404 >=> text "Ressource not found") next ctx
+        (setStatusCode 404 >=> text "Resource not found") next ctx
   
   routeStartsWithCi swaggerUiPath >=> handle
 
