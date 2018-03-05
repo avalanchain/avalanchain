@@ -64,6 +64,7 @@ let docAddendums =
             |> tagPartitioner "/api/exchange/" "Exchange"
             |> addQueryParam ["OrderStack"; "OrderStackView"] "symbol" "string" false
             |> addQueryParam ["OrderStackView"] "maxDepth" "integer" false
+            |> addQueryParam ["GetOrder"; "GetOrder2"] "orderID" "string" true
 
         match path, verb, pathDef with
         | _, _, def when def.OperationId = "say_hello_in_french" ->
@@ -106,34 +107,40 @@ let getInitCounter () : Task<Counter> = task { return 42 }
 let matchingService = Facade.MatchingService(5M<price>, 100UL, false)
 
 let parsingError (err : string) = RequestErrors.BAD_REQUEST err
+
 type [<CLIMutable>] SymbolQuery = { symbol: string option }
 type [<CLIMutable>] SymbolMaxDepthQuery = { symbol: string option; maxDepth: int option }
+type [<CLIMutable>] OrderIDQuery = { orderID: string option }
+type [<CLIMutable>] PageStartQuery = { startIndex: uint64 option; pageSize: uint32 option }
+type [<CLIMutable>] PageQuery = { pageSize: uint32 option }
+type [<CLIMutable>] PageSymbolStartQuery = { symbol: string option; startIndex: uint64 option; pageSize: uint32 option }
+type [<CLIMutable>] PageSymbolPageQuery = { symbol: string option; pageSize: uint32 option }
 
-// let exchangeRoutes =
-  
-// let bindQueryDefault<'T> (defaultT: 'T)
-//                         (successhandler      : 'T -> HttpHandler) : HttpHandler =
-//     fun (next : HttpFunc) (ctx : HttpContext) ->
-//         let result = ctx.TryBindQueryString<'T>()
-//         (match result with
-//         | Error msg -> successhandler defaultT
-//         | Ok model  -> successhandler model) next ctx
-
-// let queryParam name : HttpHandler =
-//     fun (next : HttpFunc) (ctx : HttpContext) ->
-//         let someValue =
-//             match ctx.TryGetQueryStringValue "q" with
-//             | None   -> "default value"
-//             | Some q -> q
-
-// let bindSymbolQuery successHandler = bindQueryDefault<SymbolQuery> { symbol = Some "" } successHandler
+let primitive value : HttpHandler = text (value.ToString())
 
 let bindSymbolQuery successHandler = 
     bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> json |> Successful.ok)
 
+let bindSymbolUInt64Query successHandler = 
+    bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> primitive |> Successful.ok)
+
 let bindSymbolMaxDepthQuery successHandler = 
     bindQuery<SymbolMaxDepthQuery> None (fun qs -> (successHandler (qs.symbol |> Option.defaultValue "" |> Symbol) (qs.maxDepth |> Option.defaultValue 10)) |> json |> Successful.ok)
 
+let bindOrderIDQuery successHandler = 
+    bindQuery<OrderIDQuery> None (fun qs -> qs.orderID |> Option.defaultValue "" |> successHandler |> json |> Successful.ok)
+
+let bindPageStartQuery successHandler = 
+    bindQuery<PageStartQuery> None (fun pq -> successHandler (pq.startIndex |> Option.defaultValue 0UL) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
+
+let bindPageQuery successHandler = 
+    bindQuery<PageQuery> None (fun qs -> qs.pageSize |> Option.defaultValue 0u |> successHandler |> json |> Successful.ok)
+
+let bindSymbolPageStartQuery successHandler = 
+    bindQuery<PageSymbolStartQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.startIndex |> Option.defaultValue 0UL) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
+
+let bindSymbolPageQuery successHandler = 
+    bindQuery<PageSymbolPageQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
 
 let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandler =
   let counterProcotol = 
@@ -154,6 +161,30 @@ let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandl
                                 route  "/OrderStackView"  >=> bindSymbolMaxDepthQuery matchingService.OrderStackView
                                 route  "/MainSymbol"      >=> json matchingService.MainSymbol |> Successful.ok
                                 route  "/Symbols"         >=> json matchingService.Symbols |> Successful.ok
+                                route  "/GetOrder"        >=> bindQuery<OrderIDQuery> None 
+                                                                (fun oq -> match oq.orderID with
+                                                                            | None -> parsingError "Missing order ID"
+                                                                            | Some guidStr -> guidStr |> Guid.Parse |> matchingService.OrderById |> json |> Successful.ok)
+                                route  "/GetOrder2"       >=> bindOrderIDQuery matchingService.OrderById2
+                                route  "/GetOrders"       >=> json matchingService.Orders |> Successful.ok
+                                route  "/OrderCommands"   >=> bindPageStartQuery matchingService.OrderCommands
+                                route  "/OrderEvents"     >=> bindPageStartQuery matchingService.OrderEvents
+                                route  "/FullOrders"      >=> bindPageStartQuery matchingService.FullOrders
+                                route  "/OrderCommandsCount" >=> primitive matchingService.OrderCommandsCount |> Successful.ok
+                                route  "/OrderEventsCount"   >=> primitive matchingService.OrderEventsCount |> Successful.ok
+                                route  "/FullOrdersCount"    >=> primitive matchingService.FullOrdersCount |> Successful.ok
+                                route  "/LastOrderCommands"  >=> bindPageQuery matchingService.LastOrderCommands
+                                route  "/LastOrderEvents"    >=> bindPageQuery matchingService.LastOrderEvents
+                                route  "/LastFullOrders"     >=> bindPageQuery matchingService.LastFullOrders
+                                route  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery matchingService.SymbolOrderCommands
+                                route  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery matchingService.SymbolOrderEvents
+                                route  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery matchingService.SymbolFullOrders
+                                route  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query matchingService.SymbolOrderCommandsCount
+                                route  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query matchingService.SymbolOrderEventsCount
+                                route  "/SymbolFullOrdersCount"    >=> bindSymbolUInt64Query matchingService.SymbolFullOrdersCount
+                                route  "/SymbolLastOrderCommands"  >=> bindSymbolPageQuery matchingService.SymbolLastOrderCommands
+                                route  "/SymbolLastOrderEvents"    >=> bindSymbolPageQuery matchingService.SymbolLastOrderEvents
+                                route  "/SymbolLastFullOrders"     >=> bindSymbolPageQuery matchingService.SymbolLastFullOrders
                               ]
                           ])
                       ) 
