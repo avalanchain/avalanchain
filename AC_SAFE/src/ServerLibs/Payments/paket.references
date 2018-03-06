@@ -1,1 +1,3 @@
-Sodium.Core
+group Server
+  FSharp.Core
+  Sodium.Core
