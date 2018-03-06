@@ -170,47 +170,85 @@ let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) 
             (choose [ route  "/test"       >=> text "test" 
                       route  "/test2"       >=> text "test12"
                       subRouteCi "/api" (
-                        subRouteCi "/Exchange" (
-                          choose [
-                            POST >=> 
-                                routeCi  "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
-                                        bindJson<OrderCommand> (ms.SubmitOrder >> Successful.OK )
-                            GET >=>
+                        choose [
+                            subRouteCi "/Exchange" (
                               choose [
-                                route  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
-                                route  "/OrderStackView"  >=> bindSymbolMaxDepthQuery ms.OrderStackView
-                                route  "/MainSymbol"      >=> json ms.MainSymbol |> Successful.ok
-                                route  "/Symbols"         >=> json ms.Symbols |> Successful.ok
-                                route  "/GetOrder"        >=> bindQuery<OrderIDQuery> None 
-                                                                (fun oq -> match oq.orderID with
-                                                                            | None -> parsingError "Missing order ID"
-                                                                            | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
-                                route  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
-                                route  "/GetOrders"       >=> json ms.Orders |> Successful.ok
-                                route  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands
-                                route  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents
-                                route  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders
-                                route  "/OrderCommandsCount" >=> primitive ms.OrderCommandsCount |> Successful.ok
-                                route  "/OrderEventsCount"   >=> primitive ms.OrderEventsCount |> Successful.ok
-                                route  "/FullOrdersCount"    >=> primitive ms.FullOrdersCount |> Successful.ok
-                                route  "/LastOrderCommands"  >=> bindPageQuery ms.LastOrderCommands
-                                route  "/LastOrderEvents"    >=> bindPageQuery ms.LastOrderEvents
-                                route  "/LastFullOrders"     >=> bindPageQuery ms.LastFullOrders
-                                route  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery ms.SymbolOrderCommands
-                                route  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery ms.SymbolOrderEvents
-                                route  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery ms.SymbolFullOrders
-                                route  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query ms.SymbolOrderCommandsCount
-                                route  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query ms.SymbolOrderEventsCount
-                                route  "/SymbolFullOrdersCount"    >=> bindSymbolUInt64Query ms.SymbolFullOrdersCount
-                                route  "/SymbolLastOrderCommands"  >=> bindSymbolPageQuery ms.SymbolLastOrderCommands
-                                route  "/SymbolLastOrderEvents"    >=> bindSymbolPageQuery ms.SymbolLastOrderEvents
-                                route  "/SymbolLastFullOrders"     >=> bindSymbolPageQuery ms.SymbolLastFullOrders
+                                POST >=> 
+                                    routeCi  "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
+                                            bindJson<OrderCommand> (ms.SubmitOrder >> Successful.OK )
+                                GET >=>
+                                  choose [
+                                    routeCi  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
+                                    routeCi  "/OrderStackView"  >=> bindSymbolMaxDepthQuery ms.OrderStackView
+                                    routeCi  "/MainSymbol"      >=> json ms.MainSymbol |> Successful.ok
+                                    routeCi  "/Symbols"         >=> json ms.Symbols |> Successful.ok
+                                    routeCi  "/GetOrder"        >=> bindQuery<OrderIDQuery> None 
+                                                                    (fun oq -> match oq.orderID with
+                                                                                | None -> parsingError "Missing order ID"
+                                                                                | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
+                                    routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
+                                    routeCi  "/GetOrders"       >=> json ms.Orders |> Successful.ok
+                                    routeCi  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands
+                                    routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents
+                                    routeCi  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders
+                                    routeCi  "/OrderCommandsCount" >=> primitive ms.OrderCommandsCount |> Successful.ok
+                                    routeCi  "/OrderEventsCount"   >=> primitive ms.OrderEventsCount |> Successful.ok
+                                    routeCi  "/FullOrdersCount"    >=> primitive ms.FullOrdersCount |> Successful.ok
+                                    routeCi  "/LastOrderCommands"  >=> bindPageQuery ms.LastOrderCommands
+                                    routeCi  "/LastOrderEvents"    >=> bindPageQuery ms.LastOrderEvents
+                                    routeCi  "/LastFullOrders"     >=> bindPageQuery ms.LastFullOrders
+                                    routeCi  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery ms.SymbolOrderCommands
+                                    routeCi  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery ms.SymbolOrderEvents
+                                    routeCi  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery ms.SymbolFullOrders
+                                    routeCi  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query ms.SymbolOrderCommandsCount
+                                    routeCi  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query ms.SymbolOrderEventsCount
+                                    routeCi  "/SymbolFullOrdersCount"    >=> bindSymbolUInt64Query ms.SymbolFullOrdersCount
+                                    routeCi  "/SymbolLastOrderCommands"  >=> bindSymbolPageQuery ms.SymbolLastOrderCommands
+                                    routeCi  "/SymbolLastOrderEvents"    >=> bindSymbolPageQuery ms.SymbolLastOrderEvents
+                                    routeCi  "/SymbolLastFullOrders"     >=> bindSymbolPageQuery ms.SymbolLastFullOrders
+                                  ]
+                              ])
+                            subRouteCi "/Currency" (
+                              choose [
+                                subRouteCi "/Node" (
+                                  choose [
+                                    POST >=> 
+                                        routeCi "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
+                                                bindJson<OrderCommand> (ms.SubmitOrder >> Successful.OK )
+                                    GET >=>
+                                      choose [
+                                        route  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
+                                        
+                                      ]
+                                  ])
+                                subRouteCi "/Wallet" (
+                                  choose [
+                                    POST >=> 
+                                        routeCi "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
+                                                bindJson<OrderCommand> (ms.SubmitOrder >> Successful.OK )
+                                    GET >=>
+                                      choose [
+                                        route  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
+                                        
+                                      ]
+                                  ])
+                                subRouteCi "/Account" (
+                                  choose [
+                                    POST >=> 
+                                        routeCi "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
+                                                bindJson<OrderCommand> (ms.SubmitOrder >> Successful.OK )
+                                    GET >=>
+                                      choose [
+                                        route  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
+                                        
+                                      ]
+                                  ])
                               ]
-                          ])
-                      ) 
+                            )
+                      ]) 
                       GET >=>
                          choose [
-                              route  "/"           >=> htmlFile "index.html" 
+                              route  "/"           >=> htmlFile "index.html"
                               route  "/ping"       >=> text "pong"
                     ]
             ]) |> withConfig docsConfig
@@ -221,8 +259,8 @@ let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) 
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
-                      
 let matchingService = Facade.MatchingService.Instance
+
 let configureApp  (app : IApplicationBuilder) =
   app
     .UseStaticFiles()

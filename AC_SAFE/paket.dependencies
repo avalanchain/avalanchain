@@ -7,6 +7,8 @@ group Server
   nuget Fable.Remoting.Giraffe
   nuget Fable.JsonConverter
 
+  nuget Sodium.Core
+
   clitool Microsoft.DotNet.Watcher.Tools
 
 group Client

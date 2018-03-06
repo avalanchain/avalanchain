@@ -421,12 +421,12 @@ module MatchingEngine =
                                 } |> OrderCommand.Create |> ms.SubmitOrder 
                 async {
                     tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    for i in 1 .. 1000000 do
-                        do! Async.Sleep 2000
+                    for i in 1 .. 10000000 do
+                        do! Async.Sleep 100
                         tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2
                 }
 
-            do if runBot then tradingBot(__, ["AVC"; "USD"; "EUR"; "GBP"; "QUOKA"; "V1"; "V2"; "ICO1"; "ICO2"; "ICO3"; "ICO4"; "ICO5"; "ICO6"; "ICO7"; "ICO8"; "ICO9"; "ICO10"; "ICO11"; "ICO12" ]) |> Async.Start
+            do if runBot then tradingBot(__, ["AVC"; "USD"; "EUR"; "GBP"; "AIM"; "V1"; "V2"; "ICO1"; "ICO2"; "ICO3"; "ICO4"; "ICO5"; "ICO6"; "ICO7"; "ICO8"; "ICO9"; "ICO10"; "ICO11"; "ICO12" ]) |> Async.Start
 
             let getPage (lst: ResizeArray<_>) (startIndex: uint64) (pageSize: uint32) = 
                 let startIndexI = startIndex |> int

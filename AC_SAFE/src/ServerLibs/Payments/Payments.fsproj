@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Crdt.fs" />
+    <Compile Include="Crypto.fs" />
+    <Compile Include="Chain.fs" />
+    <Compile Include="Payments.fs" />
+    <Compile Include="Communication.fs" />
+  </ItemGroup>
+
+</Project>

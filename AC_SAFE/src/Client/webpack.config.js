@@ -36,7 +36,7 @@ module.exports = {
   },
   devServer: {
     proxy: {
-      '/api/*': {
+      '/api/wwwroot/*': {
         target: 'http://localhost:' + port,
         changeOrigin: true
       }
