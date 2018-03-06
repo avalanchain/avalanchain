@@ -28,7 +28,7 @@ open Shared
 open avalanchain.Common.MatchingEngine
 open System
 
-let clientPath = Path.Combine("..","Client") |> Path.GetFullPath
+let clientPath = Path.Combine("..","Client/wwwroot") |> Path.GetFullPath
 let port = 8085us
 
 let wsConnectionManager = ConnectionManager()
@@ -126,8 +126,6 @@ let docsConfig c =
 
 let getInitCounter () : Task<Counter> = task { return 42 }
 
-let matchingService = Facade.MatchingService(5M<price>, 100UL, false)
-
 let parsingError (err : string) = RequestErrors.BAD_REQUEST err
 
 type [<CLIMutable>] SymbolQuery = { symbol: string option }
@@ -164,7 +162,7 @@ let bindSymbolPageStartQuery successHandler =
 let bindSymbolPageQuery successHandler = 
     bindQuery<PageSymbolPageQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
 
-let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandler =
+let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) cancellationToken : HttpHandler =
   let counterProcotol = 
     { getInitCounter = getInitCounter >> Async.AwaitTask }
   // creates a HttpHandler for the given implementation
@@ -176,43 +174,43 @@ let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandl
                           choose [
                             POST >=> 
                                 routeCi  "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
-                                        bindJson<OrderCommand> (matchingService.SubmitOrder >> Successful.OK )
+                                        bindJson<OrderCommand> (ms.SubmitOrder >> Successful.OK )
                             GET >=>
                               choose [
-                                route  "/OrderStack"      >=> bindSymbolQuery matchingService.OrderStack
-                                route  "/OrderStackView"  >=> bindSymbolMaxDepthQuery matchingService.OrderStackView
-                                route  "/MainSymbol"      >=> json matchingService.MainSymbol |> Successful.ok
-                                route  "/Symbols"         >=> json matchingService.Symbols |> Successful.ok
+                                route  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
+                                route  "/OrderStackView"  >=> bindSymbolMaxDepthQuery ms.OrderStackView
+                                route  "/MainSymbol"      >=> json ms.MainSymbol |> Successful.ok
+                                route  "/Symbols"         >=> json ms.Symbols |> Successful.ok
                                 route  "/GetOrder"        >=> bindQuery<OrderIDQuery> None 
                                                                 (fun oq -> match oq.orderID with
                                                                             | None -> parsingError "Missing order ID"
-                                                                            | Some guidStr -> guidStr |> Guid.Parse |> matchingService.OrderById |> json |> Successful.ok)
-                                route  "/GetOrder2"       >=> bindOrderIDQuery matchingService.OrderById2
-                                route  "/GetOrders"       >=> json matchingService.Orders |> Successful.ok
-                                route  "/OrderCommands"   >=> bindPageStartQuery matchingService.OrderCommands
-                                route  "/OrderEvents"     >=> bindPageStartQuery matchingService.OrderEvents
-                                route  "/FullOrders"      >=> bindPageStartQuery matchingService.FullOrders
-                                route  "/OrderCommandsCount" >=> primitive matchingService.OrderCommandsCount |> Successful.ok
-                                route  "/OrderEventsCount"   >=> primitive matchingService.OrderEventsCount |> Successful.ok
-                                route  "/FullOrdersCount"    >=> primitive matchingService.FullOrdersCount |> Successful.ok
-                                route  "/LastOrderCommands"  >=> bindPageQuery matchingService.LastOrderCommands
-                                route  "/LastOrderEvents"    >=> bindPageQuery matchingService.LastOrderEvents
-                                route  "/LastFullOrders"     >=> bindPageQuery matchingService.LastFullOrders
-                                route  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery matchingService.SymbolOrderCommands
-                                route  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery matchingService.SymbolOrderEvents
-                                route  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery matchingService.SymbolFullOrders
-                                route  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query matchingService.SymbolOrderCommandsCount
-                                route  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query matchingService.SymbolOrderEventsCount
-                                route  "/SymbolFullOrdersCount"    >=> bindSymbolUInt64Query matchingService.SymbolFullOrdersCount
-                                route  "/SymbolLastOrderCommands"  >=> bindSymbolPageQuery matchingService.SymbolLastOrderCommands
-                                route  "/SymbolLastOrderEvents"    >=> bindSymbolPageQuery matchingService.SymbolLastOrderEvents
-                                route  "/SymbolLastFullOrders"     >=> bindSymbolPageQuery matchingService.SymbolLastFullOrders
+                                                                            | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
+                                route  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
+                                route  "/GetOrders"       >=> json ms.Orders |> Successful.ok
+                                route  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands
+                                route  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents
+                                route  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders
+                                route  "/OrderCommandsCount" >=> primitive ms.OrderCommandsCount |> Successful.ok
+                                route  "/OrderEventsCount"   >=> primitive ms.OrderEventsCount |> Successful.ok
+                                route  "/FullOrdersCount"    >=> primitive ms.FullOrdersCount |> Successful.ok
+                                route  "/LastOrderCommands"  >=> bindPageQuery ms.LastOrderCommands
+                                route  "/LastOrderEvents"    >=> bindPageQuery ms.LastOrderEvents
+                                route  "/LastFullOrders"     >=> bindPageQuery ms.LastFullOrders
+                                route  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery ms.SymbolOrderCommands
+                                route  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery ms.SymbolOrderEvents
+                                route  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery ms.SymbolFullOrders
+                                route  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query ms.SymbolOrderCommandsCount
+                                route  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query ms.SymbolOrderEventsCount
+                                route  "/SymbolFullOrdersCount"    >=> bindSymbolUInt64Query ms.SymbolFullOrdersCount
+                                route  "/SymbolLastOrderCommands"  >=> bindSymbolPageQuery ms.SymbolLastOrderCommands
+                                route  "/SymbolLastOrderEvents"    >=> bindSymbolPageQuery ms.SymbolLastOrderEvents
+                                route  "/SymbolLastFullOrders"     >=> bindSymbolPageQuery ms.SymbolLastFullOrders
                               ]
                           ])
                       ) 
                       GET >=>
                          choose [
-                              route  "/"           >=> text "index" 
+                              route  "/"           >=> htmlFile "index.html" 
                               route  "/ping"       >=> text "pong"
                     ]
             ]) |> withConfig docsConfig
@@ -224,12 +222,12 @@ let webApp(wsConnectionManager: ConnectionManager) cancellationToken : HttpHandl
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
                       
-
+let matchingService = Facade.MatchingService.Instance
 let configureApp  (app : IApplicationBuilder) =
   app
     .UseStaticFiles()
     .UseWebSockets()
-    .UseGiraffe (webApp wsConnectionManager CancellationToken.None)
+    .UseGiraffe (webApp wsConnectionManager matchingService CancellationToken.None)
 
 let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore
