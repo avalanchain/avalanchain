@@ -122,7 +122,7 @@ module Payments =
 
     module Account =
         let create asset aref name nextClock = {ARef = aref
-                                                PublicKey = [||]
+                                                PublicKey = SigningPublicKey [||]
                                                 Name = name
                                                 NextClock = nextClock
                                                 Asset = asset }

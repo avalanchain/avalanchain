@@ -7,7 +7,7 @@ module Crypto =
     open Jose
 
     // TODO: Readjust this
-    type SigningPublicKey = byte[]
+    type SigningPublicKey = SigningPublicKey of byte[]
     type SignedProof<'T> = 'T
 
     type JwsEd25519() =
@@ -46,4 +46,4 @@ module Crypto =
 //        member this.Address = this.SigningPublicKey |> this.Hasher |> (fun h -> Base58CheckEncoding.Encode h.Bytes)
         member this.Address = "TBD"
 
-    let cryptoContextNamed name: CryptoContext = { SigningPublicKey = [||] }
+    let cryptoContextNamed name: CryptoContext = { SigningPublicKey = SigningPublicKey [||] }
