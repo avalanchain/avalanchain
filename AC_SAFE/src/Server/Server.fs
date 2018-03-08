@@ -28,7 +28,7 @@ open Shared
 open avalanchain.Common.MatchingEngine
 open System
 
-let clientPath = Path.Combine("..","Client/wwwroot") |> Path.GetFullPath
+let clientPath = Path.Combine("..","Client") |> Path.GetFullPath
 let port = 8085us
 
 let wsConnectionManager = ConnectionManager()

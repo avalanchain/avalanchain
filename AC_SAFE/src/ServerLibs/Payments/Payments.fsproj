@@ -10,5 +10,8 @@
     <Compile Include="Payments.fs" />
     <Compile Include="Communication.fs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Utils\TypeShape.Tools\TypeShape.Tools.fsproj" />
+  </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -13,6 +13,8 @@
   <ItemGroup>
     <ProjectReference Include="..\ServerLibs\Giraffe\Giraffe.fsproj" />
     <ProjectReference Include="..\ServerLibs\Giraffe.Swagger\Giraffe.Swagger.fsproj" />
+
+    <ProjectReference Include="..\ServerLibs\Payments\Payments.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

@@ -4,9 +4,23 @@ module Crypto =
     open System
     open System.Security.Cryptography
 
+    open Jose
+
     // TODO: Readjust this
     type SigningPublicKey = byte[]
     type SignedProof<'T> = 'T
+
+    type JwsEd25519() =
+        interface Jose.IJwsAlgorithm with 
+            member __.Sign (securedInput: byte[], key: obj): byte[] = securedInput
+            member __.Verify(signature: byte[], securedInput: byte[], key: obj): bool = true    
+
+    let jwsAlgo = Jose.JwsAlgorithm.ES512
+
+    Jose.JWT.DefaultSettings
+        .RegisterJws(jwsAlgo, JwsEd25519()) 
+        .RegisterJwsAlias("Ed25519", jwsAlgo) 
+        |> ignore            
 
     let hasher = SHA256.Create()
 

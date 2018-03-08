@@ -1,3 +1,4 @@
 group Server
   FSharp.Core
   Sodium.Core
+  jose-jwt

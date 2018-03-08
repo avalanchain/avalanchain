@@ -8,6 +8,9 @@ group Server
   nuget Fable.JsonConverter
 
   nuget Sodium.Core
+  nuget TypeShape
+  nuget FParsec
+  nuget jose-jwt
 
   clitool Microsoft.DotNet.Watcher.Tools
 
