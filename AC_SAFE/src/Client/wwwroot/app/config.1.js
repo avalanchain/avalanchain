@@ -25,7 +25,7 @@
 
     function routeConfigurator($stateProvider, $urlRouterProvider, $ocLazyLoadProvider, $locationProvider, $httpProvider, $breadcrumbProvider) {
         $breadcrumbProvider.setOptions({
-            templateUrl: '/wwwroot/app/views/common/breadcrumb.html'
+            templateUrl: '/app/views/common/breadcrumb.html'
         });
         $urlRouterProvider.otherwise("/login");
         // $urlRouterProvider.otherwise("/dashboards/dashboard_investor");
@@ -35,33 +35,33 @@
         });
         var c3chart = {
             serie: true,
-            files: ['/wwwroot/assets/css/plugins/c3/c3.min.css', '/wwwroot/assets/js/plugins/d3/d3.min.js', '/wwwroot/assets/js/plugins/c3/c3.min.js']
+            files: ['/assets/css/plugins/c3/c3.min.css', '/assets/js/plugins/d3/d3.min.js', '/assets/js/plugins/c3/c3.min.js']
         };
         var c3chartAngul = {
             serie: true,
             name: 'gridshore.c3js.chart',
-            files: ['/wwwroot/assets/js/plugins/c3/c3-angular.min.js']
+            files: ['/assets/js/plugins/c3/c3-angular.min.js']
         }
 
         var flot = {
             serie: true,
             name: 'angular-flot',
-            files: ['/wwwroot/assets/js/plugins/flot/jquery.flot.js', '/wwwroot/assets/js/plugins/flot/jquery.flot.time.js', '/wwwroot/assets/js/plugins/flot/jquery.flot.tooltip.min.js', '/wwwroot/assets/js/plugins/flot/jquery.flot.spline.js',
-                '/wwwroot/assets/js/plugins/flot/jquery.flot.resize.js', '/wwwroot/assets/js/plugins/flot/jquery.flot.pie.js', '/wwwroot/assets/js/plugins/flot/curvedLines.js', '/wwwroot/assets/js/plugins/flot/angular-flot.js',
+            files: ['/assets/js/plugins/flot/jquery.flot.js', '/assets/js/plugins/flot/jquery.flot.time.js', '/assets/js/plugins/flot/jquery.flot.tooltip.min.js', '/assets/js/plugins/flot/jquery.flot.spline.js',
+                '/assets/js/plugins/flot/jquery.flot.resize.js', '/assets/js/plugins/flot/jquery.flot.pie.js', '/assets/js/plugins/flot/curvedLines.js', '/assets/js/plugins/flot/angular-flot.js',
             ]
         }
 
         var footable = {
-            files: ['/wwwroot/assets/js/plugins/footable/footable.all.min.js', '/wwwroot/assets/css/plugins/footable/footable.core.css']
+            files: ['/assets/js/plugins/footable/footable.all.min.js', '/assets/css/plugins/footable/footable.core.css']
         };
 
         var footable_angular = {
             name: 'ui.footable',
-            files: ['/wwwroot/assets/js/plugins/footable/angular-footable.js']
+            files: ['/assets/js/plugins/footable/angular-footable.js']
         };
 
         var touchspin = {
-            files: ['/wwwroot/assets/css/plugins/touchspin/jquery.bootstrap-touchspin.min.css', '/wwwroot/assets/js/plugins/touchspin/jquery.bootstrap-touchspin.min.js']
+            files: ['/assets/css/plugins/touchspin/jquery.bootstrap-touchspin.min.css', '/assets/js/plugins/touchspin/jquery.bootstrap-touchspin.min.js']
         };
 
 
@@ -70,30 +70,30 @@
             {
                 abstract: true,
                 url: "/dashboards",
-                templateUrl: "/wwwroot/app/views/common/content.html",
+                templateUrl: "/app/views/common/content.html",
             })
             .state('assets',
             {
                 abstract: true,
                 url: "/assets",
-                templateUrl: "/wwwroot/app/views/common/content.html",
+                templateUrl: "/app/views/common/content.html",
             })
             .state('exchange',
             {
                 abstract: true,
                 url: "/exchange",
-                templateUrl: "/wwwroot/app/views/common/content.html",
+                templateUrl: "/app/views/common/content.html",
             })
              .state('quoka', {
                  abstract: true,
                  url: "/quoka",
-                 templateUrl: "/wwwroot/app/views/common/content.html",
+                 templateUrl: "/app/views/common/content.html",
              })
             .state('index',
             {
                 abstract: true,
                 // url: "/",
-                templateUrl: "/wwwroot/app/views/common/content.html",
+                templateUrl: "/app/views/common/content.html",
                 resolve: {
                     loadPlugin: function ($ocLazyLoad) {
                         return $ocLazyLoad.load([
@@ -101,9 +101,9 @@
                                 insertBefore: '#loadBefore',
                                 name: 'localytics.directives',
                                 files: [
-                                    '/wwwroot/assets/css/plugins/chosen/bootstrap-chosen.css',
-                                    '/wwwroot/assets/js/plugins/chosen/chosen.jquery.js',
-                                    '/wwwroot/assets/js/plugins/chosen/chosen.js'
+                                    '/assets/css/plugins/chosen/bootstrap-chosen.css',
+                                    '/assets/js/plugins/chosen/chosen.jquery.js',
+                                    '/assets/js/plugins/chosen/chosen.js'
                                 ]
                             }, footable, footable_angular
                         ]);
@@ -113,7 +113,7 @@
             .state('dashboards.dashboard',
             {
                 url: "/dashboard",
-                templateUrl: "/wwwroot/app/views/dashboard/dashboard.html",
+                templateUrl: "/app/views/dashboard/dashboard.html",
                 data: {
                     pageTitle: 'Dashboard'
                 },
@@ -130,7 +130,7 @@
             .state('dashboards.dashboard_investor',
             {
                 url: "/dashboard_investor",
-                templateUrl: "/wwwroot/app/views/dashboard/dashboard_investor.html",
+                templateUrl: "/app/views/dashboard/dashboard_investor.html",
                 data: {
                     pageTitle: 'INVESTOR'
                 },
@@ -147,7 +147,7 @@
             .state('index.chat',
             {
                 url: "/chat",
-                templateUrl: "/wwwroot/app/views/chat/chat.html",
+                templateUrl: "/app/views/chat/chat.html",
                 data: {
                     pageTitle: 'Chat'
                 },
@@ -158,7 +158,7 @@
             .state('index.clusters',
             {
                 url: "/clusters",
-                templateUrl: "/wwwroot/app/views/clusters/clusters.html",
+                templateUrl: "/app/views/clusters/clusters.html",
                 data: {
                     pageTitle: 'Clusters'
                 },
@@ -169,7 +169,7 @@
             .state('index.cluster',
             {
                 url: "/clusters/:clusterId",
-                templateUrl: "/wwwroot/app/views/clusters/cluster.html",
+                templateUrl: "/app/views/clusters/cluster.html",
                 data: {
                     pageTitle: 'Cluster'
                 },
@@ -188,7 +188,7 @@
             .state('index.accounts',
             {
                 url: "/accounts",
-                templateUrl: "/wwwroot/app/views/accounts/accounts.html",
+                templateUrl: "/app/views/accounts/accounts.html",
                 data: {
                     pageTitle: 'Accounts'
                 },
@@ -200,7 +200,7 @@
             .state('index.account',
             {
                 url: "/accounts/:accountId",
-                templateUrl: "/wwwroot/app/views/accounts/account.html",
+                templateUrl: "/app/views/accounts/account.html",
                 data: {
                     pageTitle: 'Account'
                 },
@@ -214,7 +214,7 @@
             .state('index.wallet',
             {
                 url: "/accounts/wallet/:accountId",
-                templateUrl: "/wwwroot/app/views/accounts/wallet.html",
+                templateUrl: "/app/views/accounts/wallet.html",
                 data: {
                     pageTitle: 'Wallet'
                 },
@@ -233,7 +233,7 @@
             .state('index.transactions',
             {
                 url: "/transactions",
-                templateUrl: "/wwwroot/app/views/transactions/transactions.html",
+                templateUrl: "/app/views/transactions/transactions.html",
                 data: {
                     pageTitle: 'Transactions'
                 },
@@ -244,7 +244,7 @@
             .state('index.nodes',
             {
                 url: "/nodes",
-                templateUrl: "/wwwroot/app/views/nodes/nodes.html",
+                templateUrl: "/app/views/nodes/nodes.html",
                 data: {
                     pageTitle: 'Nodes'
                 },
@@ -255,7 +255,7 @@
             .state('index.node',
             {
                 url: "/nodes/:nodeId",
-                templateUrl: "/wwwroot/app/views/nodes/node.html",
+                templateUrl: "/app/views/nodes/node.html",
                 data: {
                     pageTitle: 'Node'
                 },
@@ -274,7 +274,7 @@
             .state('index.chains',
             {
                 url: "/chains",
-                templateUrl: "/wwwroot/app/views/streams/streams.html",
+                templateUrl: "/app/views/streams/streams.html",
                 data: {
                     pageTitle: 'Chains'
                 },
@@ -290,7 +290,7 @@
             .state('assets.createassets',
             {
                 url: "/createassets",
-                templateUrl: "/wwwroot/app/views/wwwroot/assets/createassets.html",
+                templateUrl: "/app/views/assets/createassets.html",
                 data: {
                     pageTitle: 'Create Assets'
                 },
@@ -306,7 +306,7 @@
             .state('assets.assets',
             {
                 url: "/assets",
-                templateUrl: "/wwwroot/app/views/wwwroot/assets/assets.html",
+                templateUrl: "/app/views/assets/assets.html",
                 data: {
                     pageTitle: 'Assets'
                 },
@@ -322,7 +322,7 @@
             .state('index.admin',
             {
                 url: "/admin",
-                templateUrl: "/wwwroot/app/views/admin/admin.html",
+                templateUrl: "/app/views/admin/admin.html",
                 data: {
                     pageTitle: 'Admin'
                 },
@@ -334,19 +334,19 @@
             {
                 abstract: true,
                 url: "/user",
-                templateUrl: "/wwwroot/app/views/user/layout.html",
+                templateUrl: "/app/views/user/layout.html",
             })
             .state('user.main',
             {
                 url: "/dashboard",
-                templateUrl: "/wwwroot/app/views/user/dashboard.html",
+                templateUrl: "/app/views/user/dashboard.html",
                 data: {
                     pageTitle: 'user dashboard'
                 }
             }).state('login',
             {
                 url: "/login",
-                templateUrl: "/wwwroot/app/views/common/login.html",
+                templateUrl: "/app/views/common/login.html",
                 data: {
                     pageTitle: 'user dashboard'
                 }
@@ -354,7 +354,7 @@
             .state('exchange.trader',
             {
                 url: "/trader",
-                templateUrl: "/wwwroot/app/views/exchange/trader.html",
+                templateUrl: "/app/views/exchange/trader.html",
                 data: {
                     pageTitle: 'Exchange'
                 },
@@ -365,7 +365,7 @@
             .state('exchange.dashboard',
             {
                 url: "/dashboard",
-                templateUrl: "/wwwroot/app/views/exchange/dashboard.html",
+                templateUrl: "/app/views/exchange/dashboard.html",
                 data: {
                     pageTitle: 'Exchange'
                 },
@@ -375,7 +375,7 @@
             }).state('exchange.symbol',
             {
                 url: "/:symbol",
-                templateUrl: "/wwwroot/app/views/exchange/symbol.html",
+                templateUrl: "/app/views/exchange/symbol.html",
                 data: {
                     pageTitle: 'Symbol'
                 },
@@ -391,7 +391,7 @@
             }).state('quoka.trader',
                 {
                     url: "/trader",
-                    templateUrl: "/wwwroot/app/views/quoka/trader.html",
+                    templateUrl: "/app/views/quoka/trader.html",
                     data: {
                         pageTitle: 'Exchange'
                     },
@@ -402,7 +402,7 @@
             .state('quoka.dashboard',
                 {
                     url: "/dashboard",
-                    templateUrl: "/wwwroot/app/views/quoka/dashboard.html",
+                    templateUrl: "/app/views/quoka/dashboard.html",
                     data: {
                         pageTitle: 'Exchange'
                     }, resolve: {
