@@ -39,6 +39,14 @@ module.exports = {
       '/api/*': {
         target: 'http://localhost:' + port,
         changeOrigin: true
+      },
+      '/swaggerui/': {
+        target: 'http://localhost:' + port,
+        changeOrigin: true
+      },
+      '/swagger*': {
+        target: 'http://localhost:' + port,
+        changeOrigin: true
       }
     },
     hot: true,
