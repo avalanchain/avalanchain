@@ -67,8 +67,8 @@ Target "Run" (fun () ->
     Diagnostics.Process.Start "http://localhost:8080" |> ignore
   }
 
-  //[ server; client; browser]
-  [ server]
+  [ server; client; browser]
+  // [ server]
   |> Async.Parallel
   |> Async.RunSynchronously
   |> ignore
