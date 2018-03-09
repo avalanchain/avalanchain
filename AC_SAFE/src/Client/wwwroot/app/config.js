@@ -290,7 +290,7 @@
             .state('assets.createassets',
             {
                 url: "/createassets",
-                templateUrl: "/wwwroot/app/views/wwwroot/assets/createassets.html",
+                templateUrl: "/wwwroot/app/views/assets/createassets.html",
                 data: {
                     pageTitle: 'Create Assets'
                 },
@@ -306,7 +306,7 @@
             .state('assets.assets',
             {
                 url: "/assets",
-                templateUrl: "/wwwroot/app/views/wwwroot/assets/assets.html",
+                templateUrl: "/wwwroot/app/views/assets/assets.html",
                 data: {
                     pageTitle: 'Assets'
                 },
