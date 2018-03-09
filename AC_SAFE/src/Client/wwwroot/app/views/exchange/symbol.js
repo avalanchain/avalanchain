@@ -130,10 +130,10 @@
             var depth = 50;
             return exchangeservice.orderStackView(symbol, depth).then(function (data) {
                 vm.orderStackView = data.data;
-                vm.bidOrders = vm.orderStackView.bidOrders;
-                vm.askOrders = vm.orderStackView.askOrders;
-                vm.lowestAsk = vm.askOrders.length > 0 ? Math.min.apply(Math, vm.askOrders.map(function (o) { return o.price; })): 0;
-                vm.highestBid = vm.bidOrders.length > 0 ? Math.max.apply(Math, vm.bidOrders.map(function (o) { return o.price; })) : 0;
+                vm.bidOrders = vm.orderStackView.BidOrders;
+                vm.askOrders = vm.orderStackView.AskOrders;
+                vm.lowestAsk = vm.askOrders.length > 0 ? Math.min.apply(Math, vm.askOrders.map(function (o) { return o.Price; })): 0;
+                vm.highestBid = vm.bidOrders.length > 0 ? Math.max.apply(Math, vm.bidOrders.map(function (o) { return o.Price; })) : 0;
             });
         }
         function submitOrder(order) {

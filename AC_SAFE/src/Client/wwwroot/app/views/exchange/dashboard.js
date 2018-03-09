@@ -28,7 +28,7 @@
 
         vm.showSymbol = function (symbol) {
             $state.go('exchange.symbol', {
-                symbol: symbol
+                symbol: symbol.Symbol
             });
         }
 
@@ -58,7 +58,7 @@
         function getSymbol() {
             return exchangeservice.mainSymbol().then(function (data) {
 
-                vm.symbol = data.data;
+                vm.symbol = data.data.Symbol;
             });
         }
         function getSymbols() {
