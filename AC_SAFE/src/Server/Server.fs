@@ -80,9 +80,9 @@ let docAddendums =
                                                         "SymbolOrderCommandsCount"; "SymbolOrderEventsCount"; "SymbolFullOrdersCount"] 
             |> addQueryParam "integer" "maxDepth" false["OrderStackView"]
             |> addQueryParam "string" "orderID" true   ["GetOrder"; "GetOrder2"] 
-            |> addQueryParam "long" "startIndex" false ["OrderCommands"; "OrderEvents"; "FullOrders";
+            |> addQueryParam "long" "startIndex" false ["GetOrders"; "OrderCommands"; "OrderEvents"; "FullOrders";
                                                         "SymbolOrderCommands"; "SymbolOrderEvents"; "SymbolFullOrders"]
-            |> addQueryParam "integer" "pageSize" true ["OrderCommands"; "OrderEvents"; "FullOrders"; 
+            |> addQueryParam "integer" "pageSize" false["GetOrders"; "OrderCommands"; "OrderEvents"; "FullOrders"; 
                                                         "LastOrderCommands"; "LastOrderEvents"; "LastFullOrders"; 
                                                         "SymbolOrderCommands"; "SymbolOrderEvents"; "SymbolFullOrders";
                                                         "SymbolLastOrderCommands"; "SymbolLastOrderEvents"; "SymbolLastFullOrders"]
@@ -187,7 +187,7 @@ let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) 
                                                                                 | None -> parsingError "Missing order ID"
                                                                                 | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
                                     routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
-                                    routeCi  "/GetOrders"       >=> json ms.Orders |> Successful.ok
+                                    routeCi  "/GetOrders"       >=> bindPageStartQuery ms.Orders
                                     routeCi  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands
                                     routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents
                                     routeCi  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders

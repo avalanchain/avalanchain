@@ -476,7 +476,7 @@ module MatchingEngine =
             member __.SymbolOrderEventsCount symbol = (symbol |> findSymbolStack).Events.LongCount() |> uint64
             member __.SymbolFullOrdersCount symbol = (symbol |> findSymbolStack).FullOrders.LongCount() |> uint64
 
-            member __.Orders() = orders
+            member __.Orders (startIndex: uint64) (pageSize: uint32) = orders |> Seq.skip (int startIndex) |> Seq.truncate (int pageSize) |> Seq.map (fun kv -> kv.Value) |> Seq.toArray // TODO: Find a less expensive way
             member __.OrderById orderID = orders |> Map.tryFind orderID
 
             member __.OrderById2 (orderID: string) = orders |> Map.toArray |> Array.map (fun kv -> (fst kv).ToString()) |> fun a -> orderID + " | " + String.Join(",", a)
