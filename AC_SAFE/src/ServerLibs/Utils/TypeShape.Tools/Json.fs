@@ -108,7 +108,7 @@ module Json =
         let ctx = new TypeGenerationContext()
         genPicklerCached<'T> ctx
         
-    and private genPicklerCached<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
+    and genPicklerCached<'T> (ctx : TypeGenerationContext) : JsonPickler<'T> =
         // create a delayed uninitialized instance for recursive type definitions
         let delay (c : Cell<JsonPickler<'T>>) : JsonPickler<'T> =
             { Parser = fun s -> c.Value.Parser s ;
@@ -156,10 +156,10 @@ module Json =
 
             mkPickler printer parser
 
-        let withObjBracketsPrinter(printer : StringBuilder -> 'T -> unit) = fun sb t -> append sb "{ " ; printer sb t ; append sb " }"
+        let withObjBracketsPrinter(printer : StringBuilder -> 'T -> unit) = fun sb t -> append sb "{" ; printer sb t ; append sb "}"
         let withObjBrackets (p : JsonPickler<'T>) = { Parser = jsonObj p.Parser ; Printer = withObjBracketsPrinter p.Printer }
 
-        let withArrayBracketsPrinter(printer : StringBuilder -> 'T -> unit) = fun sb t -> append sb "[ " ; printer sb t ; append sb " ]"
+        let withArrayBracketsPrinter(printer : StringBuilder -> 'T -> unit) = fun sb t -> append sb "[" ; printer sb t ; append sb "]"
         let withArrayBrackets (p : JsonPickler<'T>) = { Parser = jsonArraySimple p.Parser ; Printer = withArrayBracketsPrinter p.Printer }
        
         match shapeof<'T> with
@@ -241,7 +241,7 @@ module Json =
                         if typeof<'k> <> typeof<string> then failwithf "Type '%O' is not supported" typeof<'T>
                         let vp = genPicklerCached<'v> ctx
                         let printer sb (m : Map<string, 'v>) =
-                            append sb "{ "
+                            append sb "{"
                             let mutable first = true
                             for kv in m do
                                 if first then first <- false else append sb ", "
@@ -249,7 +249,7 @@ module Json =
                                 append sb " : "
                                 vp.Printer sb kv.Value
 
-                            append sb " }"
+                            append sb "}"
 
                         let parser =
                             let keyValue = stringLiteral .>> spaced (pchar ':') .>>. vp.Parser
@@ -318,12 +318,12 @@ module Json =
     //-----------------------------------
     // Serialization functions
 
-    let serialize (pickler : JsonPickler<'T>) (value : 'T) : string =
+    let inline serialize (pickler : JsonPickler<'T>) (value : 'T) : string =
         let sb = new StringBuilder()
         pickler.Printer sb value
         sb.ToString()
 
-    let deserialize (pickler : JsonPickler<'T>) (json : string) : 'T =
+    let inline deserialize (pickler : JsonPickler<'T>) (json : string) : 'T =
         match run pickler.Parser json with
         | Success(r,_,_) -> r
         | Failure(msg,_,_) -> failwithf "Parse error: %s" msg

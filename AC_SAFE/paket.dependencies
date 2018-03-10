@@ -11,7 +11,23 @@ group Server
   nuget Sodium.Core
   nuget TypeShape
   nuget FParsec
-  nuget jose-jwt
+  nuget FSharp.Control.FusionTasks.FS41
+  nuget VaultSharp
+
+  nuget Proto.Actor
+  nuget Proto.Actor.Extensions
+  nuget Proto.Mailbox 
+  nuget Proto.Router
+  nuget Proto.Remote 
+  nuget Proto.Persistence
+  nuget Proto.Cluster
+  nuget Proto.Cluster.Consul
+  nuget Proto.Schedulers.SimpleScheduler
+  nuget Proto.Cluster.WeightedMemberStrategy 
+  nuget Proto.Persistence.Sqlite 
+  nuget Proto.Serialization.Wire 
+
+  github cotyar/protoactor-fsharp:dev
 
   clitool Microsoft.DotNet.Watcher.Tools
 
@@ -26,7 +42,7 @@ group Client
   nuget Fable.Remoting.Client
 
   clitool dotnet-fable
-clitool Microsoft.DotNet.Watcher.Tools
+  clitool Microsoft.DotNet.Watcher.Tools
 
 group ServerTests
   source https://nuget.org/api/v2

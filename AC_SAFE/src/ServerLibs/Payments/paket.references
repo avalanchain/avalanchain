@@ -1,4 +1,20 @@
 group Server
   FSharp.Core
   Sodium.Core
-  jose-jwt
+  FSharp.Control.FusionTasks.FS41
+  VaultSharp
+
+  Proto.Actor
+  Proto.Actor.Extensions
+  Proto.Mailbox 
+  Proto.Router
+  Proto.Remote 
+  Proto.Persistence
+  Proto.Cluster
+  Proto.Cluster.Consul
+  Proto.Schedulers.SimpleScheduler
+  Proto.Cluster.WeightedMemberStrategy 
+  Proto.Persistence.Sqlite 
+  Proto.Serialization.Wire 
+  
+  
