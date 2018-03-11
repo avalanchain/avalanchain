@@ -62,13 +62,13 @@ module Crypto =
             member inline __.Kid() = __.PublicKey.Kid()
             member inline __.Sign (str: string) = __.PrivateKey |> Option.map (fun privKey -> PublicKeyAuth.SignDetached(str, privKey)) 
             member inline __.Verify (str: string) signature = 
-                __.PrivateKey |> Option.map (fun privKey -> PublicKeyAuth.VerifyDetached(signature, Text.Encoding.UTF8.GetBytes(str), privKey)) 
+                PublicKeyAuth.VerifyDetached(signature, Text.Encoding.UTF8.GetBytes(str), __.PublicKey.Bytes)
             interface IDisposable with member __.Dispose() = match __ with  | NaClPair kp -> kp.Dispose() 
                                                                             | NaClPub _ -> ()
     and NaClPubKey = NaClPubKey of byte[] 
         with 
-            member inline __.Bytes = match __ with NaClPubKey bts -> bts
-            member inline __.Kid() = BitConverter.ToUInt64(ShortHash.Hash(__.Bytes, null), 0)
+            member __.Bytes = match __ with NaClPubKey bts -> bts
+            member __.Kid() = BitConverter.ToUInt64(ShortHash.Hash(__.Bytes, (Array.zeroCreate<byte> 16)), 0)
 
     type CryptoContext = {
         Kid: JwtKeyId
