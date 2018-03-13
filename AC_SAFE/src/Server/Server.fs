@@ -28,9 +28,6 @@ open Shared
 open avalanchain.Common.MatchingEngine
 open System
 
-let clientPath = Path.Combine("..","Client") |> Path.GetFullPath
-let port = 8085us
-
 let wsConnectionManager = ConnectionManager()
 
 module ParamHelper =
@@ -101,7 +98,7 @@ let docAddendums =
         | _ -> path, verb, pathDef
 
 
-let docsConfig c = 
+let docsConfig port c = 
     let describeWith desc  = 
         { desc
             with
@@ -162,7 +159,7 @@ let bindSymbolPageStartQuery successHandler =
 let bindSymbolPageQuery successHandler = 
     bindQuery<PageSymbolPageQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
 
-let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) cancellationToken : HttpHandler =
+let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) port cancellationToken : HttpHandler =
   let counterProcotol = 
     { getInitCounter = getInitCounter >> Async.AwaitTask }
   // creates a HttpHandler for the given implementation
@@ -251,7 +248,7 @@ let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) 
                               route  "/"           >=> htmlFile "index.html"
                               route  "/ping"       >=> text "pong"
                     ]
-            ]) |> withConfig docsConfig
+            ]) |> withConfig (docsConfig port)
           route "/wsecho" >=> (wsConnectionManager.CreateSocket(
                                 (fun _ref -> task { return () }),
                                 (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),
@@ -261,11 +258,11 @@ let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) 
 
 let matchingService = Facade.MatchingService.Instance
 
-let configureApp  (app : IApplicationBuilder) =
+let configureApp port (app : IApplicationBuilder) =
   app
     .UseStaticFiles()
     .UseWebSockets()
-    .UseGiraffe (webApp wsConnectionManager matchingService CancellationToken.None)
+    .UseGiraffe (webApp wsConnectionManager matchingService port CancellationToken.None)
 
 let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore
@@ -288,12 +285,27 @@ let main args =
     try
         let port = getPortsOrDefault 8085us
 
+        let args = Array.toList args
+        let clientPath =
+            match args with
+            | clientPath:: _  when Directory.Exists clientPath -> clientPath
+            | _ ->
+                // did we start from server folder?
+                let devPath = Path.Combine("..","Client")
+                if Directory.Exists devPath then devPath
+                else
+                    // maybe we are in root of project?
+                    let devPath = Path.Combine("src","Client")
+                    if Directory.Exists devPath then devPath
+                    else @"./client"
+            |> Path.GetFullPath        
+
         WebHost
           .CreateDefaultBuilder()
           .UseWebRoot(clientPath)
           .UseContentRoot(clientPath)
           .ConfigureLogging(configureLogging)
-          .Configure(Action<IApplicationBuilder> configureApp)
+          .Configure(Action<IApplicationBuilder> (configureApp port))
           .ConfigureServices(configureServices)
           .UseUrls("http://localhost:" + port.ToString() + "/")
           .Build()
