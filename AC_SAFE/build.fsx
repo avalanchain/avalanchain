@@ -260,16 +260,17 @@ Target "BundleClient" (fun _ ->
             info.Arguments <- "publish -c Release -o \"" + FullName deployDir + "\"") TimeSpan.MaxValue
     if result <> 0 then failwith "Publish failed"
 
-    let clientDir = deployDir </> "client"
-    let publicDir = clientDir </> "public"
-    let jsDir = clientDir </> "js"
-    let cssDir = clientDir </> "css"
-    let imageDir = clientDir </> "Images"
+    let clientDir = deployDir </> "Сlient"
+    let copyFolder folder =
+        "src/Client" </> folder </> "**/*.*" 
+        |> (!!)
+        |> CopyFiles (clientDir </> folder) 
 
-    !! "src/Client/public/**/*.*" |> CopyFiles publicDir
-    !! "src/Client/js/**/*.*" |> CopyFiles jsDir
-    !! "src/Client/css/**/*.*" |> CopyFiles cssDir
-    !! "src/Client/Images/**/*.*" |> CopyFiles imageDir
+    copyFolder "public"
+    copyFolder "js"
+    copyFolder "css"
+    copyFolder "Images"
+    copyFolder "wwwroot"
 
     "src/Client/index.html" |> CopyFile clientDir
 )
@@ -297,11 +298,11 @@ Target "TestDockerImage" (fun _ ->
             info.Arguments <- sprintf "run -d -p 127.0.0.1:8086:8085 --rm --name %s -it %s/%s" testImageName dockerUser dockerImageName) TimeSpan.MaxValue
     if result <> 0 then failwith "Docker run failed"
 
-    System.Threading.Thread.Sleep 5000 |> ignore  // give server some time to start
+    // System.Threading.Thread.Sleep 5000 |> ignore  // give server some time to start
 
-    !! clientTestExecutables
-    |> Expecto (fun p -> { p with Parallel = false } )
-    |> ignore
+    // !! clientTestExecutables
+    // |> Expecto (fun p -> { p with Parallel = false } )
+    // |> ignore
 
     let result =
         ExecProcess (fun info ->
@@ -340,12 +341,12 @@ Target "All" DoNothing
   ==> "RunServerTests"
   ==> "BuildClientTests"
   ==> "RenameDrivers"
-  ==> "RunClientTests"
+//   ==> "RunClientTests"
   ==> "BundleClient"
   ==> "All"
   ==> "CreateDockerImage"
   ==> "TestDockerImage"
-  ==> "PrepareRelease"
+//   ==> "PrepareRelease"
   ==> "Deploy"
 
 "BuildClient"
