@@ -14,5 +14,5 @@ let wishListTests =
       Expect.isSome token "Signing failed"
 
       let verificationResult = verify ctx token.Value
-      Expect.isSome token "Verification failed"
+      Expect.isSome verificationResult "Verification failed"
   ]

@@ -7,6 +7,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\paket-files\server\cotyar\protoactor-fsharp\src\Proto.Actor.FSharp\Proto.FSharp.fs" />
+    <Compile Include="Actor.fs" />
     <Compile Include="Crdt.fs" />
     <Compile Include="Crypto.fs" />
     <Compile Include="Chain.fs" />
