@@ -863,7 +863,7 @@ NUGET
       Microsoft.Extensions.Logging.Abstractions (>= 2.0) - restriction: >= netstandard2.0
       Microsoft.Extensions.Options (>= 2.0) - restriction: >= netstandard2.0
       System.Security.Principal.Windows (>= 4.4) - restriction: >= netstandard2.0
-    Microsoft.AspNetCore.Server.Kestrel (2.0.1) - restriction: >= netstandard2.0
+    Microsoft.AspNetCore.Server.Kestrel (2.0.1)
       Microsoft.AspNetCore.Hosting (>= 2.0.1) - restriction: >= netstandard2.0
       Microsoft.AspNetCore.Server.Kestrel.Core (>= 2.0.1) - restriction: >= netstandard2.0
       Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv (>= 2.0.1) - restriction: >= netstandard2.0
@@ -894,6 +894,12 @@ NUGET
       Microsoft.Extensions.FileProviders.Abstractions (>= 2.0) - restriction: >= netstandard2.0
       Microsoft.Extensions.Logging.Abstractions (>= 2.0) - restriction: >= netstandard2.0
       Microsoft.Extensions.WebEncoders (>= 2.0) - restriction: >= netstandard2.0
+    Microsoft.AspNetCore.TestHost (2.0.1)
+      Microsoft.AspNetCore.Hosting (>= 2.0.1) - restriction: >= netstandard2.0
+    Microsoft.AspNetCore.WebSockets (2.0.1)
+      Microsoft.AspNetCore.Http.Extensions (>= 2.0.1) - restriction: >= netstandard2.0
+      Microsoft.Extensions.Options (>= 2.0) - restriction: >= netstandard2.0
+      System.Numerics.Vectors (>= 4.4) - restriction: >= netstandard2.0
     Microsoft.AspNetCore.WebUtilities (2.0.1)
       Microsoft.Net.Http.Headers (>= 2.0.1) - restriction: >= netstandard2.0
       System.Text.Encodings.Web (>= 4.4) - restriction: >= netstandard2.0

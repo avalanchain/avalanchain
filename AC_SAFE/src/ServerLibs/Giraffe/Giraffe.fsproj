@@ -28,10 +28,10 @@
   <ItemGroup>
     <PackageReference Include="System.Text.RegularExpressions" Version="4.3.*" />
     <PackageReference Include="System.Xml.XmlSerializer" Version="4.3.*" />
-    <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.0.*" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="2.0.*" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.0.*" />
-    <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.0.*" />
+    <PackageReference Include="Microsoft.AspNetCore.Hosting.Abstractions" Version="2.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics" Version="2.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.*" />
     <PackageReference Include="TaskBuilder.fs" Version="1.0.*" />
   </ItemGroup>
