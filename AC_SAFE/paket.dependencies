@@ -25,6 +25,7 @@ group Server
   nuget Microsoft.AspNetCore.WebSockets = 2.0.1
   nuget Microsoft.AspNetCore.TestHost = 2.0.1
 
+  nuget FSharp.Control.Reactive
 
   nuget Fable.Remoting.Giraffe
   nuget Fable.JsonConverter
@@ -70,8 +71,8 @@ group ServerTests
   storage:none
   clitool Microsoft.DotNet.Watcher.Tools
   nuget FSharp.Core redirects: force
-  nuget Argu = 5.0.1
-  nuget Expecto = 5.1.2
+  nuget Argu
+  nuget Expecto
 
 group UITests
   source https://nuget.org/api/v2

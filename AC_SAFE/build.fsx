@@ -260,11 +260,13 @@ Target "BundleClient" (fun _ ->
             info.Arguments <- "publish -c Release -o \"" + FullName deployDir + "\"") TimeSpan.MaxValue
     if result <> 0 then failwith "Publish failed"
 
-    let clientDir = deployDir </> "Сlient"
+    let clientDeployDir = deployDir </> "Client"
+    let clientSourceDir = "src" </> "Client"
     let copyFolder folder =
-        "src/Client" </> folder </> "**/*.*" 
-        |> (!!)
-        |> CopyFiles (clientDir </> folder) 
+        let sourceFolder = clientSourceDir </> folder
+        if Directory.Exists sourceFolder then
+            CopyDir clientDeployDir sourceFolder (fun _ -> true)
+        else printfn "Source folder not found: %s" sourceFolder
 
     copyFolder "public"
     copyFolder "js"
@@ -272,7 +274,7 @@ Target "BundleClient" (fun _ ->
     copyFolder "Images"
     copyFolder "wwwroot"
 
-    "src/Client/index.html" |> CopyFile clientDir
+    clientSourceDir </> "index.html" |> CopyFile (clientDeployDir </> "index.html")
 )
 
 Target "CreateDockerImage" (fun _ ->
