@@ -11,13 +11,15 @@ module Actor =
     // type PersistenceActor() =
     //     interface IActor with
 
-    let persistWithCommandSourcingAndSnapshoting 
-        (provider: IProvider) 
+    let persistWithCommandSourcingAndSnapshotingDetailed 
+        (eventStore: IEventStore) 
+        (snapshotStore: ISnapshotStore) 
         (processCommand: 'State -> int64 -> 'Command -> Result<'Event, 'CommandError>)
         (recoverEvent: 'State -> int64 -> 'Event -> 'State) 
         (replayEvent: 'State -> int64 -> 'Event -> 'State)
         (persistedEvent: 'State -> int64 -> 'Event -> 'State)
         (recoverSnapshot: (int64 -> 'State -> 'State) option) 
+        (persistedSnapshot: (int64 -> 'State -> 'State) option) 
         (initialState: 'State)
         (snapshotStrategy: ISnapshotStrategy)
         (persistentID: string) 
@@ -43,17 +45,22 @@ module Actor =
             match snapshot with
             | :? RecoverSnapshot as rs ->
                 match rs.State with
-                | :? 'State as st -> state <-   match recoverSnapshot with 
-                                                | Some rs -> rs snapshot.Index st
-                                                | None -> st
+                | :? 'State as st ->    match recoverSnapshot with 
+                                        | Some rs -> state <- rs snapshot.Index st
+                                        | None -> ()
                 | _ -> failwithf "Unsupported snapshot type: '%A'" (snapshot.State.GetType())
-            | :? PersistedSnapshot as ps -> () // TODO: Add logging
+            | :? PersistedSnapshot as ps -> 
+                match ps.State with
+                | :? 'State as st ->    match persistedSnapshot with 
+                                        | Some rs -> state <- rs snapshot.Index st
+                                        | None -> ()
+                | _ -> failwithf "Unsupported snapshot type: '%A'" (snapshot.State.GetType())
             | _ -> printfn "Unsupported snapshot type: '%A'" (snapshot.State.GetType())
 
         let persistence = 
             Persistence.WithEventSourcingAndSnapshotting(
-                provider, 
-                provider, 
+                eventStore, 
+                snapshotStore, 
                 persistentID,
                 System.Action<_>(applyEvent), 
                 System.Action<_>(applySnapshot),
@@ -75,4 +82,48 @@ module Actor =
         Actor.create3Async systemHandler handler
 
 
-    let persistWithEventSourcingAndSnapshoting = persistWithCommandSourcingAndSnapshoting 
+    let persistWithEventSourcingAndSnapshotingDetailed
+        (eventStore: IEventStore) 
+        (snapshotStore: ISnapshotStore) 
+        (recoverEvent: 'State -> int64 -> 'Event -> 'State) 
+        (replayEvent: 'State -> int64 -> 'Event -> 'State)
+        (persistedEvent: 'State -> int64 -> 'Event -> 'State)
+        (recoverSnapshot: (int64 -> 'State -> 'State) option) 
+        (persistedSnapshot: (int64 -> 'State -> 'State) option) 
+        (initialState: 'State)
+        (snapshotStrategy: ISnapshotStrategy)
+        (persistentID: string)
+        = 
+        persistWithCommandSourcingAndSnapshotingDetailed 
+            eventStore 
+            snapshotStore
+            (fun _ _ cmd -> Ok cmd)
+            recoverEvent
+            replayEvent
+            persistedEvent
+            recoverSnapshot
+            persistedSnapshot
+            initialState
+            snapshotStrategy
+            persistentID
+
+    let persistWithEventSourcingAndSnapshoting
+        (provider: IProvider) 
+        (onEvent: 'State -> int64 -> 'Event -> 'State) 
+        (recoverSnapshot: (int64 -> 'State -> 'State) option) 
+        (persistedSnapshot: (int64 -> 'State -> 'State) option) 
+        (initialState: 'State)
+        (snapshotStrategy: ISnapshotStrategy)
+        (persistentID: string)
+        = 
+        persistWithEventSourcingAndSnapshotingDetailed 
+            provider 
+            provider
+            onEvent
+            onEvent
+            onEvent
+            recoverSnapshot
+            persistedSnapshot
+            initialState
+            snapshotStrategy
+            persistentID    
