@@ -297,7 +297,7 @@ let main args =
                     // maybe we are in root of project?
                     let devPath = Path.Combine("src","Client")
                     if Directory.Exists devPath then devPath
-                    else @"./client"
+                    else @"./Client"
             |> Path.GetFullPath        
 
         WebHost
