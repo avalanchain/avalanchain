@@ -174,14 +174,14 @@ module WebSocketActor =
         | Message of WebSocketReference * WebSocketMessage
         | NewConnection of WebSocketReference
 
-    let webSocket route (log: string -> unit) (connection: WebSocketDispatcher -> WebSocketDisposer -> WebSocketReference -> WebSocketMessageHandler) cancellationToken =
+    let webSocketBase isBroadcast route (log: string -> unit) (connection: WebSocketDispatcher -> WebSocketDisposer -> WebSocketReference -> WebSocketMessageHandler) cancellationToken =
         let connectionManager = ConnectionManager()
         let spawnChild (parentCtx: Proto.IContext) (ref: WebSocketReference) =
             let name = ref.ID
 
-            let dispatcher (msg: WebSocketMessage) = async {
-                match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken)
-            }
+            let dispatcher (msg: WebSocketMessage) = 
+                if isBroadcast then async { match msg with | WebSocketMessage msg -> do! connectionManager.BroadcastTextAsync(msg, cancellationToken) }
+                else async { match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken) }
             let disposer reason = async { do! ref.CloseAsync(reason, cancellationToken) }
             let handler = connection dispatcher disposer ref 
 
@@ -204,6 +204,10 @@ module WebSocketActor =
         connectionManager.CreateSocket( (fun ref -> task { pid <! NewConnection ref } ),
                                         (fun ref msg -> task { pid <! Message(ref, WebSocketMessage msg) }),
                                         cancellationToken = cancellationToken)
+
+    let webSocket = webSocketBase false
+    let webSocketBroadcast = webSocketBase true
+
 
         // let parentHandler (ctx: IContext) (msg: obj) =
         //     printfn "(Parent) Message: %A" msg
@@ -348,6 +352,7 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                 (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),
                                 cancellationToken = cancellationToken)) 
           route "/wsecho2" >=> WebSocketActor.webSocket "wsecho2" (printfn "%s") (fun d _ _ -> (fun m -> m |> d)) cancellationToken
+          route "/wsecho3" >=> WebSocketActor.webSocketBroadcast "wsecho3" (printfn "%s") (fun d _ _ -> (fun m -> m |> d)) cancellationToken
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
