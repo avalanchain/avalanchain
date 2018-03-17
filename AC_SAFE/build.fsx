@@ -347,7 +347,7 @@ Target "All" DoNothing
   ==> "BundleClient"
   ==> "All"
   ==> "CreateDockerImage"
-//   ==> "TestDockerImage"
+  ==> "TestDockerImage"
   ==> "PrepareRelease"
   ==> "Deploy"
 
