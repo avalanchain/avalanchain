@@ -1,6 +1,7 @@
 group Server
   FSharp.Core
   FSharp.Control.Reactive
+  FSharp.Control.AsyncSeq
   Sodium.Core
   FSharp.Control.FusionTasks.FS41
   VaultSharp
@@ -18,4 +19,4 @@ group Server
   Proto.Persistence.Sqlite 
   Proto.Serialization.Wire 
   
-  
+

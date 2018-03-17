@@ -2,6 +2,7 @@
 open System.IO
 open System.Threading
 open System.Threading.Tasks
+open System.Reactive.Subjects
 open Microsoft.AspNetCore
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
@@ -25,8 +26,8 @@ open Giraffe.ModelBinding
 open Fable.Remoting.Giraffe
 
 open Shared
-open avalanchain.Common.MatchingEngine
-open System
+open Avalanchain.Common.MatchingEngine
+open Avalanchain.Core
 
 let wsConnectionManager = ConnectionManager()
 
@@ -59,6 +60,7 @@ module ParamHelper =
         path, verb, pathDef
 
 open ParamHelper
+open System.Collections.Concurrent
 
 let docAddendums =
     fun (route:Analyzer.RouteInfos) (path:string,verb:HttpVerb,pathDef:PathDefinition) ->
@@ -159,7 +161,99 @@ let bindSymbolPageStartQuery successHandler =
 let bindSymbolPageQuery successHandler = 
     bindQuery<PageSymbolPageQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
 
-let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) port cancellationToken : HttpHandler =
+
+module WebSocketActor = 
+    open Proto
+    open Proto.FSharp
+
+    type WebSocketMessage = | WebSocketMessage of string
+    type WebSocketDispatcher = WebSocketMessage -> Async<unit>
+    type WebSocketDisposer = string -> Async<unit>
+    type WebSocketMessageHandler = WebSocketMessage -> Async<unit>
+    type private WebSocketConnectionMessage = 
+        | Message of WebSocketReference * WebSocketMessage
+        | NewConnection of WebSocketReference
+
+    let webSocket route (log: string -> unit) (connection: WebSocketDispatcher -> WebSocketDisposer -> WebSocketReference -> WebSocketMessageHandler) cancellationToken =
+        let connectionManager = ConnectionManager()
+        let spawnChild (parentCtx: Proto.IContext) (ref: WebSocketReference) =
+            let name = ref.ID
+
+            let dispatcher (msg: WebSocketMessage) = async {
+                match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken)
+            }
+            let disposer reason = async { do! ref.CloseAsync(reason, cancellationToken) }
+            let handler = connection dispatcher disposer ref 
+
+            let props = Actor.createAsync handler |> Actor.initProps
+            let pid = parentCtx.SpawnNamed(props, name)
+            log (sprintf "Spawned connection: '%s' with PID: '%A' Id: '%s' Address: '%s'" name pid pid.Id pid.Address)
+            pid
+
+        let handler (ctx: IContext) (msg: WebSocketConnectionMessage) = async {
+            match msg with 
+            | NewConnection ref -> spawnChild ctx ref |> ignore
+            | Message (ref, msg) -> 
+                match ctx.Children |> Seq.tryFind (fun c -> c.Id.EndsWith ref.ID) with
+                | Some pid -> pid <! msg
+                | None -> log (sprintf "ERROR: WebSocket connection not found: '%s' for route '%s'" ref.ID route)
+        }
+
+        let pid = Actor.create2Async handler |> Actor.initProps |> Actor.spawnNamed ("ws_" + route)
+
+        connectionManager.CreateSocket( (fun ref -> task { pid <! NewConnection ref } ),
+                                        (fun ref msg -> task { pid <! Message(ref, WebSocketMessage msg) }),
+                                        cancellationToken = cancellationToken)
+
+        // let parentHandler (ctx: IContext) (msg: obj) =
+        //     printfn "(Parent) Message: %A" msg
+        //     match msg with
+        //     | :? string as message when message = "kill" ->
+        //         printfn "Will kill someone"
+        //         let children = ctx.Children
+        //         let childToKill = children |> Seq.head
+        //         "die" >! childToKill
+        //     | :? Proto.Started ->
+        //         [ 1 .. 3 ] |> List.iter (spawnChild ctx)
+        //     | _ -> printfn "Some other message: %A" msg
+
+        // let wsStreams = new ConcurrentDictionary<WebSocketReference, WebSocketConnection>()
+
+        // let addSubscription = 
+
+        // wsConnectionManager.CreateSocket(
+        //                             (fun ref -> task { 
+        //                                 let sink = new Subject<_>()
+        //                                 let source = //connection ref sink
+        //                                 source |> Observable.subscribe (fun msg -> ref.SendTextAsync(msg, cancellationToken))
+        //                                 () 
+        //                             }),
+        //                             (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),
+        //                             cancellationToken = cancellationToken)
+
+    // type WebSocketConnection = {
+    //     Ref: WebSocketReference
+    //     Sink: string -> Task<unit>
+    //     Source: Subject<string>
+    // }
+
+// let webSocket (wsConnectionManager: ConnectionManager) (connection: WebSocketReference -> IObservable<string> -> IObservable<string>) cancellationToken =
+//     let wsStreams = new ConcurrentDictionary<WebSocketReference, WebSocketConnection>()
+
+//     wsConnectionManager.CreateSocket(
+//                                 (fun ref -> 
+//                                             task { 
+//                                                 let sink = new Subject<_>()
+//                                                 let source = connection sink
+//                                                 source |> Observable.subscribe (fun msg -> ref.SendTextAsync(msg, cancellationToken).Wait())
+//                                                 () 
+//                                             }),
+//                                 (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),
+//                                 cancellationToken = cancellationToken)
+
+                                            
+
+let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) port cancellationToken : HttpHandler =
   let counterProcotol = 
     { getInitCounter = getInitCounter >> Async.AwaitTask }
   // creates a HttpHandler for the given implementation
@@ -250,9 +344,10 @@ let webApp(wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) 
                     ]
             ]) |> withConfig (docsConfig port)
           route "/wsecho" >=> (wsConnectionManager.CreateSocket(
-                                (fun _ref -> task { return () }),
+                                (fun ref -> task { return () }),
                                 (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),
                                 cancellationToken = cancellationToken)) 
+          route "/wsecho2" >=> WebSocketActor.webSocket "wsecho2" (printfn "%s") (fun d _ _ -> (fun m -> m |> d)) cancellationToken
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 

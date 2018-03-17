@@ -26,6 +26,7 @@ group Server
   nuget Microsoft.AspNetCore.TestHost = 2.0.1
 
   nuget FSharp.Control.Reactive
+  nuget FSharp.Control.AsyncSeq
 
   nuget Fable.Remoting.Giraffe
   nuget Fable.JsonConverter
@@ -49,7 +50,7 @@ group Server
   nuget Proto.Persistence.Sqlite 
   nuget Proto.Serialization.Wire 
 
-  github cotyar/protoactor-fsharp:NoCE
+  github cotyar/protoactor-fsharp:dev
 
   clitool Microsoft.DotNet.Watcher.Tools
 
