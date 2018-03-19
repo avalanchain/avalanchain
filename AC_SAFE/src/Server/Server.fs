@@ -291,7 +291,7 @@ let configureServices (services : IServiceCollection) =
         NewtonsoftJsonSerializer(fableJsonSettings)) |> ignore
     
 let configureLogging (loggerBuilder : ILoggingBuilder) =
-    loggerBuilder.AddFilter(fun lvl -> lvl.Equals LogLevel.Error)
+    loggerBuilder.AddFilter(fun lvl -> lvl.Equals LogLevel.Debug)
                  .AddConsole()
                  .AddDebug() |> ignore
 

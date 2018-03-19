@@ -28,11 +28,16 @@ module WebSocketActor =
             let dispatcher (msg: WebSocketMessage) = 
                 if isBroadcast then async { match msg with | WebSocketMessage msg -> do! connectionManager.BroadcastTextAsync(msg, cancellationToken) }
                 else async { match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken) }
-            let disposer reason = async { do! ref.CloseAsync(reason, cancellationToken) }
+            let mutable actorPid = None
+            let disposer reason = async { 
+                actorPid |> Option.iter (fun pid -> pid <! PoisonPill) 
+                do! ref.CloseAsync(reason, cancellationToken) }
+            
             let handler = connection dispatcher disposer ref 
 
             let props = Actor.createAsync handler |> Actor.initProps
             let pid = parentCtx.SpawnNamed(props, name)
+            actorPid <- Some pid
             log (sprintf "Spawned WebSocket connection: '%s' with PID: '%A' Id: '%s' Address: '%s'" name pid pid.Id pid.Address)
             pid
 
@@ -108,7 +113,10 @@ module WebSocketActor =
         let dispatcher (msg: WebSocketMessage) = 
             logger "Disp" msg |> ignore; 
             async { match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken) }
-        let disposer reason = async { do! ref.CloseAsync(reason, cancellationToken) }
+        let mutable actorPid = None
+        let disposer reason = async { 
+            actorPid |> Option.iter (fun pid -> pid <! PoisonPill) 
+            do! ref.CloseAsync(reason, cancellationToken) }
         let handler = logger "Rec" >> connection dispatcher disposer ref 
         let receiver msg = async {
             let mutable running = true
@@ -117,8 +125,9 @@ module WebSocketActor =
                 running <- msg
         }
         
-        let pid = Actor.createAsync receiver |> Actor.spawnPropsPrefix ("wsClient_" + url.ToString() + "_") // TODO: Add pid Poisoning on dispose
+        let pid = Actor.createAsync receiver |> Actor.spawnPropsPrefix ("wsClient_" + url.ToString() + "_") 
         pid <! "start"
+        actorPid <- Some pid
         log (sprintf "Spawned WebSocket client to: '%A' with PID: '%A' Id: '%s' Address: '%s'" url pid pid.Id pid.Address)
 
         dispatcher, disposer

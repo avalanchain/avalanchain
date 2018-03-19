@@ -50,7 +50,8 @@ group Server
   nuget Proto.Persistence.Sqlite 
   nuget Proto.Serialization.Wire 
 
-  github cotyar/protoactor-fsharp:dev
+  github cotyar/protoactor-fsharp:dev src/Proto.Actor.FSharp/Proto.FSharp.fs 
+  github cotyar/protoactor-fsharp:dev src/Proto.Actor.FSharp.Persistence/Proto.FSharp.Persistence.fs  
 
   clitool Microsoft.DotNet.Watcher.Tools
 
