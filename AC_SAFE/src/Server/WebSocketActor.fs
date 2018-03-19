@@ -1,5 +1,6 @@
 namespace Avalanchain.Server
 open System.Threading
+open FSharp.Control
 
 module WebSocketActor = 
     open Proto
@@ -132,6 +133,26 @@ module WebSocketActor =
 
         dispatcher, disposer
 
+
+    let toAsyncSeqPair cancellationToken (dispatcher: WebSocketDispatcher) =
+        let sinkSeqSrc = AsyncSeqSrc.create()
+        sinkSeqSrc
+        |> AsyncSeqSrc.toAsyncSeq 
+        |> AsyncSeq.iterAsync dispatcher 
+        |> fun aseq -> Async.Start (aseq, cancellationToken)
+
+        let sourceSeqSrc = AsyncSeqSrc.create() 
+
+        let handler = fun m -> async { sourceSeqSrc |> AsyncSeqSrc.put m }
+        (sourceSeqSrc |> AsyncSeqSrc.toAsyncSeq), sinkSeqSrc, handler
+
+    let fromAsyncSeqPair sourceSeq sinkSeqSrc cancellationToken (dispatcher: WebSocketDispatcher) =
+        sourceSeq
+        |> AsyncSeq.iterAsync dispatcher 
+        |> fun aseq -> Async.Start (aseq, cancellationToken)
+
+        fun m -> async { sinkSeqSrc |> AsyncSeqSrc.put m }
+        
 
         // let parentHandler (ctx: IContext) (msg: obj) =
         //     printfn "(Parent) Message: %A" msg

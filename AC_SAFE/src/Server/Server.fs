@@ -270,6 +270,14 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                         fun m -> m |> logger "ClientRec" |> clientDispatcher
                                     ) 
                                 cancellationToken
+          route "/wsecho5" >=> webSocket "wsecho5" (printfn "%s") 
+                                (fun dispatcher _ _ -> 
+                                        let source, sink, handler = toAsyncSeqPair cancellationToken dispatcher
+                                        let url = (sprintf "ws://localhost:%d/wsecho4" port) |> Uri
+                                        webSocketClient url (printfn "%s") (fun d _ _ -> fromAsyncSeqPair source sink cancellationToken dispatcher) cancellationToken |> ignore
+                                        handler
+                                    ) 
+                                cancellationToken
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
