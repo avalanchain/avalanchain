@@ -265,10 +265,10 @@ Target "BundleClient" (fun _ ->
     let copyFolder folder =
         let sourceFolder = clientSourceDir </> folder
         if Directory.Exists sourceFolder then
-            CopyDir clientDeployDir sourceFolder (fun _ -> true)
+            CopyDir (clientDeployDir</>folder) sourceFolder (fun _ -> true)
         else printfn "Source folder not found: %s" sourceFolder
 
-    copyFolder "public"
+    CopyDir clientDeployDir (clientSourceDir </> "public") (fun _ -> true)
     copyFolder "js"
     copyFolder "css"
     copyFolder "Images"
@@ -348,7 +348,7 @@ Target "All" DoNothing
   ==> "All"
   ==> "CreateDockerImage"
   ==> "TestDockerImage"
-  ==> "PrepareRelease"
+//   ==> "PrepareRelease"
   ==> "Deploy"
 
 "BuildClient"

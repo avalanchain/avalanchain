@@ -324,7 +324,7 @@ let main args =
           .ConfigureLogging(configureLogging)
           .Configure(Action<IApplicationBuilder> (configureApp port))
           .ConfigureServices(configureServices)
-          .UseUrls("http://localhost:" + port.ToString() + "/")
+          .UseUrls("http://0.0.0.0:" + port.ToString() + "/")
           .Build()
           .Run()
             
