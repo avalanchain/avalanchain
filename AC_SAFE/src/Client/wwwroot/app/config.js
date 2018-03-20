@@ -372,12 +372,22 @@
                 ncyBreadcrumb: {
                     label: 'Dashboard'
                 }
+            }).state('exchange.trade',
+            {
+                url: "/trade",
+                templateUrl: "/wwwroot/app/views/exchange/trade.html",
+                data: {
+                    pageTitle: 'Exchange'
+                },
+                ncyBreadcrumb: {
+                    label: 'Trade'
+                }
             }).state('exchange.symbol',
             {
                 url: "/:symbol",
                 templateUrl: "/wwwroot/app/views/exchange/symbol.html",
                 data: {
-                    pageTitle: 'Symbol'
+                    pageTitle: 'Currency'
                 },
                 controller: function ($scope, $stateParams) {
                     $scope.foo = $stateParams.symbol || '';

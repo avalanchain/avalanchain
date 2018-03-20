@@ -426,7 +426,7 @@ module MatchingEngine =
                         tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2
                 }
 
-            do if runBot then tradingBot(__, ["AVC"; "USD"; "EUR"; "GBP"; "AIM"; "V1"; "V2"; "ICO1"; "ICO2"; "ICO3"; "ICO4"; "ICO5"; "ICO6"; "ICO7"; "ICO8"; "ICO9"; "ICO10"; "ICO11"; "ICO12" ]) |> Async.Start
+            do if runBot then tradingBot(__, ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]) |> Async.Start
 
             let getPage (lst: ResizeArray<_>) (startIndex: uint64) (pageSize: uint32) = 
                 let startIndexI = startIndex |> int

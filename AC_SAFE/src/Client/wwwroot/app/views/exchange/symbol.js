@@ -1,9 +1,9 @@
 ﻿(function () {
     'use strict';
     var controllerId = 'symbol';
-    angular.module('avalanchain').controller(controllerId, ['common', '$scope', 'dataservice', 'exchangeservice', '$stateParams', symbol]);
+    angular.module('avalanchain').controller(controllerId, ['common', '$scope', 'dataservice', 'exchangeservice', '$stateParams','$sce', symbol]);
 
-    function symbol(common, $scope, dataservice, exchangeservice, $stateParams) {
+    function symbol(common, $scope, dataservice, exchangeservice, $stateParams,$sce) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -17,7 +17,8 @@
         //    })[0];
         //    vm.getTransactions();
         //});
-
+        $scope.tviewurl = $sce.trustAsResourceUrl("https://www.tradingview.com/chart/");
+        // $scope.tviewurl = "https://uk.tradingview.com/chart/";
         $scope.datayahoo = [];
         $scope.users = [1, 2, 3, 4];
         $scope.amount1 = [1000, 2100, 3330, 400];
