@@ -13,7 +13,7 @@
         'irontec.simpleChat',
         'luegg.directives',
         'nvd3',
-        'plotly'
+        // 'plotly'
         // 'localytics.directives'
         // 'AdalAngular'
     ]);
