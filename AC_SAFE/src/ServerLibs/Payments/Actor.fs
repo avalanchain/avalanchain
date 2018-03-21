@@ -135,12 +135,12 @@ module PagedLog =
         let! res = pid <? GetPos
         return match res with
                 | Ok r -> match r with
-                            | Pos i -> i
+                            | Pos i -> i + 1L
                             | EventPage _ | Event _ | SeqEvent _ | SeqComplete _ -> failwith "Incorrect getPos result type"
                 | Error e -> failwithf "Error during getPos call: '%A'" (e)                
     }
 
-    let offer o (pid: PID): Async<LogEvent<_>> = async {
+    let offerWithAck (pid: PID) o: Async<LogEvent<_>> = async {
         let! res = pid <? Offer o
         return match res with
                 | Ok r -> match r with
@@ -149,4 +149,4 @@ module PagedLog =
                 | Error e -> failwithf "Error during Offer call: '%A'" (e)                
     }
 
-    
+    let offer (pid: PID) o = pid <! Offer o

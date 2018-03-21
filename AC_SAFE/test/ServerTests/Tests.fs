@@ -43,8 +43,7 @@ let coreTests =
         Threading.Thread.Sleep 100
 
         let storedMsgs = ResizeArray<_>()
-        eventStore 
-        |> getEvents<string> (fun e -> printfn "E %A" e; storedMsgs.Add e) "0" 0L 9L 
+        getEvents<string> eventStore "0" 0L 9L (fun e -> printfn "E %A" e; storedMsgs.Add e)
         |> Async.RunSynchronously 
         |> ignore
 
@@ -63,8 +62,8 @@ let coreTests =
         msgs |> Array.iter (fun m -> m >! eventSourcing)
 
         let mutable storedMsgs = [||]
-        eventStore 
-        |> getEventsObservable<string> "0" 0L 9L 
+         
+        getEventsObservable<string> eventStore "0" 0L 9L 
         |> Observable.toArray 
         |> Observable.subscribe (fun msgs -> printfn "Msgs: %A" msgs)
         |> ignore

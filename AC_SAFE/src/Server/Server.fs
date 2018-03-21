@@ -9,6 +9,7 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Logging
 open Microsoft.AspNetCore.Http
+//open FSharp.Control.Tasks.ContextInsensitive
 
 open Newtonsoft.Json
 
@@ -62,6 +63,7 @@ module ParamHelper =
 
 open ParamHelper
 open System.Collections.Concurrent
+open Proto.FSharp
 
 let docAddendums =
     fun (route:Analyzer.RouteInfos) (path:string,verb:HttpVerb,pathDef:PathDefinition) ->
@@ -136,7 +138,22 @@ type [<CLIMutable>] PageQuery = { pageSize: uint32 option }
 type [<CLIMutable>] PageSymbolStartQuery = { symbol: string option; startIndex: uint64 option; pageSize: uint32 option }
 type [<CLIMutable>] PageSymbolPageQuery = { symbol: string option; pageSize: uint32 option }
 
-let primitive value : HttpHandler = text (value.ToString())
+let textAsync (str : Async<string>) : HttpHandler =
+    fun (next : HttpFunc) (ctx : HttpContext) -> task { 
+        let! s = str.AsTask()
+        return! ctx.WriteTextAsync s
+    }
+
+let primitive (value: Async<_>): HttpHandler = async {  let! v = value
+                                                        return v.ToString() } |> textAsync
+
+let jsonAsync (value: Async<'T>) : HttpHandler =
+    fun (next : HttpFunc) (ctx : HttpContext) -> task { 
+        let! v = value.AsTask()
+        return! ctx.WriteJsonAsync v
+    }
+
+let json = jsonAsync
 
 let bindSymbolQuery successHandler = 
     bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> json |> Successful.ok)
@@ -184,13 +201,13 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                   choose [
                                     routeCi  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
                                     routeCi  "/OrderStackView"  >=> bindSymbolMaxDepthQuery ms.OrderStackView
-                                    routeCi  "/MainSymbol"      >=> json ms.MainSymbol |> Successful.ok
-                                    routeCi  "/Symbols"         >=> json ms.Symbols |> Successful.ok
+                                    routeCi  "/MainSymbol"      >=> json (async { return ms.MainSymbol }) |> Successful.ok
+                                    routeCi  "/Symbols"         >=> json (async { return ms.Symbols }) |> Successful.ok
                                     routeCi  "/GetOrder"        >=> bindQuery<OrderIDQuery> None 
                                                                     (fun oq -> match oq.orderID with
                                                                                 | None -> parsingError "Missing order ID"
                                                                                 | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
-                                    routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
+                                    // routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
                                     routeCi  "/GetOrders"       >=> bindPageStartQuery ms.Orders
                                     routeCi  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands
                                     routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents

@@ -1,4 +1,7 @@
 ﻿namespace Avalanchain.Common
+open Avalanchain.Core.PagedLog
+open Proto.Persistence.Sqlite
+open Microsoft.Data.Sqlite
 
 module MatchingEngine = 
 
@@ -6,6 +9,12 @@ module MatchingEngine =
     open System.Threading
     open System.Collections.Generic
     open System.Collections.Concurrent
+
+    open Proto
+    open Proto.Persistence
+    open Proto.FSharp
+
+    open Avalanchain.Core
     //open FSharpx.Collections
 
     type MatchType = | Partial | Full
@@ -25,7 +34,10 @@ module MatchingEngine =
     type Total = decimal<price*qty>
 
     type Symbol = Symbol of string
+        with member __.Value = match __ with Symbol s -> s
+
     type TradingAccount = TradingAccount of string
+        with member __.Value = match __ with TradingAccount ta -> ta
 
     type OrderType = 
     // | Market 
@@ -303,33 +315,48 @@ module MatchingEngine =
             ExpirationPosLimit: Pos 
             Pos: Pos
             OrderStack: OrderStack
-            Commands: ResizeArray<OrderCommand>
-            Events: ResizeArray<OrderEvent>
-            FullOrders: ResizeArray<Order>
+            Commands: PID
+            Events: PID
+            FullOrders: PID
         }
-        with static member Create symbol priceStep posLimit = { Symbol = symbol
-                                                                ExpirationPosLimit = posLimit
-                                                                Pos = 0UL
-                                                                OrderStack = OrderStack.Create priceStep
-                                                                Commands = ResizeArray<_>() 
-                                                                Events = ResizeArray<_>() 
-                                                                FullOrders = ResizeArray<_>() }
+        with static member Create symbol priceStep posLimit commands events fullOrders = {  Symbol = symbol
+                                                                                            ExpirationPosLimit = posLimit
+                                                                                            Pos = 0UL
+                                                                                            OrderStack = OrderStack.Create priceStep
+                                                                                            Commands = commands 
+                                                                                            Events = events 
+                                                                                            FullOrders = fullOrders }
 
-        type MatchingService(priceStep, posLimit, runBot) as __ =
-            let orderCommands = ResizeArray<OrderCommand>()
+        type MatchingService(provider: IProvider, priceStep, posLimit, runBot) as __ =
+
+            let hasher = fun _ -> "Hash"
+            let toToken = fun _ -> "Token"
+            let maxPageSize = 200u
+
             let mutable symbolStackMap = Map.empty<Symbol, SymbolStack>
             let mutable orders = Map.empty<OrderID, Order>
-            let findSymbolStack symbol = match symbolStackMap.TryFind symbol with
-                                            | Some ss -> ss
-                                            | None -> SymbolStack.Create symbol priceStep posLimit
+
+            let spawnLog prefix = 
+                PagedLog.pagedLogHandler hasher toToken maxPageSize provider prefix
+                |> Actor.spawnPropsPrefix prefix
+
+            let findSymbolStack (symbol: Symbol) = 
+                let commands = spawnLog ("MatchingService_" + symbol.Value + "_Commands")
+                let events = spawnLog ("MatchingService_" + symbol.Value + "_Events")
+                let fullOrders = spawnLog ("MatchingService_" + symbol.Value + "_FullOrders")
+                match symbolStackMap.TryFind symbol with
+                | Some ss -> ss
+                | None -> SymbolStack.Create symbol priceStep posLimit commands events fullOrders
 
             //orderStack = OrderStack.Create priceStep
-            let fullOrders = ResizeArray<Order>()
-            let events = ResizeArray<OrderEvent>()
+            let orderCommands = spawnLog "MatchingService_Commands"
+            let events = spawnLog "MatchingService_Events"
+            let fullOrders = spawnLog "MatchingService_FullOrders"
+            
             let processCommand command expireLimit = 
                 match command with
                 | OrderCommand.Create order -> 
-                    orderCommands.Add command
+                    command |> PagedLog.offer orderCommands
                     let symbolStack = findSymbolStack order.Symbol
                     let newPos = symbolStack.Pos + 1UL
                     let newOrderStack, evts, updatedOrders = order 
@@ -342,13 +369,14 @@ module MatchingEngine =
                     for o in updatedOrders do 
                         orders <- orders.Add(o.ID, o)
                         if o.FullyAllocated then 
-                            newSymbolStack.FullOrders.Add o
-                            fullOrders.Add o
-                    newSymbolStack.Commands.Add command
+                            o |> PagedLog.offer newSymbolStack.FullOrders
+                            o |> PagedLog.offer fullOrders
+                    command |> PagedLog.offer newSymbolStack.Commands
                     
                     let revEvents = evts |> List.rev
-                    newSymbolStack.Events.AddRange revEvents
-                    events.AddRange revEvents
+                    for re in revEvents do 
+                        re |> PagedLog.offer newSymbolStack.Events
+                        re |> PagedLog.offer events
                     symbolStackMap <- symbolStackMap.Add (newSymbolStack.Symbol, newSymbolStack)
                 | OrderCommand.Cancel oid -> failwith "Not supported yet"
             
@@ -376,7 +404,8 @@ module MatchingEngine =
                         for sym in symbols do 
                             let sym = Symbol sym
                             let quantity = decimal(rnd.Next(52, 100)) * 1M<qty>
-                            let st = ms.OrderStack(sym)
+                            let st = (findSymbolStack sym).OrderStack
+                           
                             let medianPrice = decimal(((highCap - lowCap) / st.PriceStep) / 2M |> Math.Round) * st.PriceStep
                             let p, side = match st.BidOrders, st.AskOrders with
                                             | [], [] -> medianPrice, MarketSide.Ask
@@ -421,65 +450,66 @@ module MatchingEngine =
                                 } |> OrderCommand.Create |> ms.SubmitOrder 
                 async {
                     tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    for i in 1 .. 10000000 do
-                        do! Async.Sleep 100
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+
+                    // for i in 1 .. 10000000 do
+                    for i in 1 .. 10000 do
+                        //do! Async.Sleep 1000
                         tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2
                 }
 
             do if runBot then tradingBot(__, ["AVC"; "USD"; "EUR"; "GBP"; "AIM"; "V1"; "V2"; "ICO1"; "ICO2"; "ICO3"; "ICO4"; "ICO5"; "ICO6"; "ICO7"; "ICO8"; "ICO9"; "ICO10"; "ICO11"; "ICO12" ]) |> Async.Start
 
-            let getPage (lst: ResizeArray<_>) (startIndex: uint64) (pageSize: uint32) = 
-                let startIndexI = startIndex |> int
-                let pageSizeI = (pageSize |> int)
-                let endIndexI = startIndexI + pageSizeI
-                let listCount = lst.Count
-                if startIndexI > listCount then Array.empty
-                elif endIndexI > listCount then lst.GetRange(startIndexI, listCount - startIndexI).ToArray()
-                else lst.GetRange(startIndexI, pageSizeI).ToArray()
-
-            let getLastPage (lst: ResizeArray<_>) (pageSize: uint32) = 
-                let pageSizeI = pageSize |> int
-                let listCount = lst.Count
-                if pageSizeI > listCount then lst.ToArray()
-                else lst.GetRange(listCount - pageSizeI, pageSizeI).ToArray()
-            
             
             member __.SubmitOrder orderCommand = processCommand orderCommand posLimit
 
-            member __.MainSymbol = Symbol "AVC"
+            member __.MainSymbol = Symbol "AVC" 
             member __.Symbols with get() = symbolStackMap |> Map.toSeq |> Seq.map fst |> Seq.filter(fun s -> s <> __.MainSymbol)
             member __.SymbolStrings = __.Symbols |> Seq.map(fun (Symbol s) -> s) |> Seq.toArray
-            member __.OrderStack symbol: OrderStack = (findSymbolStack symbol).OrderStack
-            member __.OrderStackView symbol maxDepth = (findSymbolStack symbol).OrderStack |> toOrderStackView maxDepth
+            member __.OrderStack symbol: Async<OrderStack> = async { return (findSymbolStack symbol).OrderStack }
+            member __.OrderStackView symbol maxDepth = async { return (findSymbolStack symbol).OrderStack |> toOrderStackView maxDepth }
 
-            member __.OrderCommands startIndex pageSize = getPage orderCommands startIndex pageSize
-            member __.OrderEvents startIndex pageSize = getPage events startIndex pageSize
-            member __.FullOrders startIndex pageSize = getPage fullOrders startIndex pageSize
+            member __.OrderCommands startIndex pageSize = orderCommands |> getPage startIndex pageSize
+            member __.OrderEvents startIndex pageSize = events |> getPage startIndex pageSize
+            member __.FullOrders startIndex pageSize = fullOrders |> getPage startIndex pageSize
 
-            member __.LastOrderCommands pageSize = getLastPage orderCommands pageSize
-            member __.LastOrderEvents pageSize = getLastPage events pageSize
-            member __.LastFullOrders pageSize = getLastPage fullOrders pageSize
+            member __.LastOrderCommands pageSize = orderCommands |> getLastPage pageSize
+            member __.LastOrderEvents pageSize = events |> getLastPage pageSize
+            member __.LastFullOrders pageSize = fullOrders |> getLastPage pageSize
 
-            member __.OrderCommandsCount with get() = orderCommands.LongCount() |> uint64
-            member __.OrderEventsCount with get() = events.LongCount() |> uint64
-            member __.FullOrdersCount with get() = fullOrders.LongCount() |> uint64
+            member __.OrderCommandsCount with get() = orderCommands |> getPos
+            member __.OrderEventsCount with get() = events |> getPos
+            member __.FullOrdersCount with get() = fullOrders |> getPos
 
-            member __.SymbolOrderCommands symbol startIndex pageSize = getPage (symbol |> findSymbolStack).Commands startIndex pageSize
-            member __.SymbolOrderEvents symbol startIndex pageSize = getPage (symbol |> findSymbolStack).Events startIndex pageSize
-            member __.SymbolFullOrders symbol startIndex pageSize = getPage (symbol |> findSymbolStack).FullOrders startIndex pageSize
+            member __.SymbolOrderCommands symbol startIndex pageSize = (symbol |> findSymbolStack).Commands |> getPage startIndex pageSize
+            member __.SymbolOrderEvents symbol startIndex pageSize = (symbol |> findSymbolStack).Events |> getPage startIndex pageSize
+            member __.SymbolFullOrders symbol startIndex pageSize = (symbol |> findSymbolStack).FullOrders |> getPage startIndex pageSize
 
-            member __.SymbolLastOrderCommands symbol pageSize = getLastPage (symbol |> findSymbolStack).Commands pageSize
-            member __.SymbolLastOrderEvents symbol pageSize = getLastPage (symbol |> findSymbolStack).Events pageSize
-            member __.SymbolLastFullOrders symbol pageSize = getLastPage (symbol |> findSymbolStack).FullOrders pageSize
+            member __.SymbolLastOrderCommands symbol pageSize = (symbol |> findSymbolStack).Commands |> getLastPage pageSize
+            member __.SymbolLastOrderEvents symbol pageSize = (symbol |> findSymbolStack).Events |> getLastPage pageSize
+            member __.SymbolLastFullOrders symbol pageSize = (symbol |> findSymbolStack).FullOrders |> getLastPage pageSize
 
-            member __.SymbolOrderCommandsCount symbol = (symbol |> findSymbolStack).Commands.LongCount() |> uint64
-            member __.SymbolOrderEventsCount symbol = (symbol |> findSymbolStack).Events.LongCount() |> uint64
-            member __.SymbolFullOrdersCount symbol = (symbol |> findSymbolStack).FullOrders.LongCount() |> uint64
+            member __.SymbolOrderCommandsCount symbol = (symbol |> findSymbolStack).Commands |> getPos
+            member __.SymbolOrderEventsCount symbol = (symbol |> findSymbolStack).Events |> getPos
+            member __.SymbolFullOrdersCount symbol = (symbol |> findSymbolStack).FullOrders |> getPos
 
-            member __.Orders (startIndex: uint64) (pageSize: uint32) = orders |> Seq.skip (int startIndex) |> Seq.truncate (int pageSize) |> Seq.map (fun kv -> kv.Value) |> Seq.toArray // TODO: Find a less expensive way
-            member __.OrderById orderID = orders |> Map.tryFind orderID
+            member __.Orders (startIndex: uint64) (pageSize: uint32) = async { return orders |> Seq.skip (int startIndex) |> Seq.truncate (int pageSize) |> Seq.map (fun kv -> kv.Value) |> Seq.toArray } // TODO: Find a less expensive way 
+            member __.OrderById orderID = async { return orders |> Map.tryFind orderID }
 
-            member __.OrderById2 (orderID: string) = orders |> Map.toArray |> Array.map (fun kv -> (fst kv).ToString()) |> fun a -> orderID + " | " + String.Join(",", a)
+            // member __.OrderById2 (orderID: string) = orders |> Map.toArray |> Array.map (fun kv -> (fst kv).ToString()) |> fun a -> orderID + " | " + String.Join(",", a)
 
 
-            static member Instance = MatchingService (1M<price>, 100UL, true)
+            static member Instance = MatchingService ((new SqliteProvider(new SqliteConnectionStringBuilder ( DataSource = "datasource.db" ))), 1M<price>, 100UL, true)
