@@ -21,6 +21,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{524A9C44
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ServerTests", "test\ServerTests\ServerTests.fsproj", "{E50A51DF-B22E-4277-8004-96B6B71082C4}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PersistenceProviders", "src\ServerLibs\PersistenceProviders\PersistenceProviders.csproj", "{05980591-E2CC-4923-8A56-B6109244B530}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -115,6 +117,18 @@ Global
 		{E50A51DF-B22E-4277-8004-96B6B71082C4}.Release|x64.Build.0 = Release|Any CPU
 		{E50A51DF-B22E-4277-8004-96B6B71082C4}.Release|x86.ActiveCfg = Release|Any CPU
 		{E50A51DF-B22E-4277-8004-96B6B71082C4}.Release|x86.Build.0 = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x64.Build.0 = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x86.Build.0 = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x64.ActiveCfg = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x64.Build.0 = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x86.ActiveCfg = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -125,6 +139,7 @@ Global
 		{6CA1C3BF-E6A8-4A4A-81FE-6C1E728AE786} = {E710C621-0941-4196-AF33-DCAF94879341}
 		{E7C38FA0-0BFD-4374-9C4C-A894860C9906} = {E710C621-0941-4196-AF33-DCAF94879341}
 		{E50A51DF-B22E-4277-8004-96B6B71082C4} = {524A9C44-3AEA-45AA-873A-6DEB54E0985E}
+		{05980591-E2CC-4923-8A56-B6109244B530} = {E710C621-0941-4196-AF33-DCAF94879341}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {229C5A8D-F14E-44D7-AC34-4A80C9B77A59}
