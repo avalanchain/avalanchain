@@ -12,7 +12,8 @@
         'ncy-angular-breadcrumb',
         'irontec.simpleChat',
         'luegg.directives',
-        'nvd3'
+        'nvd3',
+        // 'plotly'
         // 'localytics.directives'
         // 'AdalAngular'
     ]);

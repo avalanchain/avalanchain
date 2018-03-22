@@ -1836,8 +1836,8 @@ NUGET
       NETStandard.Library (>= 1.6) - restriction: && (< net45) (>= netstandard1.6)
 GITHUB
   remote: cotyar/protoactor-fsharp
-    src/Proto.Actor.FSharp.Persistence/Proto.FSharp.Persistence.fs (c656fff3504122ef4351041d3e3e8025297761fe)
-    src/Proto.Actor.FSharp/Proto.FSharp.fs (c656fff3504122ef4351041d3e3e8025297761fe)
+    src/Proto.Actor.FSharp.Persistence/Proto.FSharp.Persistence.fs (fd0c25ffd518a198e644560394ba6d4f17c460c6)
+    src/Proto.Actor.FSharp/Proto.FSharp.fs (fd0c25ffd518a198e644560394ba6d4f17c460c6)
 GROUP ServerTests
 STORAGE: NONE
 NUGET
