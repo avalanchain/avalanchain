@@ -1,0 +1,6 @@
+group Server
+  Microsoft.Data.Sqlite  
+  Proto.Actor
+  Proto.Actor.Extensions
+  Proto.Persistence
+
