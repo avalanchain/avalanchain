@@ -64,6 +64,8 @@ module ParamHelper =
 open ParamHelper
 open System.Collections.Concurrent
 open Proto.FSharp
+open Avalanchain.Common.MatchingEngine.Facade
+open PersistenceProviders
 
 let docAddendums =
     fun (route:Analyzer.RouteInfos) (path:string,verb:HttpVerb,pathDef:PathDefinition) ->
@@ -140,7 +142,7 @@ type [<CLIMutable>] PageSymbolPageQuery = { symbol: string option; pageSize: uin
 
 let textAsync (str : Async<string>) : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) -> task { 
-        let! s = str.AsTask()
+        let! s = str |> Async.StartAsTask
         return! ctx.WriteTextAsync s
     }
 
@@ -213,8 +215,8 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                     routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents
                                     routeCi  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders
                                     routeCi  "/OrderCommandsCount" >=> primitive ms.OrderCommandsCount |> Successful.ok
-                                    routeCi  "/OrderEventsCount"   >=> primitive ms.OrderEventsCount |> Successful.ok
-                                    routeCi  "/FullOrdersCount"    >=> primitive ms.FullOrdersCount |> Successful.ok
+                                    // routeCi  "/OrderEventsCount"   >=> primitive ms.OrderEventsCount |> Successful.ok
+                                    // routeCi  "/FullOrdersCount"    >=> primitive ms.FullOrdersCount |> Successful.ok
                                     routeCi  "/LastOrderCommands"  >=> bindPageQuery ms.LastOrderCommands
                                     routeCi  "/LastOrderEvents"    >=> bindPageQuery ms.LastOrderEvents
                                     routeCi  "/LastFullOrders"     >=> bindPageQuery ms.LastFullOrders
@@ -235,7 +237,7 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                   choose [
                                     POST >=> 
                                         routeCi "/SubmitOrder" >=> //operationId "submit_order" ==> consumes typeof<OrderCommand> ==> produces typeof<OrderCommand> ==>
-                                                bindJson<OrderCommand> (ms.SubmitOrder >> Successful.OK )
+                                                bindJson<OrderCommand> ( ms.SubmitOrder >> json >> Successful.OK )
                                     GET >=>
                                       choose [
                                         route  "/OrderStack"      >=> bindSymbolQuery ms.OrderStack
@@ -277,28 +279,29 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                 (fun ref -> task { return () }),
                                 (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),
                                 cancellationToken = cancellationToken)) 
-          route "/wsecho2" >=> webSocket "wsecho2" (printfn "%s") (fun d _ _ -> (fun m -> m |> d)) cancellationToken
-          route "/wsecho3" >=> webSocketBroadcast "wsecho3" (printfn "%s") (fun d _ _ -> (fun m -> "Hi " + m.Value |> WebSocketMessage |> logger "wsecho3" |> d)) cancellationToken
-          route "/wsecho4" >=> webSocket "wsecho4" (printfn "%s") 
-                                (fun dispatcher _ _ -> 
-                                        let url = (sprintf "ws://localhost:%d/wsecho3" port) |> Uri
-                                        let (clientDispatcher, _) = 
-                                            webSocketClient url (printfn "%s") (fun d _ _ -> (fun m -> m |> logger "Rec2" |> dispatcher)) cancellationToken
-                                        fun m -> m |> logger "ClientRec" |> clientDispatcher
-                                    ) 
-                                cancellationToken
-          route "/wsecho5" >=> webSocket "wsecho5" (printfn "%s") 
-                                (fun dispatcher _ _ -> 
-                                        let source, sink, handler = toAsyncSeqPair cancellationToken dispatcher
-                                        let url = (sprintf "ws://localhost:%d/wsecho4" port) |> Uri
-                                        webSocketClient url (printfn "%s") (fun d _ _ -> fromAsyncSeqPair source sink cancellationToken dispatcher) cancellationToken |> ignore
-                                        handler
-                                    ) 
-                                cancellationToken
+        //   route "/wsecho2" >=> webSocket "wsecho2" (printfn "%s") (fun d _ _ -> (fun m -> m |> d)) cancellationToken
+        //   route "/wsecho3" >=> webSocketBroadcast "wsecho3" (printfn "%s") (fun d _ _ -> (fun m -> "Hi " + m.Value |> WebSocketMessage |> logger "wsecho3" |> d)) cancellationToken
+        //   route "/wsecho4" >=> webSocket "wsecho4" (printfn "%s") 
+        //                         (fun dispatcher _ _ -> 
+        //                                 let url = (sprintf "ws://localhost:%d/wsecho3" port) |> Uri
+        //                                 let (clientDispatcher, _) = 
+        //                                     webSocketClient url (printfn "%s") (fun d _ _ -> (fun m -> m |> logger "Rec2" |> dispatcher)) cancellationToken
+        //                                 fun m -> m |> logger "ClientRec" |> clientDispatcher
+        //                             ) 
+        //                         cancellationToken
+        //   route "/wsecho5" >=> webSocket "wsecho5" (printfn "%s") 
+        //                         (fun dispatcher _ _ -> 
+        //                                 let source, sink, handler = toAsyncSeqPair cancellationToken dispatcher
+        //                                 let url = (sprintf "ws://localhost:%d/wsecho4" port) |> Uri
+        //                                 webSocketClient url (printfn "%s") (fun d _ _ -> fromAsyncSeqPair source sink cancellationToken dispatcher) cancellationToken |> ignore
+        //                                 handler
+        //                             ) 
+        //                         cancellationToken
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
-let matchingService = Facade.MatchingService.Instance
+let matchingService = MatchingService (new InMemoryProvider(), 1M<price>, 100UL, false)
+//static member Instance = MatchingService ((new SqliteProvider(new SqliteConnectionStringBuilder ( DataSource = "datasource.db" ))), 1M<price>, 100UL, true)
 
 let configureApp port (app : IApplicationBuilder) =
   app

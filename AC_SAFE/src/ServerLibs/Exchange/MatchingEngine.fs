@@ -1,7 +1,7 @@
 ﻿namespace Avalanchain.Common
 open Avalanchain.Core.PagedLog
-open Proto.Persistence.Sqlite
 open Microsoft.Data.Sqlite
+open PersistenceProviders
 
 module MatchingEngine = 
 
@@ -23,6 +23,7 @@ module MatchingEngine =
   
 
     type OrderID = Guid //uint64
+    type OrderConfirmationID = Guid //uint64
     type Pos = uint64
     let newOrderID = Guid.NewGuid
 
@@ -130,6 +131,10 @@ module MatchingEngine =
     //     MarketSide: MarketSide
     //     Account: TradingAccount
     // }
+    and OrderConfirmation = {
+        ID: OrderConfirmationID
+        ClOrdID: ClOrdID
+    }
 
     type PriceBucket = {
         Price: Price
@@ -210,6 +215,7 @@ module MatchingEngine =
                     else 
                         let askOrders = insertOrder (<) order [] __.AskOrders |> List.truncate 20 // TODO: Remove truncate
                         { __ with AskOrders = askOrders; BidOrders = bidOrders }, Created order :: events, fullOrders 
+
         member __.RemoveExpired currentPos = 
             let removeExpired (buckets: PriceBucket list): PriceBucket list * Order list = 
                 (   buckets 
@@ -327,36 +333,37 @@ module MatchingEngine =
                                                                                             Events = events 
                                                                                             FullOrders = fullOrders }
 
-        type MatchingService(provider: IProvider, priceStep, posLimit, runBot) as __ =
+        let hasher = fun _ -> "Hash"
+        let toToken = fun _ -> "Token"
+        let maxPageSize = 200u
 
-            let hasher = fun _ -> "Hash"
-            let toToken = fun _ -> "Token"
-            let maxPageSize = 200u
+        let spawnLog<'T> provider prefix = 
+            PagedLog.pagedLogHandler<'T> hasher toToken maxPageSize provider prefix
+            |> Actor.spawnPropsPrefix prefix
+
+
+        type MatchingService(provider: IProvider, priceStep, posLimit, runBot) as __ =
 
             let mutable symbolStackMap = Map.empty<Symbol, SymbolStack>
             let mutable orders = Map.empty<OrderID, Order>
 
-            let spawnLog prefix = 
-                PagedLog.pagedLogHandler hasher toToken maxPageSize provider prefix
-                |> Actor.spawnPropsPrefix prefix
-
             let findSymbolStack (symbol: Symbol) = 
-                let commands = spawnLog ("MatchingService_" + symbol.Value + "_Commands")
-                let events = spawnLog ("MatchingService_" + symbol.Value + "_Events")
-                let fullOrders = spawnLog ("MatchingService_" + symbol.Value + "_FullOrders")
+                let commands = spawnLog<OrderCommand> provider ("MatchingService_" + symbol.Value + "_Commands")
+                let events = spawnLog<OrderEvent> provider ("MatchingService_" + symbol.Value + "_Events")
+                let fullOrders = spawnLog<Order> provider ("MatchingService_" + symbol.Value + "_FullOrders")
                 match symbolStackMap.TryFind symbol with
                 | Some ss -> ss
                 | None -> SymbolStack.Create symbol priceStep posLimit commands events fullOrders
 
             //orderStack = OrderStack.Create priceStep
-            let orderCommands = spawnLog "MatchingService_Commands"
-            let events = spawnLog "MatchingService_Events"
-            let fullOrders = spawnLog "MatchingService_FullOrders"
+            let orderCommands = spawnLog<OrderCommand> provider "MatchingService_Commands"
+            let events = spawnLog<OrderEvent> provider "MatchingService_Events"
+            let fullOrders = spawnLog<Order> provider "MatchingService_FullOrders"
             
-            let processCommand command expireLimit = 
+            let submitOrder command expireLimit = async {
                 match command with
                 | OrderCommand.Create order -> 
-                    command |> PagedLog.offer orderCommands
+                    // command |> PagedLog.offer orderCommands
                     let symbolStack = findSymbolStack order.Symbol
                     let newPos = symbolStack.Pos + 1UL
                     let newOrderStack, evts, updatedOrders = order 
@@ -369,16 +376,21 @@ module MatchingEngine =
                     for o in updatedOrders do 
                         orders <- orders.Add(o.ID, o)
                         if o.FullyAllocated then 
-                            o |> PagedLog.offer newSymbolStack.FullOrders
-                            o |> PagedLog.offer fullOrders
-                    command |> PagedLog.offer newSymbolStack.Commands
+                            // let! _ = o |> PagedLog.offerWithAck newSymbolStack.FullOrders
+                            // let! _ = o |> PagedLog.offerWithAck fullOrders
+                            ()
+                    // let! _ = command |> PagedLog.offerWithAck newSymbolStack.Commands
                     
                     let revEvents = evts |> List.rev
                     for re in revEvents do 
-                        re |> PagedLog.offer newSymbolStack.Events
-                        re |> PagedLog.offer events
+                        // let! _ = re |> PagedLog.offerWithAck newSymbolStack.Events
+                        // let! _ = re |> PagedLog.offerWithAck events
+                        ()
                     symbolStackMap <- symbolStackMap.Add (newSymbolStack.Symbol, newSymbolStack)
-                | OrderCommand.Cancel oid -> failwith "Not supported yet"
+                    return { ID = Guid.NewGuid(); ClOrdID = order.ClOrdID }
+                | OrderCommand.Cancel oid -> //failwith "Not supported yet"
+                    return { ID = Guid.NewGuid(); ClOrdID = ClOrdID "ERROR" }
+            }
             
             // TODO: Remove fakes:
             //do for o in [orderData; orderData2; aorderData; aorderData2; aorderData3] do 
@@ -398,7 +410,7 @@ module MatchingEngine =
             let tradingBot(ms: MatchingService, symbols) = 
             // let ms = Facade.MatchingService(5M<price>, 10UL, false)
                 let rnd = Random()
-                let tradeStep lowCap highCap (dt: DateTime) (dtStep: TimeSpan) symbols count =
+                let tradeStep lowCap highCap (dt: DateTime) (dtStep: TimeSpan) (symbols: string list) count = async {
                     for i in 1 .. count do
                         let timestamp = dt.Add(TimeSpan(dtStep.Ticks * int64(i))) |> DateTimeOffset
                         for sym in symbols do 
@@ -442,39 +454,25 @@ module MatchingEngine =
                                                 elif p > highCap then highCap - st.PriceStep
                                                 else p
                             // printfn "s p q: %A %A %A" side p quantity
-                            { orderData with    Symbol = sym 
-                                                MarketSide = side
-                                                OrderType = Limit cappedPrice
-                                                Quantity = quantity
-                                                CreatedTime = timestamp
-                                } |> OrderCommand.Create |> ms.SubmitOrder 
+                            let order = { orderData with    Symbol = sym 
+                                                            MarketSide = side
+                                                            OrderType = Limit cappedPrice
+                                                            Quantity = quantity
+                                                            CreatedTime = timestamp
+                                        } |> OrderCommand.Create 
+                            let! _ = ms.SubmitOrder order
+                            ()
+                }
                 async {
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-                    tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
-
-                    // for i in 1 .. 10000000 do
-                    for i in 1 .. 10000 do
-                        //do! Async.Sleep 1000
-                        tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2
+                    for i in 1 .. 10000000 do
+                        do! Async.Sleep 250
+                        do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2
                 }
 
             do if runBot then tradingBot(__, ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]) |> Async.Start
 
             
-            member __.SubmitOrder orderCommand = processCommand orderCommand posLimit
+            member __.SubmitOrder orderCommand: Async<OrderConfirmation> = submitOrder orderCommand posLimit
 
             member __.MainSymbol = Symbol "AVC" 
             member __.Symbols with get() = symbolStackMap |> Map.toSeq |> Seq.map fst |> Seq.filter(fun s -> s <> __.MainSymbol)
@@ -512,4 +510,3 @@ module MatchingEngine =
             // member __.OrderById2 (orderID: string) = orders |> Map.toArray |> Array.map (fun kv -> (fst kv).ToString()) |> fun a -> orderID + " | " + String.Join(",", a)
 
 
-            static member Instance = MatchingService ((new SqliteProvider(new SqliteConnectionStringBuilder ( DataSource = "datasource.db" ))), 1M<price>, 100UL, true)

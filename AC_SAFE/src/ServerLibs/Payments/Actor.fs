@@ -70,14 +70,18 @@ module PagedLog =
         Hash: string
         Token: string
     }
+    and LogError<'T> = 
+        | InternalLogError of string
 
-    let pagedLogHandler (hasher: _ -> string) (toToken: _ -> string) (maxPageSize: uint32) (provider: IProvider) (persistentID: string) =
-        CommandSourcingAndSnapshotting.persist
-            provider
-            (fun si _ i cmd -> async { 
+    let pagedLogHandler<'T> (hasher: 'T -> string) (toToken: 'T -> string) (maxPageSize: uint32) (provider: IProvider) (persistentID: string) =
+        let commandProcessor: CommandProcessor<LogCommand<'T>, LogReply<'T>, string, LogError<'T>> =
+            fun si _ i (cmd: LogCommand<'T>) -> async {
+                let siTell e = si |> Option.iter(fun senderInfo -> senderInfo.Tell e) 
                 match cmd with
-                | Offer v -> return (Event { Pos = i; Val = v; Hash = hasher v; Token = toToken v } |> Some, true) |> Ok 
-                | GetPos -> return (Pos i |> Some, false) |> Ok 
+                | Offer v -> 
+                    return (Event { Pos = i; Val = v; Hash = hasher v; Token = toToken v } |> Some, true) |> Ok 
+                | GetPos -> 
+                    return (Pos i |> Some, false) |> Ok 
                 | GetPage (indexStart, pageSize) -> 
                     let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
                     let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue - int64(pageSize) else int64 indexStart
@@ -89,7 +93,7 @@ module PagedLog =
                     let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
                     let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue - int64(pageSize) else int64 indexStart
                     let indexEnd = indexStart + int64(pageSize) - 1L
-                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> si.Tell)
+                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> siTell)
                     return (SeqComplete guid |> Some, false) |> Ok 
                 | GetLastPage pageSize -> 
                     let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
@@ -104,14 +108,17 @@ module PagedLog =
                     let pageSize = int64(pageSize) - 1L // Just to make the math simpler
                     let indexStart, indexEnd =  if i < pageSize then 0L, i
                                                 else i - pageSize, i
-                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> si.Tell)
+                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> siTell)
                     return (SeqComplete guid |> Some, false) |> Ok 
-            })
-            (fun _ _ _ -> None)
+            }
+        CommandSourcingAndSnapshotting.persist<LogCommand<'T>, LogReply<'T>, string, LogError<'T>>
+            provider
+            commandProcessor
+            (fun _ _ _ -> "None")
             (printfn "pagedLogHandler: %s")
             (IntervalStrategy 100)
             persistentID 
-            None
+            "None"
 
     let getPage indexStart pageSize (pid: PID): Async<LogEvent<_> list> = async {
         let! res = pid <? GetPage(indexStart, pageSize)
@@ -140,7 +147,8 @@ module PagedLog =
                 | Error e -> failwithf "Error during getPos call: '%A'" (e)                
     }
 
-    let offerWithAck (pid: PID) o: Async<LogEvent<_>> = async {
+    let offerWithAck (pid: PID) (o: 'T): Async<LogEvent<'T>> = async {
+
         let! res = pid <? Offer o
         return match res with
                 | Ok r -> match r with
@@ -150,3 +158,6 @@ module PagedLog =
     }
 
     let offer (pid: PID) o = pid <! Offer o
+
+    let a = EventStream.Instance.Subscribe<DeadLetterEvent>(Action<_>(fun o -> 
+                                                                        printfn "DEAD LETTER: %A" o))
