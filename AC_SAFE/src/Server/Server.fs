@@ -151,7 +151,7 @@ let primitive (value: Async<_>): HttpHandler = async {  let! v = value
 
 let jsonAsync (value: Async<'T>) : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) -> task { 
-        let! v = value.AsTask()
+        let! v = value |> Async.StartAsTask //.AsTask()
         return! ctx.WriteJsonAsync v
     }
 
