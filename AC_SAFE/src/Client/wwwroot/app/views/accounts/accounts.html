@@ -31,7 +31,7 @@
                         <h5>All accounts assigned to this admin</h5>
 
                         <div class="ibox-tools">
-                            <a href="" class="btn btn-primary btn-xs" ng-click="openModal()">Create new account</a>
+                            <button class="btn btn-info btn-xs" ng-click="openModal()">Create new account</button>
                             <!--<a href="" class="btn btn-primary btn-xs" ng-click="toggleModal()">test</a>-->
                         </div>
                         <!--<modal title="Login form" template-url="/Content/views/accounts/create_account.html" visible="showModal">
@@ -45,7 +45,7 @@
                             <div class="col-md-11">
                                 <div class="input-group">
                                     <input type="text" placeholder="Search" class="input-sm form-control" ng-model="searchAccounts"> <span class="input-group-btn">
-                                        <button type="button" class="btn btn-sm btn-primary" ng-click="clean()"> Clean</button>
+                                        <button type="button" class="btn btn-sm btn-info" ng-click="clean()"> Clean</button>
                                     </span>
                                 </div>
                             </div>
@@ -68,20 +68,20 @@
                               </tr>
                               </thead>
                                 <tbody>
-                                <tr ng-click="showAccount(account)" style="cursor: pointer" ng-repeat="account in accounts | filter:{name : searchAccounts} | pagination:(currentPage-1)*10 | limitTo:10" >
-                                  <td class="project-title">
+                                <tr style="cursor: pointer" ng-repeat="account in accounts | filter:{name : searchAccounts} | pagination:(currentPage-1)*10 | limitTo:10" >
+                                  <td class="project-title" ng-click="showAccount(account)">
                                       {{($index-9)+(currentPage*10)}}
                                   </td>
-                                    <td class="project-status">
+                                    <td class="project-status" ng-click="showAccount(account)">
                                         <span class="label {{account.status == 1? 'label-active': 'label-primary'}}">{{account.status == 1? 'Active': account.status == 2? 'Disabled':'Blocked'}}</span>
                                     </td>
-                                    <td class="project-title">
+                                    <td class="project-long" style="word-wrap: break-word;">
                                         <strong>{{account.name}}</strong>
                                         <!-- <br/>
                                         <small><label class="label label-warning">Address:</label>{{account.ref.address}}</small> -->
                                     </td>
-                                    <td class="project-completion">
-                                        <label class="label label-info"></label><strong> {{ account.publicKey | limitTo: 40}}...</strong>
+                                    <td class="project-long" ng-click="showAccount(account)">
+                                        <label class="label label-info" ></label><strong> {{ account.publicKey | limitTo: 40}}...</strong>
                                     </td>
                                     <td class="project-title">
                                          {{account.balance | number}}
@@ -90,11 +90,11 @@
                                         <i class="fa fa-check text-navy"></i>
                                     </td>
                                     <td class="project-title">
-                                        Jul 14, 2016
+                                        Jul 14, 2018
                                     </td>
                                     <td >
                                         <a ng-click="showAccount(account)" class="btn btn-white btn-sm"> Open </a>
-                                        <a ng-click="showWallet(account)" class="btn btn-white btn-sm"> Wallet </a>
+                                        <button ng-click="showWallet(account)" class="btn btn-white btn-sm"> Wallet </button>
                                     </td>
                                 </tr>
 

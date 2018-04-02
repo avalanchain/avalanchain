@@ -67,18 +67,18 @@
                                                   <td class="project-title">
                                                       <span class="label {{transaction.type == 'system'? 'label-active': 'label-info'}}">{{transaction.type}}</span>
                                                   </td>
-                                                  <td class="project-title">
+                                                  <td class="project-long">
                                                       <small>{{transaction.id}}</small>
                                                   </td>
-                                                  <td class="project-title">
+                                                  <td class="project-long">
                                                       <small>{{transaction.publicKey}}</small>
                                                   </td>
-                                                  <td class="project-list">
+                                                  <td class="project-long">
                                                       <small ng-if="transaction.account == 'system'">{{transaction.account}}</small>
                                                       <small ng-if="transaction.account != 'system'"><a  href="#/accounts/{{transaction.account}}">{{transaction.account}}</a></small>
                                                   </td>
 
-                                                  <td class="project-title">
+                                                  <td class="project-long">
                                                       <small>{{transaction.node}}</small>
                                                   </td>
 

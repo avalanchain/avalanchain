@@ -60,13 +60,14 @@
 
         $scope.showAccount = function(account) {
             $state.go('index.account', {
-                accountId: account.ref.address
+                accountId: account.address
             });
         }
 
         $scope.showWallet = function(account) {
-            $state.go('index.wallet', {
-                accountId: account.ref.address
+            dataservice.setCurrentAccount(account.address);
+            $state.go('wallet.wallet', {
+                // accountId: account.address
             });
         }
         // $scope.showAccount = function (value) {

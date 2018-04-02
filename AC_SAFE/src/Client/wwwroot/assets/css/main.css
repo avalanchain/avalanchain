@@ -165,7 +165,7 @@ footer {
     padding: 0;
     width: 22px;
     height: 22px;
-    background: url(/lib/iCheck/skins/square/green.png) no-repeat;
+    background: url(/wwwroot/lib/iCheck/skins/square/green.png) no-repeat;
     border: none;
     cursor: pointer;
 }
@@ -292,6 +292,13 @@ footer {
 .li.complete .status h4 {
     color: #1ab394;
 }
+.project-long{
+    border-top: none;
+    border-bottom: 1px solid #e7eaec;
+    padding: 15px 10px;
+    vertical-align: middle;
+    word-wrap:break-word;
+}
 
 @media only screen and (max-width: 1200px) {
     .li {
@@ -302,6 +309,13 @@ footer {
     .status h4 {
         font-weight: 600;
         font-size: 12px;
+    }
+    .project-long{
+        font-size: 10px;
+        max-width: 100px;
+        word-wrap:break-word
+        padding: 8px;;
+        /* min-width:100px; width:100% */
     }
     /* .timeline {
         list-style-type: none;
@@ -322,9 +336,12 @@ footer {
     } */
 }
 
-
-/* @media (min-device-width: 320px) and (max-device-width: 700px) {
-  .timeline {
+@media (min-device-width: 320px) and (max-device-width: 700px) {
+    
+    .project-long{
+        max-width: 100px;
+    }
+  /* .timeline {
     list-style-type: none;
     display: block;
   }
@@ -343,8 +360,8 @@ footer {
     left: -8%;
     top: 30%;
     transition: all 200ms ease-in;
-  }
-} */
+  } */
+}
 .skin-1 .navbar-minimalize {
     background: #1ab394;
     border-color: #1ab394;
@@ -368,8 +385,14 @@ footer {
     padding-left: 0px;
 }
 
+
+.cl-white{
+    color: white;
+}
+
 /* .btn-primary {
     background-color: #1ab394;
     border-color: #1ab394;
     color: #FFFFFF;
 } */
+

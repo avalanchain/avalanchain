@@ -49,6 +49,7 @@
             mapping: mapping,
             addAsset: addAsset,
             getAssets: getAssets,
+            setCurrentAccount: setCurrentAccount
         };
 
         return service;
@@ -94,6 +95,14 @@
             var accounts = [];
             var sc = {};
             if (accounts.length < 1) {
+                accounts.push({
+                    name: '0d303074de0747b588cdef3d3845075f',
+                    publicKey: getId(),
+                    balance: Math.floor(Math.random() * 1000) + 100,
+                    status: Math.floor(Math.random() * 3) + 1,
+                    signed: true,
+                    address: '0d303074de0747b588cdef3d3845075f'
+                })
                 for (var i = 0; i < 200; i++) {
                     accounts.push({
                         name: getId(),
@@ -101,9 +110,7 @@
                         balance: Math.floor(Math.random() * 1000) + 100,
                         status: Math.floor(Math.random() * 3) + 1,
                         signed: true,
-                        ref: {
-                            address: getId()
-                        }
+                        address: getId()
                     })
                 }
             }
@@ -113,6 +120,30 @@
             //     //$scope.GetAllProgresses = data;
             // });
         }
+
+        function getCurrentAccount() {
+            
+            if (!data.account) {
+               
+                data.account = data.accounts[0];
+            }
+
+            return data.account;
+        }
+
+        function setCurrentAccount(address) {
+            
+            data.account = data.accounts.filter(function(account) {
+                return account.address == address;
+            })[0];
+            
+            if (!data.account) {
+                data.account = data.accounts[0];
+            }
+
+            return data.account;
+        }
+
 
         function sendPayment(payment) {
             return $http.post('/api/transaction/submit', payment)
@@ -143,7 +174,7 @@
                 var node = i <= (1000/2) ? 0 : 1;
                 var action, value, typename = '';
                 if (type === "users") {
-                    account = data.accounts[Math.floor(Math.random() * data.accounts.length)].ref.address;
+                    account = data.accounts[Math.floor(Math.random() * data.accounts.length)].address;
                     action = ausers[Math.floor(Math.random() * ausers.length)];
                     typename = tusers[Math.floor(Math.random() * tusers.length)];
                 } else {
@@ -155,6 +186,7 @@
                     id: getId(),
                     publicKey: getId(),
                     node: data.nodes[node].id,
+                    nodeName: data.nodes[node].name,
                     action: action,
                     account: account,
                     type: type,
@@ -541,7 +573,7 @@
             data.transactions = data.transactions ? data.transactions : getTransactions();
             data.chat = data.chat ? data.chat : getChat();
             data.assets = data.assets ? data.assets : getAssets();
-
+            data.account = data.account ? data.account : getCurrentAccount();
             $timeout(function() {
                 defer.resolve(data);
             }, 200)

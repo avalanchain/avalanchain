@@ -29,19 +29,31 @@
             name: 'British Pound'
         }];
         $scope.currency = $scope.currencies[0];
+        // dataservice.getData().then(function(data) {
+        //     $scope.accounts = data.accounts;
+        //     $scope.current = data.accounts.filter(function(acc) {
+        //         return acc.address === accountId;
+        //     })[0];
+
+        //     if(!$scope.current){
+        //       $state.go('index.accounts');
+        //     }
+        //     // $scope.getTransactions();
+        // });
+
         dataservice.getData().then(function(data) {
             $scope.accounts = data.accounts;
-            $scope.current = data.accounts.filter(function(acc) {
-                return acc.ref.address === accountId;
-            })[0];
+            $scope.current = data.account;
+            
+            // data.accounts.filter(function(acc) {
+            //     return acc.address === accountId;
+            // })[0];
 
             if(!$scope.current){
               $state.go('index.accounts');
             }
             // $scope.getTransactions();
         });
-
-
         $scope.openSend = function (currency) {
             $rootScope.modal = {};
             $rootScope.modal.guid = dataservice.getId();

@@ -1,0 +1,17 @@
+version: '3'
+services:
+  exchange:
+    build: 
+      context: deploy
+      dockerfile: Dockerfile
+    container_name: "exchange"
+    hostname: "exchange"
+    depends_on:
+      - consul
+  consul:
+    image: "consul:latest"
+    container_name: "consul"
+    hostname: "consul"
+    ports:
+      - "8084:8084"
+    command: "agent -server -bootstrap -ui -disable-host-node-id -client 0.0.0.0"

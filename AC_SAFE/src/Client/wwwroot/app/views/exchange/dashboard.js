@@ -1,9 +1,9 @@
 (function () {
     'use strict';
     var controllerId = 'Exchangedashboard';
-    angular.module('avalanchain').controller(controllerId, ['common', '$scope', 'dataservice', 'exchangeservice', '$state', exchangedashboard]);
+    angular.module('avalanchain').controller(controllerId, ['common', '$scope', 'dataservice', 'exchangeservice', '$state','$interval', exchangedashboard]);
 
-    function exchangedashboard(common, $scope, dataservice, exchangeservice, $state) {
+    function exchangedashboard(common, $scope, dataservice, exchangeservice, $state, $interval) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -15,16 +15,6 @@
         //$scope.amount2 = [1100, 2200, 133000, 1400];
         vm.orders = [];
         $scope.ordersPage = 1;
-        $scope.isEdit = false;
-
-        //dataservice.getPrices().then(function (data) {
-        //    if (data.status === 200)
-        //        $scope.prices = data.data;
-        //});
-        setInterval(function updateRandom() {
-            if (!$scope.isEdit)
-                getData();
-        }, 10000);
 
         vm.showSymbol = function (symbol) {
             $state.go('exchange.symbol', {
@@ -84,6 +74,18 @@
                 vm.fullOrdersCount = data.data;
             });
         }
+
+        $scope.startTimer = function() {
+            $scope.Timer = $interval( getData, 10000);
+        };
+
+        //TODO: add to service
+        $scope.$on("$destroy", function() {
+            if (angular.isDefined($scope.Timer)) {
+                $interval.cancel($scope.Timer);
+            }
+        });
+        $scope.startTimer();
         activate();
         function activate() {
             common.activateController([getData()], controllerId)

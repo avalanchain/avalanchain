@@ -14,7 +14,7 @@
         dataservice.getData().then(function(data) {
           $scope.accounts = data.accounts;
             $scope.current = data.accounts.filter(function(acc) {
-                return acc.ref.address === accountId;
+                return acc.address === accountId;
             })[0];
             $scope.getTransactions();
         });
@@ -43,13 +43,13 @@
                 });
 
                 var currentTransactionPage = $scope.transactionPage;
-                $scope.payment.fromAcc = $scope.current.ref;
+                $scope.payment.fromAcc = $scope.current;
             });
         }
 
         $scope.sendPayment = function() {
             dataservice.sendPayment($scope.payment).then(function(data) {
-                $scope.getTransactions($scope.current.ref.address);
+                $scope.getTransactions($scope.current.address);
                 getAccounts();
             });
         }

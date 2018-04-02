@@ -110,6 +110,11 @@
                     }
                 }
             })
+            .state('wallet', {
+                abstract: true,
+                url: "/wallet",
+                templateUrl: "/wwwroot/app/views/common/topcontent.html",
+            })
             .state('dashboards.dashboard',
             {
                 url: "/dashboard",
@@ -211,9 +216,9 @@
                     label: 'Account'
                 }
             })
-            .state('index.wallet',
+            .state('wallet.wallet',
             {
-                url: "/accounts/wallet/:accountId",
+                url: "/account",
                 templateUrl: "/wwwroot/app/views/accounts/wallet.html",
                 data: {
                     pageTitle: 'Wallet'
@@ -223,12 +228,31 @@
                         return $ocLazyLoad.load([c3chart, c3chartAngul]);
                     }
                 },
-                ncyBreadcrumb: {
-                    parent: function () {
-                        return 'index.accounts';
-                    },
-                    label: 'Wallet'
-                }
+                // ncyBreadcrumb: {
+                //     parent: function () {
+                //         return 'index.accounts';
+                //     },
+                //     label: 'Wallet'
+                // }
+            })
+            .state('wallet.transactions',
+            {
+                url: "/transactions",
+                templateUrl: "/wwwroot/app/views/accounts/transactions.html",
+                data: {
+                    pageTitle: 'Transactions'
+                },
+                resolve: {
+                    loadPlugin: function ($ocLazyLoad) {
+                        return $ocLazyLoad.load([c3chart, c3chartAngul]);
+                    }
+                },
+                // ncyBreadcrumb: {
+                //     parent: function () {
+                //         return 'index.accounts';
+                //     },
+                //     label: 'Wallet'
+                // }
             })
             .state('index.transactions',
             {
@@ -351,15 +375,15 @@
                     pageTitle: 'user dashboard'
                 }
             })
-            .state('exchange.trader',
+            .state('exchange.traderbot',
             {
-                url: "/trader",
-                templateUrl: "/wwwroot/app/views/exchange/trader.html",
+                url: "/traderbot",
+                templateUrl: "/wwwroot/app/views/exchange/traderbot.html",
                 data: {
                     pageTitle: 'Exchange'
                 },
                 ncyBreadcrumb: {
-                    label: 'Trader'
+                    label: 'Trader Bot'
                 }
             })
             .state('exchange.dashboard',
@@ -372,15 +396,15 @@
                 ncyBreadcrumb: {
                     label: 'Dashboard'
                 }
-            }).state('exchange.trade',
+            }).state('exchange.trader',
             {
                 url: "/trade",
-                templateUrl: "/wwwroot/app/views/exchange/trade.html",
+                templateUrl: "/wwwroot/app/views/exchange/trader.html",
                 data: {
                     pageTitle: 'Exchange'
                 },
                 ncyBreadcrumb: {
-                    label: 'Trade'
+                    label: 'Trader'
                 }
             }).state('exchange.symbol',
             {

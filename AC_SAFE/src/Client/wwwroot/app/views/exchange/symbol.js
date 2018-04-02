@@ -1,9 +1,9 @@
 ﻿(function () {
     'use strict';
     var controllerId = 'symbol';
-    angular.module('avalanchain').controller(controllerId, ['common', '$scope', 'dataservice', 'exchangeservice', '$stateParams','$sce', symbol]);
+    angular.module('avalanchain').controller(controllerId, ['common', '$scope', 'dataservice', 'exchangeservice', '$stateParams','$sce','$interval', symbol]);
 
-    function symbol(common, $scope, dataservice, exchangeservice, $stateParams,$sce) {
+    function symbol(common, $scope, dataservice, exchangeservice, $stateParams,$sce, $interval) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
@@ -33,11 +33,23 @@
         //    if (data.status === 200)
         //        $scope.prices = data.data;
         //});
-        setInterval(function updateRandom() {
-            if (!$scope.isEdit)
-                getData();
-        }, 10000);
+        // setInterval(function updateRandom() {
+        //     if (!$scope.isEdit)
+        //         getData();
+        // }, 10000);
 
+
+        $scope.startTimer = function() {
+            $scope.Timer = $interval( getData, 3000);
+        };
+
+        //TODO: add to service
+        $scope.$on("$destroy", function() {
+            if (angular.isDefined($scope.Timer)) {
+                $interval.cancel($scope.Timer);
+            }
+        });
+        $scope.startTimer();
         $scope.options = {
             chart: {
                 type: 'candlestickBarChart',
@@ -139,7 +151,7 @@
         }
         function submitOrder(order) {
             return exchangeservice.submitOrder(order).then(function (data) {
-                getData();
+                getData()
             });
         }
         function getSymbol() {
@@ -177,6 +189,17 @@
                 .then(function () { log('Activated symbol') });//log('Activated Admin View');
         }
 
+        // $scope.getData = function() {//orderStack(vm.symbol);
+        //     symbolOrderCommands(vm.symbol);
+        //     symbolOrderEvents(vm.symbol);
+        //     //getOrders();
+        //     getSymbol();
+        //     //getSymbols();
+        //     symbolOrderCommandsCount(vm.symbol);
+        //     symbolOrderEventsCount(vm.symbol);
+        //     symbolFullOrdersCount(vm.symbol);
+        //     orderStackView(vm.symbol);
+        // }
 
         function getData() {
             //orderStack(vm.symbol);
