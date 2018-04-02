@@ -53,6 +53,17 @@ group Server
   github cotyar/protoactor-fsharp:dev src/Proto.Actor.FSharp/Proto.FSharp.fs 
   github cotyar/protoactor-fsharp:dev src/Proto.Actor.FSharp.Persistence/Proto.FSharp.Persistence.fs  
 
+  nuget Akka = 1.3.5
+  nuget Akka.Streams = 1.3.5
+  nuget Akka.Persistence = 1.3.5
+  nuget Akka.Persistence.Sqlite
+  nuget Akka.Persistence.Sql.Common
+  nuget Akka.Persistence.Query
+  nuget Akka.Persistence.Query.Sql
+
+  nuget Akkling.Streams
+  nuget Akkling.Persistence
+
   clitool Microsoft.DotNet.Watcher.Tools
 
 group Client

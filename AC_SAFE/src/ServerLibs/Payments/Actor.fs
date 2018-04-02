@@ -50,103 +50,106 @@ module Persistence =
         sinkSeqSrc |> AsyncSeqSrc.toAsyncSeq
 
 
-module PagedLog = 
-    type LogCommand<'T> =
-        | Offer of 'T
-        | GetPage of indexStart: uint64 * pageSize: uint32
-        | GetPageStreamed of requestId: Guid * indexStart: uint64 * pageSize: uint32
-        | GetLastPage of pageSize: uint32
-        | GetLastPageStreamed of requestId: Guid * pageSize: uint32
-        | GetPos
-    type LogReply<'T> =
-        | Pos of int64
-        | Event of LogEvent<'T>
-        | EventPage of LogEvent<'T> list
-        | SeqEvent of Guid * LogEvent<'T>
-        | SeqComplete of Guid
-    and LogEvent<'T> = {
-        Pos: int64
-        Val: 'T
-        Hash: string
-        Token: string
-    }
+module PagedLog = ()
 
-    let pagedLogHandler (hasher: _ -> string) (toToken: _ -> string) (maxPageSize: uint32) (provider: IProvider) (persistentID: string) =
-        CommandSourcingAndSnapshotting.persist
-            provider
-            (fun si _ i cmd -> async { 
-                match cmd with
-                | Offer v -> return (Event { Pos = i; Val = v; Hash = hasher v; Token = toToken v } |> Some, true) |> Ok 
-                | GetPos -> return (Pos i |> Some, false) |> Ok 
-                | GetPage (indexStart, pageSize) -> 
-                    let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
-                    let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue - int64(pageSize) else int64 indexStart
-                    let indexEnd = indexStart + int64(pageSize) - 1L
-                    let mutable events = []
-                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> events <- e :: events)
-                    return (EventPage (events |> List.rev) |> Some, false) |> Ok 
-                | GetPageStreamed (guid, indexStart, pageSize) -> 
-                    let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
-                    let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue - int64(pageSize) else int64 indexStart
-                    let indexEnd = indexStart + int64(pageSize) - 1L
-                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> si.Tell)
-                    return (SeqComplete guid |> Some, false) |> Ok 
-                | GetLastPage pageSize -> 
-                    let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
-                    let pageSize = int64(pageSize) - 1L // Just to make the math simpler
-                    let indexStart, indexEnd =  if i < pageSize then 0L, i
-                                                else i - pageSize, i
-                    let mutable events = []
-                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> events <- e :: events)
-                    return (EventPage (events |> List.rev) |> Some, false) |> Ok                    
-                | GetLastPageStreamed (guid, pageSize) -> 
-                    let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
-                    let pageSize = int64(pageSize) - 1L // Just to make the math simpler
-                    let indexStart, indexEnd =  if i < pageSize then 0L, i
-                                                else i - pageSize, i
-                    let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> si.Tell)
-                    return (SeqComplete guid |> Some, false) |> Ok 
-            })
-            (fun _ _ _ -> None)
-            (printfn "pagedLogHandler: %s")
-            (IntervalStrategy 100)
-            persistentID 
-            None
 
-    let getPage indexStart pageSize (pid: PID): Async<LogEvent<_> list> = async {
-        let! res = pid <? GetPage(indexStart, pageSize)
-        return match res with
-                | Ok r -> match r with
-                            | EventPage events -> events
-                            | Pos _ | Event _ | SeqEvent _ | SeqComplete _ -> failwithf "Incorrect GetPage result type '%A'" (r.GetType())
-                | Error e -> failwithf "Error during GetPage call: '%A'" (e)
-    }
+// module PagedLog = 
+//     type LogCommand<'T> =
+//         | Offer of 'T
+//         | GetPage of indexStart: uint64 * pageSize: uint32
+//         | GetPageStreamed of requestId: Guid * indexStart: uint64 * pageSize: uint32
+//         | GetLastPage of pageSize: uint32
+//         | GetLastPageStreamed of requestId: Guid * pageSize: uint32
+//         | GetPos
+//     type LogReply<'T> =
+//         | Pos of int64
+//         | Event of LogEvent<'T>
+//         | EventPage of LogEvent<'T> list
+//         | SeqEvent of Guid * LogEvent<'T>
+//         | SeqComplete of Guid
+//     and LogEvent<'T> = {
+//         Pos: int64
+//         Val: 'T
+//         Hash: string
+//         Token: string
+//     }
 
-    let getLastPage pageSize (pid: PID): Async<LogEvent<_> list> = async {
-        let! res = pid <? GetLastPage(pageSize)
-        return match res with
-                | Ok r -> match r with
-                            | EventPage events -> events
-                            | Pos _ | Event _ | SeqEvent _ | SeqComplete _ -> failwith "Incorrect GetLastPage result type"
-                | Error e -> failwithf "Error during GetLastPage call: '%A'" (e)
-    }
+//     let pagedLogHandler (hasher: _ -> string) (toToken: _ -> string) (maxPageSize: uint32) (provider: IProvider) (persistentID: string) =
+//         CommandSourcingAndSnapshotting.persist
+//             provider
+//             (fun si _ i cmd -> async { 
+//                 match cmd with
+//                 | Offer v -> return (Event { Pos = i; Val = v; Hash = hasher v; Token = toToken v } |> Some, true) |> Ok 
+//                 | GetPos -> return (Pos i |> Some, false) |> Ok 
+//                 | GetPage (indexStart, pageSize) -> 
+//                     let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
+//                     let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue - int64(pageSize) else int64 indexStart
+//                     let indexEnd = indexStart + int64(pageSize) - 1L
+//                     let mutable events = []
+//                     let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> events <- e :: events)
+//                     return (EventPage (events |> List.rev) |> Some, false) |> Ok 
+//                 | GetPageStreamed (guid, indexStart, pageSize) -> 
+//                     let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
+//                     let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue - int64(pageSize) else int64 indexStart
+//                     let indexEnd = indexStart + int64(pageSize) - 1L
+//                     let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> si.Tell)
+//                     return (SeqComplete guid |> Some, false) |> Ok 
+//                 | GetLastPage pageSize -> 
+//                     let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
+//                     let pageSize = int64(pageSize) - 1L // Just to make the math simpler
+//                     let indexStart, indexEnd =  if i < pageSize then 0L, i
+//                                                 else i - pageSize, i
+//                     let mutable events = []
+//                     let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> events <- e :: events)
+//                     return (EventPage (events |> List.rev) |> Some, false) |> Ok                    
+//                 | GetLastPageStreamed (guid, pageSize) -> 
+//                     let pageSize = if pageSize > maxPageSize then maxPageSize else pageSize
+//                     let pageSize = int64(pageSize) - 1L // Just to make the math simpler
+//                     let indexStart, indexEnd =  if i < pageSize then 0L, i
+//                                                 else i - pageSize, i
+//                     let! _ = getEvents provider persistentID indexStart indexEnd (fun e -> (guid, e) |> SeqEvent |> si.Tell)
+//                     return (SeqComplete guid |> Some, false) |> Ok 
+//             })
+//             (fun _ _ _ -> None)
+//             (printfn "pagedLogHandler: %s")
+//             (IntervalStrategy 100)
+//             persistentID 
+//             None
+
+//     let getPage indexStart pageSize (pid: PID): Async<LogEvent<_> list> = async {
+//         let! res = pid <? GetPage(indexStart, pageSize)
+//         return match res with
+//                 | Ok r -> match r with
+//                             | EventPage events -> events
+//                             | Pos _ | Event _ | SeqEvent _ | SeqComplete _ -> failwithf "Incorrect GetPage result type '%A'" (r.GetType())
+//                 | Error e -> failwithf "Error during GetPage call: '%A'" (e)
+//     }
+
+//     let getLastPage pageSize (pid: PID): Async<LogEvent<_> list> = async {
+//         let! res = pid <? GetLastPage(pageSize)
+//         return match res with
+//                 | Ok r -> match r with
+//                             | EventPage events -> events
+//                             | Pos _ | Event _ | SeqEvent _ | SeqComplete _ -> failwith "Incorrect GetLastPage result type"
+//                 | Error e -> failwithf "Error during GetLastPage call: '%A'" (e)
+//     }
     
-    let getPos (pid: PID): Async<int64> = async {
-        let! res = pid <? GetPos
-        return match res with
-                | Ok r -> match r with
-                            | Pos i -> i
-                            | EventPage _ | Event _ | SeqEvent _ | SeqComplete _ -> failwith "Incorrect getPos result type"
-                | Error e -> failwithf "Error during getPos call: '%A'" (e)                
-    }
+//     let getPos (pid: PID): Async<int64> = async {
+//         let! res = pid <? GetPos
+//         return match res with
+//                 | Ok r -> match r with
+//                             | Pos i -> i
+//                             | EventPage _ | Event _ | SeqEvent _ | SeqComplete _ -> failwith "Incorrect getPos result type"
+//                 | Error e -> failwithf "Error during getPos call: '%A'" (e)                
+//     }
 
-    let offer o (pid: PID): Async<LogEvent<_>> = async {
-        let! res = pid <? Offer o
-        return match res with
-                | Ok r -> match r with
-                            | Event e -> e
-                            | EventPage _ | Pos _ | SeqEvent _ | SeqComplete _ -> failwith "Incorrect Offer result type"
-                | Error e -> failwithf "Error during Offer call: '%A'" (e)                
-    }
+//     let offer o (pid: PID): Async<LogEvent<_>> = async {
+//         let! res = pid <? Offer o
+//         return match res with
+//                 | Ok r -> match r with
+//                             | Event e -> e
+//                             | EventPage _ | Pos _ | SeqEvent _ | SeqComplete _ -> failwith "Incorrect Offer result type"
+//                 | Error e -> failwithf "Error during Offer call: '%A'" (e)                
+//     }
 
     

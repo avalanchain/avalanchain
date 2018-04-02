@@ -1,6 +1,9 @@
 namespace Avalanchain.Server
 open System.Threading
 open FSharp.Control
+open Akka.Streams
+open Akka.Streams.Dsl
+open Akkling.Streams
 
 module WebSocketActor = 
     open Proto
@@ -153,6 +156,58 @@ module WebSocketActor =
 
         fun m -> async { sinkSeqSrc |> AsyncSeqSrc.put m }
         
+    // let toAkkaStreams materializer cancellationToken (dispatcher: WebSocketDispatcher) =
+    //     let source = Source.queue OverflowStrategy.Backpressure 10000
+    //                     |> Source.via flow 
+    //                     |> Source.asyncMap 1 dispatcher 
+    //                     |> Source.toMat (Sink.ignore) Keep.left
+    //                     |> Graph.run materializer
+
+    //     let handler = async {   let! _ = source.AsyncOffer m
+    //                             () } // TODO: Process res
+    //     (sourceSeqSrc |> AsyncSeqSrc.toAsyncSeq), sinkSeqSrc, handler        
+
+    let fromAkkaStreams materializer (flow: Flow<WebSocketMessage,WebSocketMessage,_>) cancellationToken (dispatcher: WebSocketDispatcher) =
+        let source = Source.queue OverflowStrategy.Backpressure 10000
+                        |> Source.via flow 
+                        |> Source.asyncMap 1 dispatcher 
+                        |> Source.toMat (Sink.ignore) Keep.left
+                        |> Graph.run materializer
+
+        fun m -> async {    let! _ = source.AsyncOffer m
+                            () } // TODO: Process res
+
+    module Flow =
+        let fromAsyncSeqs sourceSeq sinkSeqSrc cancellationToken = 
+            let source = 
+                Source.queue OverflowStrategy.Backpressure 10000
+                |> Source.mapMaterializedValue (fun q -> sourceSeq
+                                                        |> AsyncSeq.iterAsync (fun m -> async { let! _ = q.AsyncOffer m
+                                                                                                () }) // TODO: Process res) 
+                                                        |> fun aseq -> Async.Start (aseq, cancellationToken)) 
+
+            let sink = Flow.id 
+                        |> Flow.toSink (Sink.forEach (fun m -> sinkSeqSrc |> AsyncSeqSrc.put m ))
+
+            Flow.ofSinkAndSourceMat sink Keep.right source
+
+        let toAsyncSeqs cancellationToken (flow: Flow<'TIn,'TOut,_>) =
+            let sinkSeqSrcSource = 
+                Source.queue OverflowStrategy.Backpressure 10000
+                |> Source.mapMaterializedValue (fun q -> 
+                                                    let sinkSeqSrc = AsyncSeqSrc.create()
+                                                    sinkSeqSrc
+                                                    |> AsyncSeqSrc.toAsyncSeq 
+                                                    |> AsyncSeq.iterAsync (fun m -> async { let! _ = q.AsyncOffer m
+                                                                                            () }) // TODO: Process res) 
+                                                    |> fun aseq -> Async.Start (aseq, cancellationToken)
+                                                    sinkSeqSrc)
+
+            let sourceSeqSrc = AsyncSeqSrc.create()
+
+            sinkSeqSrcSource                                 
+            |> Source.via flow 
+            |> Source.toMat (Sink.forEach (fun m -> sourceSeqSrc |> AsyncSeqSrc.put m )) (fun sink _ -> sink, sourceSeqSrc |> AsyncSeqSrc.toAsyncSeq)
 
         // let parentHandler (ctx: IContext) (msg: obj) =
         //     printfn "(Parent) Message: %A" msg

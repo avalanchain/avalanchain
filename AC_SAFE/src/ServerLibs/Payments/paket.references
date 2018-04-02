@@ -20,3 +20,13 @@ group Server
   Proto.Serialization.Wire 
   
 
+  Akka
+  Akka.Streams
+  Akka.Persistence
+  Akka.Persistence.Sqlite
+  Akka.Persistence.Sql.Common
+  Akka.Persistence.Query
+  Akka.Persistence.Query.Sql
+
+  Akkling.Streams
+  Akkling.Persistence

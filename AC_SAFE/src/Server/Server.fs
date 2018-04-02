@@ -30,6 +30,10 @@ open Avalanchain.Common.MatchingEngine
 open Avalanchain.Core
 open Avalanchain.Server.WebSocketActor
 
+open Akka.Streams
+open Akka.Streams.Dsl
+open Akkling.Streams
+
 let wsConnectionManager = ConnectionManager()
 
 module ParamHelper =
@@ -62,6 +66,9 @@ module ParamHelper =
 
 open ParamHelper
 open System.Collections.Concurrent
+open Avalanchain.Common.MatchingEngine.Facade
+open Akka
+open Akkling.Streams
 
 let docAddendums =
     fun (route:Analyzer.RouteInfos) (path:string,verb:HttpVerb,pathDef:PathDefinition) ->
@@ -136,7 +143,22 @@ type [<CLIMutable>] PageQuery = { pageSize: uint32 option }
 type [<CLIMutable>] PageSymbolStartQuery = { symbol: string option; startIndex: uint64 option; pageSize: uint32 option }
 type [<CLIMutable>] PageSymbolPageQuery = { symbol: string option; pageSize: uint32 option }
 
-let primitive value : HttpHandler = text (value.ToString())
+// let primitive value : HttpHandler = text (value.ToString())
+let textAsync (str : Async<string>) : HttpHandler =
+    fun (next : HttpFunc) (ctx : HttpContext) -> task { 
+        // let! s = str.AsTask()
+        let! s = str |> Async.StartAsTask
+        return! ctx.WriteTextAsync s
+    }
+
+let primitive (value: Async<_>): HttpHandler = async {  let! v = value
+                                                        return v.ToString() } |> textAsync
+
+let jsonAsync (value: Async<'T>) : HttpHandler =
+    fun (next : HttpFunc) (ctx : HttpContext) -> task { 
+        let! v = value |> Async.StartAsTask
+        return! ctx.WriteJsonAsync v
+    }
 
 let bindSymbolQuery successHandler = 
     bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> json |> Successful.ok)
@@ -151,24 +173,79 @@ let bindOrderIDQuery successHandler =
     bindQuery<OrderIDQuery> None (fun qs -> qs.orderID |> Option.defaultValue "" |> successHandler |> json |> Successful.ok)
 
 let bindPageStartQuery successHandler = 
-    bindQuery<PageStartQuery> None (fun pq -> successHandler (pq.startIndex |> Option.defaultValue 0UL) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
+    bindQuery<PageStartQuery> None (fun pq -> successHandler (pq.startIndex |> Option.defaultValue 0UL) (pq.pageSize |> Option.defaultValue 0u) |> jsonAsync |> Successful.ok)
 
 let bindPageQuery successHandler = 
-    bindQuery<PageQuery> None (fun qs -> qs.pageSize |> Option.defaultValue 0u |> successHandler |> json |> Successful.ok)
+    bindQuery<PageQuery> None (fun qs -> qs.pageSize |> Option.defaultValue 0u |> successHandler |> jsonAsync |> Successful.ok)
 
 let bindSymbolPageStartQuery successHandler = 
-    bindQuery<PageSymbolStartQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.startIndex |> Option.defaultValue 0UL) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)
+    bindQuery<PageSymbolStartQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.startIndex |> Option.defaultValue 0UL) (pq.pageSize |> Option.defaultValue 0u) |> jsonAsync |> Successful.ok)
 
 let bindSymbolPageQuery successHandler = 
-    bindQuery<PageSymbolPageQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.pageSize |> Option.defaultValue 0u) |> json |> Successful.ok)                          
+    bindQuery<PageSymbolPageQuery> None (fun pq -> successHandler (pq.symbol |> Option.defaultValue "" |> Symbol) (pq.pageSize |> Option.defaultValue 0u) |> jsonAsync |> Successful.ok)                          
 
 let logger str (msg: WebSocketMessage) = 
     match msg with | WebSocketMessage msg -> printfn "%s:%s" str msg 
     msg
 
+
+type MatchingServiceFlows<'TC, 'TE, 'TF> = {
+    OrderCommandsSource: Source<OrderCommand, 'TC>
+    OrderEventsSource: Source<OrderEvent, 'TE>
+    FullOrdersSource: Source<Order, 'TF>
+}
+
+let toWebSocketMessage o = o.ToString() |> WebSocketMessage 
+let fromWebSocketMessage (msg: WebSocketMessage) = msg.Value 
+
+let wsStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) cancellationToken =
+  let webSocketRouteCi route connection = routeCi route >=> webSocket route (printfn "%s") connection cancellationToken
+  let webSocketBroadcastRouteCi route connection = routeCi route >=> webSocketBroadcast route (printfn "%s") connection cancellationToken
+
+  let toSourceHandler (dispatcher: WebSocketDispatcher) source = 
+    source 
+    |> Source.asyncMap 1 (toWebSocketMessage >> dispatcher)
+    |> Source.runWith materializer (Sink.ignore)
+    |> Async.RunSynchronously
+    (fun m -> m |> dispatcher)
+
+//   subRouteCi "/ws" (
+  choose [
+    webSocketBroadcastRouteCi "/OrderRequests" (fun d _ _ -> toSourceHandler d streams.OrderCommandsSource)
+    webSocketBroadcastRouteCi "/OrderEvents" (fun d _ _ -> toSourceHandler d streams.OrderEventsSource)
+    webSocketBroadcastRouteCi "/FullOrders" (fun d _ _ -> toSourceHandler d streams.FullOrdersSource)
+  ]
+//   )
+
+let wsSymbolStreamsBinding materializer (symbol: Symbol) (streams: MatchingServiceFlows<_,_,_>) cancellationToken =
+  subRouteCi ("/" + symbol.Value) ( wsStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) cancellationToken )
+
+let wsSymbolStreamsBinding materializer (streams: Map<Symbol, MatchingServiceFlows<_,_,_>>) cancellationToken =
+  subRouteCi "/symbols" (choose [ for kv in streams -> wsSymbolStreamsBinding materializer kv.Key kv.Value cancellationToken ])
+
+let wsSymbolStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) (symbolStreams: Map<Symbol, MatchingServiceFlows<_,_,_>>) cancellationToken =
+  subRouteCi "/ws" (
+    choose [ 
+      wsStreamsBinding materializer streams cancellationToken
+      wsSymbolStreamsBinding materializer symbolStreams cancellationToken
+    ]
+  )
+
+let prepareStreams () = { OrderCommandsSource = Source.queue OverflowStrategy.Backpressure 10000 //|> Source.runWith Sink.broadcastHub 1000
+                          OrderEventsSource = Source.queue OverflowStrategy.Backpressure 10000
+                          FullOrdersSource = Source.queue OverflowStrategy.Backpressure 10000 }
+
+let prepareSymbolStreams (symbols: Symbol list) =
+  symbols |> List.map (fun s -> s, prepareStreams ()) |> Map.ofList 
+  
+// let prepareStreams (streams: Symbol list)
+
 let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) port cancellationToken : HttpHandler =
   let counterProcotol = 
     { getInitCounter = getInitCounter >> Async.AwaitTask }
+
+  
+
   // creates a HttpHandler for the given implementation
   choose [swaggerOf
             (choose [ route  "/test"       >=> text "test" 
@@ -192,24 +269,24 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                                                                 | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
                                     routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
                                     routeCi  "/GetOrders"       >=> bindPageStartQuery ms.Orders
-                                    routeCi  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands
-                                    routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents
-                                    routeCi  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders
-                                    routeCi  "/OrderCommandsCount" >=> primitive ms.OrderCommandsCount |> Successful.ok
-                                    routeCi  "/OrderEventsCount"   >=> primitive ms.OrderEventsCount |> Successful.ok
-                                    routeCi  "/FullOrdersCount"    >=> primitive ms.FullOrdersCount |> Successful.ok
-                                    routeCi  "/LastOrderCommands"  >=> bindPageQuery ms.LastOrderCommands
-                                    routeCi  "/LastOrderEvents"    >=> bindPageQuery ms.LastOrderEvents
-                                    routeCi  "/LastFullOrders"     >=> bindPageQuery ms.LastFullOrders
-                                    routeCi  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery ms.SymbolOrderCommands
-                                    routeCi  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery ms.SymbolOrderEvents
-                                    routeCi  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery ms.SymbolFullOrders
-                                    routeCi  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query ms.SymbolOrderCommandsCount
-                                    routeCi  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query ms.SymbolOrderEventsCount
-                                    routeCi  "/SymbolFullOrdersCount"    >=> bindSymbolUInt64Query ms.SymbolFullOrdersCount
-                                    routeCi  "/SymbolLastOrderCommands"  >=> bindSymbolPageQuery ms.SymbolLastOrderCommands
-                                    routeCi  "/SymbolLastOrderEvents"    >=> bindSymbolPageQuery ms.SymbolLastOrderEvents
-                                    routeCi  "/SymbolLastFullOrders"     >=> bindSymbolPageQuery ms.SymbolLastFullOrders
+                                    routeCi  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands.GetPage
+                                    routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents.GetPage
+                                    routeCi  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders.GetPage
+                                    routeCi  "/OrderCommandsCount" >=> primitive (ms.OrderCommands.GetCount()) |> Successful.ok
+                                    routeCi  "/OrderEventsCount"   >=> primitive (ms.OrderEvents.GetCount()) |> Successful.ok
+                                    routeCi  "/FullOrdersCount"    >=> primitive (ms.FullOrders.GetCount()) |> Successful.ok
+                                    routeCi  "/LastOrderCommands"  >=> bindPageQuery ms.OrderCommands.GetLastPage
+                                    routeCi  "/LastOrderEvents"    >=> bindPageQuery ms.OrderEvents.GetLastPage
+                                    routeCi  "/LastFullOrders"     >=> bindPageQuery ms.FullOrders.GetLastPage
+                                    routeCi  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetPage)
+                                    routeCi  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetPage)
+                                    routeCi  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetPage)
+                                    routeCi  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query (fun symbol -> (ms.SymbolOrderCommands symbol).GetCount())
+                                    routeCi  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query (fun symbol -> (ms.SymbolOrderEvents symbol).GetCount())
+                                    routeCi  "/SymbolFullOrdersCount"    >=> bindSymbolUInt64Query (fun symbol -> (ms.SymbolFullOrders symbol).GetCount())
+                                    routeCi  "/SymbolLastOrderCommands"  >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetLastPage)
+                                    routeCi  "/SymbolLastOrderEvents"    >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetLastPage)
+                                    routeCi  "/SymbolLastFullOrders"     >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetLastPage)
                                   ]
                               ])
                             subRouteCi "/Currency" (
@@ -281,7 +358,9 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
-let matchingService = Facade.MatchingService.Instance
+let matchingService = MatchingService (1M<price>, 100UL) //Facade.MatchingService.Instance
+
+// TradingBot.tradingBot(matchingService, ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]) |> Async.Start
 
 let configureApp port (app : IApplicationBuilder) =
   app
