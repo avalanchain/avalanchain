@@ -189,16 +189,22 @@ let logger str (msg: WebSocketMessage) =
     msg
 
 
-type MatchingServiceFlows<'TC, 'TE, 'TF> = {
-    OrderCommandsSource: Source<OrderCommand, 'TC>
-    OrderEventsSource: Source<OrderEvent, 'TE>
-    FullOrdersSource: Source<Order, 'TF>
+type MatchingServiceSources = {
+    OrderCommandsSource: Source<OrderCommand, NotUsed>
+    OrderEventsSource: Source<OrderEvent, NotUsed>
+    FullOrdersSource: Source<Order, NotUsed>
+}
+
+type MatchingServiceQueues = {
+    OrderCommandsQueue: ISourceQueueWithComplete<OrderCommand>
+    OrderEventsQueue: ISourceQueueWithComplete<OrderEvent>
+    FullOrdersQueue: ISourceQueueWithComplete<Order>
 }
 
 let toWebSocketMessage o = o.ToString() |> WebSocketMessage 
 let fromWebSocketMessage (msg: WebSocketMessage) = msg.Value 
 
-let wsStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) cancellationToken =
+let wsStreamsBinding materializer (streams: MatchingServiceSources) cancellationToken =
   let webSocketRouteCi route connection = routeCi route >=> webSocket route (printfn "%s") connection cancellationToken
   let webSocketBroadcastRouteCi route connection = routeCi route >=> webSocketBroadcast route (printfn "%s") connection cancellationToken
 
@@ -217,13 +223,13 @@ let wsStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) cancell
   ]
 //   )
 
-let wsSymbolStreamsBinding materializer (symbol: Symbol) (streams: MatchingServiceFlows<_,_,_>) cancellationToken =
-  subRouteCi ("/" + symbol.Value) ( wsStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) cancellationToken )
+let wsSymbolStreamsBinding materializer (symbol: Symbol) (streams: MatchingServiceSources) cancellationToken =
+  subRouteCi ("/" + symbol.Value) ( wsStreamsBinding materializer (streams: MatchingServiceSources) cancellationToken )
 
-let wsSymbolStreamsBinding materializer (streams: Map<Symbol, MatchingServiceFlows<_,_,_>>) cancellationToken =
+let wsSymbolStreamsBinding materializer (streams: Map<Symbol, MatchingServiceSources>) cancellationToken =
   subRouteCi "/symbols" (choose [ for kv in streams -> wsSymbolStreamsBinding materializer kv.Key kv.Value cancellationToken ])
 
-let wsSymbolStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) (symbolStreams: Map<Symbol, MatchingServiceFlows<_,_,_>>) cancellationToken =
+let wsSymbolStreamsBinding materializer (streams: MatchingServiceSources) (symbolStreams: Map<Symbol, MatchingServiceSources>) cancellationToken =
   subRouteCi "/ws" (
     choose [ 
       wsStreamsBinding materializer streams cancellationToken
@@ -231,12 +237,20 @@ let wsSymbolStreamsBinding materializer (streams: MatchingServiceFlows<_,_,_>) (
     ]
   )
 
-let prepareStreams () = { OrderCommandsSource = Source.queue OverflowStrategy.Backpressure 10000 //|> Source.runWith Sink.broadcastHub 1000
-                          OrderEventsSource = Source.queue OverflowStrategy.Backpressure 10000
-                          FullOrdersSource = Source.queue OverflowStrategy.Backpressure 10000 }
+let prepareStreams (mat: IMaterializer) = 
+    let ocq, ocs = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
+    let oeq, oes = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
+    let foq, fos = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
+    let queues = {  OrderCommandsQueue = ocq
+                    OrderEventsQueue = oeq
+                    FullOrdersQueue = foq }
+    let sources = { OrderCommandsSource = ocs
+                    OrderEventsSource = oes
+                    FullOrdersSource = fos }
+    queues, sources               
 
-let prepareSymbolStreams (symbols: Symbol list) =
-  symbols |> List.map (fun s -> s, prepareStreams ()) |> Map.ofList 
+let prepareSymbolStreams mat (symbols: Symbol list) =
+  symbols |> List.map (fun s -> s, prepareStreams mat) |> Map.ofList 
   
 // let prepareStreams (streams: Symbol list)
 

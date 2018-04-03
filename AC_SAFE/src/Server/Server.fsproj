@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
@@ -14,6 +14,8 @@
     <Compile Include="../ServerLibs/Exchange/MatchingEngine.fs" />
     <Compile Include="../ServerLibs/Exchange/TradingBot.fs" />
     <Compile Include="WebSocketActor.fs" />
+    <Compile Include="Chains.fs" />
+    <Compile Include="Node.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

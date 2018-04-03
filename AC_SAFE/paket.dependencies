@@ -60,6 +60,8 @@ group Server
   nuget Akka.Persistence.Sql.Common
   nuget Akka.Persistence.Query
   nuget Akka.Persistence.Query.Sql
+  nuget Akka.Cluster
+  nuget Akka.Cluster.Tools
 
   nuget Akkling.Streams
   nuget Akkling.Persistence

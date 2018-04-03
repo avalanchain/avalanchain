@@ -5,3 +5,27 @@ group Server
   Fable.JsonConverter
   Fable.Remoting.Giraffe
   Microsoft.DotNet.Watcher.Tools
+
+  Proto.Actor
+  Proto.Actor.Extensions
+  Proto.Mailbox 
+  Proto.Router
+  Proto.Remote 
+  Proto.Persistence
+  Proto.Cluster
+  Proto.Cluster.Consul
+  Proto.Schedulers.SimpleScheduler
+  Proto.Cluster.WeightedMemberStrategy 
+  Proto.Persistence.Sqlite 
+  Proto.Serialization.Wire 
+  
+
+  Akka
+  Akka.Streams
+  Akka.Persistence
+  Akka.Persistence.Sqlite
+  Akka.Persistence.Sql.Common
+  Akka.Persistence.Query
+  Akka.Persistence.Query.Sql
+  Akka.Cluster
+  Akka.Cluster.Tools  

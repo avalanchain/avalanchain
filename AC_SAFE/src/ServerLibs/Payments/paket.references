@@ -27,6 +27,8 @@ group Server
   Akka.Persistence.Sql.Common
   Akka.Persistence.Query
   Akka.Persistence.Query.Sql
+  Akka.Cluster
+  Akka.Cluster.Tools
 
   Akkling.Streams
   Akkling.Persistence
