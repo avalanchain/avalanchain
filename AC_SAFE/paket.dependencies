@@ -27,6 +27,7 @@ group Server
 
   nuget FSharp.Control.Reactive
   nuget FSharp.Control.AsyncSeq
+  nuget FSharpx.Extras
 
   nuget Fable.Remoting.Giraffe
   nuget Fable.JsonConverter

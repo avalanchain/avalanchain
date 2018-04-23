@@ -24,6 +24,7 @@ module Node =
 
     open Microsoft.FSharp.Quotations
 
+    open Avalanchain.Core
     
     module Network =
         type Endpoint = {

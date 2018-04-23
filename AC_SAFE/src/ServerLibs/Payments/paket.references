@@ -2,6 +2,7 @@ group Server
   FSharp.Core
   FSharp.Control.Reactive
   FSharp.Control.AsyncSeq
+  FSharpx.Extras
   Sodium.Core
   FSharp.Control.FusionTasks.FS41
   VaultSharp

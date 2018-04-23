@@ -1,9 +1,10 @@
 namespace Avalanchain.Core
 
+open Avalanchain
 module Payments = 
     open Crdt
     open Crypto
-    open Chain
+    open ChainDefs
 
     type AccountRef = { Address: string }
     type AccountProof = { ARef: AccountRef; Sig: Sig }
@@ -101,7 +102,7 @@ module Payments =
         Name: string
         NextClock: unit -> VClock
         Asset: Asset
-        CryptoContext: CryptoContext
+        KeyVault: IKeyVault
     } with 
         member __.Sign<'T> (payload: 'T) = { Sig = sprintf "<'%s' '%s' Sig '%s'>" __.Name __.ARef.Address (payload.ToString()) }  // TODO: Change signing
         member __.Proof<'T> (payload: 'T) = { ARef = __.ARef; Sig = __.Sign payload }
@@ -120,11 +121,11 @@ module Payments =
             { T = t; Ref = __.Sign t }
 
     module Account =
-        let create asset aref name nextClock ctx = {ARef = aref
-                                                    Name = name
-                                                    NextClock = nextClock
-                                                    Asset = asset 
-                                                    CryptoContext = ctx }
+        let create asset aref name nextClock keyVault = {   ARef = aref
+                                                            Name = name
+                                                            NextClock = nextClock
+                                                            Asset = asset 
+                                                            KeyVault = keyVault }
 
 
     type Wallet = {

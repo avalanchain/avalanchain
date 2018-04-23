@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\GitHub\avalanchain\AC_SAFE" t="IncludeFlat">
+      <e p="AC_SAFE.sln" t="IncludeFlat" />
+      <e p="packages" t="ExcludeRecursive" />
+      <e p="paket-files\Server\cotyar\protoactor-fsharp\src\Proto.Actor.FSharp\Proto.FSharp.fs" t="Include" />
+      <e p="paket-files\Server\cotyar\protoactor-fsharp\src\Proto.Actor.FSharp.Persistence\Proto.FSharp.Persistence.fs" t="Include" />
+      <e p="ServerLibs" t="Include" />
+      <e p="src\Client" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Client.fs" t="Include" />
+        <e p="Client.fsproj" t="IncludeRecursive" />
+        <e p="obj" t="ExcludeRecursive" />
+      </e>
+      <e p="src\Server" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Node.fs" t="Include" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="Server.fs" t="Include" />
+        <e p="Server.fsproj" t="IncludeRecursive" />
+        <e p="WebSocketActor.fs" t="Include" />
+      </e>
+      <e p="src\ServerLibs\Exchange\MatchingEngine.fs" t="Include" />
+      <e p="src\ServerLibs\Exchange\TradingBot.fs" t="Include" />
+      <e p="src\ServerLibs\Giraffe" t="IncludeRecursive">
+        <e p="Auth.fs" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Common.fs" t="Include" />
+        <e p="ComputationExpressions.fs" t="Include" />
+        <e p="Core.fs" t="Include" />
+        <e p="FormatExpressions.fs" t="Include" />
+        <e p="Giraffe.fsproj" t="IncludeRecursive" />
+        <e p="GiraffeViewEngine.fs" t="Include" />
+        <e p="HttpStatusCodeHandlers.fs" t="Include" />
+        <e p="Middleware.fs" t="Include" />
+        <e p="ModelBinding.fs" t="Include" />
+        <e p="Negotiation.fs" t="Include" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="Preconditional.fs" t="Include" />
+        <e p="ResponseWriters.fs" t="Include" />
+        <e p="Routing.fs" t="Include" />
+        <e p="Serialization.fs" t="Include" />
+        <e p="Streaming.fs" t="Include" />
+        <e p="WebSockets.fs" t="Include" />
+      </e>
+      <e p="src\ServerLibs\Giraffe.Swagger" t="IncludeRecursive">
+        <e p="Analyzer.fs" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Common.fs" t="Include" />
+        <e p="Generator.fs" t="Include" />
+        <e p="Giraffe.Swagger.fsproj" t="IncludeRecursive" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="swagger-ui.zip" t="Include" />
+        <e p="Swagger.fs" t="Include" />
+        <e p="SwaggerUi.fs" t="Include" />
+      </e>
+      <e p="src\ServerLibs\Payments" t="IncludeRecursive">
+        <e p="Actor.fs" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="ChainDefs.fs" t="Include" />
+        <e p="Chains.fs" t="Include" />
+        <e p="Communication.fs" t="Include" />
+        <e p="Crdt.fs" t="Include" />
+        <e p="Crypto.fs" t="Include" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="Payments.fs" t="Include" />
+        <e p="Payments.fsproj" t="IncludeRecursive" />
+      </e>
+      <e p="src\ServerLibs\PersistenceProviders\PersistenceProviders.csproj" t="IncludeRecursive" />
+      <e p="src\ServerLibs\Utils\PersistentVector.fs" t="Include" />
+      <e p="src\ServerLibs\Utils\TypeShape.Tools" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Empty.fs" t="Include" />
+        <e p="Isomorph.fs" t="Include" />
+        <e p="Json.fs" t="Include" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="TypeShape.Tools.fsproj" t="IncludeRecursive" />
+      </e>
+      <e p="src\Shared\Shared.fs" t="Include" />
+      <e p="test\ServerTests" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="Program.fs" t="Include" />
+        <e p="ServerTests.fsproj" t="IncludeRecursive" />
+        <e p="Tests.fs" t="Include" />
+      </e>
+      <e p="Tests" t="Include" />
+    </e>
+    <e p="C:\Users\mytut\.Rider2018.1\system\resharper-host\local\Transient\ReSharperHost\v12\SolutionCaches\_AC_SAFE.-2145641520.00" t="ExcludeRecursive" />
+  </component>
+</project>

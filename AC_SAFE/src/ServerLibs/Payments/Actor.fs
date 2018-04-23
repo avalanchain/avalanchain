@@ -18,11 +18,11 @@ module Observable =
         Observable.Create(Func<_,_>(fun o -> Action(subscribe o)))
 
 module Persistence = 
-    open Proto
-    open Proto.Persistence
-    open Proto.Persistence.SnapshotStrategies
-    open Proto.FSharp
-    open Proto.FSharp.Persistence
+    // open Proto
+    // open Proto.Persistence
+    // open Proto.Persistence.SnapshotStrategies
+    // open Proto.FSharp
+    // open Proto.FSharp.Persistence
 
     let getEventsObservable<'T> (eventStore: IEventStore) (persistentID: string) (indexStart: int64) (indexEnd: int64) =
         Observable.create (fun observer -> 

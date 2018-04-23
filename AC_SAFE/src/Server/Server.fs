@@ -28,6 +28,7 @@ open Fable.Remoting.Giraffe
 open Shared
 open Avalanchain.Common.MatchingEngine
 open Avalanchain.Core
+open Avalanchain.Core.Chains
 open Avalanchain.Server.WebSocketActor
 
 open Akka.Streams
@@ -262,8 +263,8 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
 
   // creates a HttpHandler for the given implementation
   choose [swaggerOf
-            (choose [ route  "/test"       >=> text "test" 
-                      route  "/test2"       >=> text "test12"
+            (choose [ //route  "/test"       >=> text "test" 
+                      //route  "/test2"       >=> text "test12"
                       subRouteCi "/api" (
                         choose [
                             subRouteCi "/Exchange" (
@@ -372,7 +373,40 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
 
-let matchingService = MatchingService (1M<price>, 100UL) //Facade.MatchingService.Instance
+type MatchingServiceStreaming = {
+    Streams: MatchingServiceLogs
+    SymbolStreams: MatchingServiceSymbolLogs
+}
+
+let streamsMatchingServiceStreaming<'T> system mat snapshotInterval (overflowStrategy: OverflowStrategy) (maxBuffer: int) keyVault verify pid =
+    let getCount() = async { let! count = streamCurrentPos system snapshotInterval pid
+                             return count + 1L |> uint64 }
+    let getPage from count = async {let! items = currentEventsSource<'T> keyVault system verify pid (int64 from) (int64 count)
+                                                    |> Source.runWith mat (Sink.Seq()) 
+                                                    |> Async.AwaitTask
+                                    return items |> Seq.toArray }                             
+    let eventLogView() = {  GetCount = getCount
+                            GetPage = getPage 
+                            GetLastPage = fun count -> async {  
+                                                let countL = uint64(count)
+                                                let! length = getCount()
+                                                return! if length > uint64(countL) then getPage (length - countL) count
+                                                        else getPage 0UL count 
+                                            } 
+                        }
+                        
+    let eventLog() = 
+        let queue = Source.queue<'T> overflowStrategy maxBuffer 
+                    |> Source.map (PersistCommand.Offer)
+                    |> Source.toMat (persistSink system pid snapshotInterval) Keep.left 
+                    |> Graph.run mat
+        {   View = eventLogView()
+            OfferAsync = fun v -> async { let! _ = queue.AsyncOffer v }  }                      
+                        
+    None // TODO: Finish it!
+
+let matchingService (streaming: MatchingServiceStreaming) = 
+    MatchingService (streaming.Streams, streaming.SymbolStreams, 1M<price>, 100UL) //Facade.MatchingService.Instance
 
 // TradingBot.tradingBot(matchingService, ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]) |> Async.Start
 

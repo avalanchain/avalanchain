@@ -298,7 +298,6 @@ module MatchingEngine =
 
 
     module Facade = 
-        open System.Linq
 
         type SymbolStack = {
             Symbol: Symbol
@@ -348,7 +347,7 @@ module MatchingEngine =
                     let symbolStack = findSymbolStack order.Symbol
                     let newPos = symbolStack.Pos + 1UL
                     let newOrderStack, evts, updatedOrders = order 
-                                                                |> Order.Create newPos expireLimit
+                                                                |> Order.Create newPos expireLimit // TODO: Sum with current position
                                                                 |> symbolStack.OrderStack.AddOrder 
                     // let newOrderStack, expireOrders = newOrderStack.RemoveExpired newPos
                     // let expireEvts = [for o in expireOrders -> Expired(o.ID, o.Pos, newPos)]

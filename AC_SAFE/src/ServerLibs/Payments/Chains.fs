@@ -1,9 +1,11 @@
-namespace Avalanchain
+namespace Avalanchain.Core
 
 open System.Collections.Generic
 module Chains =
 
     open System
+    open System.Text.RegularExpressions
+
     open Akka.Actor
     open Akka.Configuration
     open Akka.IO
@@ -14,23 +16,19 @@ module Chains =
     open Akka.Streams.Dsl
     open Reactive.Streams
 
-    open Hyperion
-
     open Akkling
     open Akkling.Persistence
-    open Akkling.Cluster
-    open Akkling.Cluster.Sharding
+    // open Akkling.Cluster
+    // open Akkling.Cluster.Sharding
     open Akkling.Streams
-
     open Akkling.Persistence
 
     open Akka.Persistence.Query
     open Akka.Persistence.Query.Sql   
 
+    open Crypto
     open ChainDefs 
-    open System.Text.RegularExpressions
 
-    type Pos = uint64
     type PersistEvent<'T> = {   
         Val: 'T 
         Pos: Pos
@@ -40,6 +38,9 @@ module Chains =
         | Offer of 'T
         | PrintState
         | TakeSnapshot
+        | GetPos
+
+    type GetPosResult = GetPosResult of int64
 
     type PersistState<'T> = {
         LastPos: int64
@@ -78,6 +79,7 @@ module Chains =
                     if state.LastPos % snapshotInterval = 0L then actor.SaveSnapshot(state)
                 | PrintState -> __.Log.Info ("Actor state: " + (state.ToString()) + " PosN: " + (actor.LastSequenceNr.ToString()))
                 | TakeSnapshot -> actor.SaveSnapshot(state)
+                | GetPos -> __.Sender.Tell (GetPosResult state.LastPos)
             | a -> __.Log.Info ("Unhandled command: {0}", a)    
 
     let persistActorProps<'T> pid (snapshotInterval: int64) : Props<PersistCommand<'T>> =
@@ -103,10 +105,10 @@ module Chains =
     type SinkActorMessage = | GetSinkActorRef of Pid
     let rec sinkHolder<'T> (snapshotInterval: int64) (context: Actor<SinkActorMessage>) = 
         function
-        | GetSinkActorRef pid -> 
-            let act = spawnIfNotExists context pid (fun ctx -> persistActor<'T> ctx pid snapshotInterval)
-            context.Sender() <! act
-            ignored ()
+            | GetSinkActorRef pid -> 
+                let act = spawnIfNotExists context pid (fun ctx -> persistActor<'T> ctx pid snapshotInterval)
+                context.Sender() <! act
+                ignored ()
 
     let spawnSinkHolder<'T> system (snapshotInterval: int64) = 
         let name = "_" + Regex("[\[\]`]").Replace(typedefof<'T>.Name, "_")
@@ -123,16 +125,20 @@ module Chains =
 
     let readJournal system = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
 
-    let currentEventsSource<'T> keypair system pid from count = 
+    let currentEventsSource<'T> keyVault system verify pid from count = 
         (readJournal system).CurrentEventsByPersistenceId(pid, from, from + count) 
-        |> Source.map(fun e -> (e.Event :?> 'T) |> toChainItemToken keypair e.SequenceNr) 
+        |> Source.map(fun e -> (e.Event :?> string) |> fromJwt<'T> keyVault verify) 
 
-    let allEventsSource<'T> keypair system pid from count = 
+    let allEventsSource<'T> keyVault system pid verify from count = 
         (readJournal system).EventsByPersistenceId(pid, from, from + count) 
-        |> Source.map(fun e -> (e.Event :?> 'T) |> toChainItemToken keypair e.SequenceNr) 
+        |> Source.map(fun e -> (e.Event :?> string) |> fromJwt<'T> keyVault verify) 
 
-    let persistFlow<'T> snapshotInterval keypair system pid = 
+    let persistFlow<'T> snapshotInterval keyVault system verify pid = 
         let sink = persistSink<'T> system pid snapshotInterval
         Flow.ofSinkAndSourceMat sink Keep.none 
-            (allEventsSource keypair system pid 0L Int64.MaxValue) 
+            (allEventsSource keyVault system pid verify 0L Int64.MaxValue) 
     
+    let streamCurrentPos system (snapshotInterval: int64) pid = 
+        let actor = getSinkActor<string> system (snapshotInterval: int64) pid
+        async { let! (pos: GetPosResult) = actor <? GetPos
+                return match pos with GetPosResult p -> p }
