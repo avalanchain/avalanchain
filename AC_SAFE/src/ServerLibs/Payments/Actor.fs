@@ -5,7 +5,7 @@ open FSharp.Control.AsyncSeqExtensions
 open FSharp.Control
 open Proto
 open Proto.Persistence
-open Proto.FSharp.Persistence
+//open Proto.FSharp.Persistence
 open Proto.Persistence.SnapshotStrategies
 open Proto.FSharp
 
@@ -17,37 +17,37 @@ module Observable =
     let create (subscribe: IObserver<'T> -> unit -> unit) =
         Observable.Create(Func<_,_>(fun o -> Action(subscribe o)))
 
-module Persistence = 
+module Persistence = ()
     // open Proto
     // open Proto.Persistence
     // open Proto.Persistence.SnapshotStrategies
     // open Proto.FSharp
     // open Proto.FSharp.Persistence
 
-    let getEventsObservable<'T> (eventStore: IEventStore) (persistentID: string) (indexStart: int64) (indexEnd: int64) =
-        Observable.create (fun observer -> 
-                            fun () -> async {   let! _ = getEvents<'T> eventStore persistentID indexStart indexEnd observer.OnNext
-                                                observer.OnCompleted() } |> Async.RunSynchronously)
-
-    let eventSourcingAsyncSeqSink<'T> cancellationToken (eventStore: IEventStore) (persistentID: string) =
-        let sinkSeqSrc = AsyncSeqSrc.create<'T>()
-        let persistencePID = EventSourcing.persistLight eventStore persistentID |> Actor.spawnPropsPrefix persistentID
-
-        sinkSeqSrc 
-        |> AsyncSeqSrc.toAsyncSeq
-        |> AsyncSeq.iter (fun e -> persistencePID <! e)
-        |> fun aseq -> Async.Start (aseq, cancellationToken)
-
-        sinkSeqSrc
-    
-    let getEventsAsyncSeq<'T> (maxPageSize: uint32) (eventStore: IEventStore) (persistentID: string) (indexStart: uint64) (indexEnd: uint64) =
-        let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue else int64 indexStart
-        let indexEnd = if indexEnd > uint64 Int64.MaxValue then Int64.MaxValue else int64 indexEnd
-        let indexEnd = if indexEnd - indexStart + 1L > int64 maxPageSize then indexStart + (int64 maxPageSize) - 1L else indexEnd
-        let sinkSeqSrc = AsyncSeqSrc.create()
-        async { let! _ = getEvents<'T> eventStore persistentID indexStart indexEnd  (fun e -> sinkSeqSrc |> AsyncSeqSrc.put e)
-                () } |> Async.Start
-        sinkSeqSrc |> AsyncSeqSrc.toAsyncSeq
+//    let getEventsObservable<'T> (eventStore: IEventStore) (persistentID: string) (indexStart: int64) (indexEnd: int64) =
+//        Observable.create (fun observer -> 
+//                            fun () -> async {   let! _ = getEvents<'T> eventStore persistentID indexStart indexEnd observer.OnNext
+//                                                observer.OnCompleted() } |> Async.RunSynchronously)
+//
+//    let eventSourcingAsyncSeqSink<'T> cancellationToken (eventStore: IEventStore) (persistentID: string) =
+//        let sinkSeqSrc = AsyncSeqSrc.create<'T>()
+//        let persistencePID = EventSourcing.persistLight eventStore persistentID |> Actor.spawnPropsPrefix persistentID
+//
+//        sinkSeqSrc 
+//        |> AsyncSeqSrc.toAsyncSeq
+//        |> AsyncSeq.iter (fun e -> persistencePID <! e)
+//        |> fun aseq -> Async.Start (aseq, cancellationToken)
+//
+//        sinkSeqSrc
+//    
+//    let getEventsAsyncSeq<'T> (maxPageSize: uint32) (eventStore: IEventStore) (persistentID: string) (indexStart: uint64) (indexEnd: uint64) =
+//        let indexStart = if indexStart > uint64 Int64.MaxValue then Int64.MaxValue else int64 indexStart
+//        let indexEnd = if indexEnd > uint64 Int64.MaxValue then Int64.MaxValue else int64 indexEnd
+//        let indexEnd = if indexEnd - indexStart + 1L > int64 maxPageSize then indexStart + (int64 maxPageSize) - 1L else indexEnd
+//        let sinkSeqSrc = AsyncSeqSrc.create()
+//        async { let! _ = getEvents<'T> eventStore persistentID indexStart indexEnd  (fun e -> sinkSeqSrc |> AsyncSeqSrc.put e)
+//                () } |> Async.Start
+//        sinkSeqSrc |> AsyncSeqSrc.toAsyncSeq
 
 
 module PagedLog = ()

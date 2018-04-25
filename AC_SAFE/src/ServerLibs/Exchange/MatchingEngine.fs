@@ -8,6 +8,9 @@ module MatchingEngine =
     open System.Collections.Concurrent
     //open FSharpx.Collections
     open Akka.Streams.Dsl
+    
+    open Avalanchain.Core
+    open Crypto
 
     type MatchType = | Partial | Full
     type MarketSide = | Bid | Ask
@@ -313,13 +316,18 @@ module MatchingEngine =
         type EventLogView<'T> = {
             GetCount: unit -> Async<uint64>
             GetPage: uint64 -> uint32 -> Async<'T[]>
+            GetPageToken: uint64 -> uint32 -> Async<JwtToken<'T>[]>
+            GetPageJwt: uint64 -> uint32 -> Async<string[]>
             GetLastPage: uint32 -> Async<'T[]>
+            GetLastPageToken: uint32 -> Async<JwtToken<'T>[]>
+            GetLastPageJwt: uint32 -> Async<string[]>
         }
 
         type EventLog<'T> = {
             OfferAsync: 'T -> Async<unit> // TODO: Add error handling
             View: EventLogView<'T>
         }
+        
 
         type MatchingServiceLogs = {
             OrderCommands: EventLog<OrderCommand>

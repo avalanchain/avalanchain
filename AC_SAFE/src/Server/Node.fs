@@ -46,7 +46,7 @@ module Node =
         Mat: ActorMaterializer
         OverflowStrategy: OverflowStrategy
         MaxBuffer: int
-        Mediator: Lazy<IActorRef> 
+        // Mediator: Lazy<IActorRef> 
         Journal: Lazy<SqlReadJournal>
     }
 
@@ -253,25 +253,7 @@ module Node =
         let config = 
             sprintf """
                 akka {
-                    actor {
-                        provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
-                        serializers {
-                            akka-pubsub = "Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer, Akka.Cluster.Tools"
-                            akka-data-replication = "Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData"
-                            akka-replicated-data = "Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData"                            
-                        }                            
-                        serialization-bindings {
-                            "Akka.Cluster.Tools.PublishSubscribe.IDistributedPubSubMessage, Akka.Cluster.Tools" = akka-pubsub
-                            "Akka.Cluster.Tools.PublishSubscribe.Internal.SendToOneSubscriber, Akka.Cluster.Tools" = akka-pubsub
-                            "Akka.DistributedData.IReplicatorMessage, Akka.DistributedData" = akka-data-replication
-                            "Akka.DistributedData.IReplicatedDataSerialization, Akka.DistributedData" = akka-replicated-data
-                        }                            
-                        serialization-identifiers {
-                            "Akka.Cluster.Tools.PublishSubscribe.Serialization.DistributedPubSubMessageSerializer, Akka.Cluster.Tools" = 21
-                            "Akka.DistributedData.Serialization.ReplicatedDataSerializer, Akka.DistributedData" = 11
-                            "Akka.DistributedData.Serialization.ReplicatorMessageSerializer, Akka.DistributedData" = 12
-                        }                        
-                    }
+
                     remote {
                         helios.tcp {
                         public-hostname = "%s"
@@ -284,152 +266,14 @@ module Node =
                             acceptable-heartbeat-pause = 20 s # default 10s
                         }
                     }
-                    cluster {
-                        auto-down-unreachable-after = 5s
-                        seed-nodes = %s
-                        #gossip-time-to-live = 10s
-                        unreachable-nodes-reaper-interval = 10s
-                        publish-stats-interval = 5s
-                        #failure-detector {
-                        #    heartbeat-interval = 5 s
-                        #    min-std-deviation = 2 s
-                        #    acceptable-heartbeat-pause = 13 s
-                        #    expected-response-after = 10 s
-                        #}
 
-                        pub-sub {
-                            # Actor name of the mediator actor, /system/distributedPubSubMediator
-                            name = acMassSend
-
-                            # Start the mediator on members tagged with this role.
-                            # All members are used if undefined or empty.
-                            #role = ""
-
-                            # The routing logic to use for 'Send'
-                            # Possible values: random, round-robin, broadcast
-                            routing-logic = broadcast
-
-                            # How often the DistributedPubSubMediator should send out gossip information
-                            gossip-interval = 1s
-
-                            # Removed entries are pruned after this duration
-                            removed-time-to-live = 120s
-
-                            # Maximum number of elements to transfer in one message when synchronizing the registries.
-                            # Next chunk will be transferred in next round of gossip.
-                            max-delta-elements = 3000
-                        }
-                        distributed-data {
-                            # Actor name of the Replicator actor, /system/ddataReplicator
-                            name = acSync
-
-                            # Replicas are running on members tagged with this role.
-                            # All members are used if undefined or empty.
-                            role = ""
-
-                            # How often the Replicator should send out gossip information
-                            gossip-interval = 200 ms
-
-                            # How often the subscribers will be notified of changes, if any
-                            notify-subscribers-interval = 500 ms
-
-                            # Maximum number of entries to transfer in one gossip message when synchronizing
-                            # the replicas. Next chunk will be transferred in next round of gossip.
-                            max-delta-elements = 10000
-
-                            # The id of the dispatcher to use for Replicator actors. If not specified
-                            # default dispatcher is used.
-                            # If specified you need to define the settings of the actual dispatcher.
-                            use-dispatcher = ""
-
-                            # How often the Replicator checks for pruning of data associated with
-                            # removed cluster nodes.
-                            pruning-interval = 30 s
-
-                            # How long time it takes (worst case) to spread the data to all other replica nodes.
-                            # This is used when initiating and completing the pruning process of data associated
-                            # with removed cluster nodes. The time measurement is stopped when any replica is 
-                            # unreachable, so it should be configured to worst case in a healthy cluster.
-                            max-pruning-dissemination = 260 s
-
-                            # Serialized Write and Read messages are cached when they are sent to 
-                            # several nodes. If no further activity they are removed from the cache
-                            # after this duration.
-                            serializer-cache-time-to-live = 10s
-
-                            delta-crdt {
-
-                                # Some complex deltas grow in size for each update and above this
-                                # threshold such deltas are discarded and sent as full state instead.
-                                max-delta-size = 200000  
-                            }
-
-                            durable {
-                                # List of keys that are durable. Prefix matching is supported by using * at the
-                                # end of a key.  
-                                keys = [ "chainDefs", "transactions", "chat*", "pmt*" ]
-
-                                # The markers of that pruning has been performed for a removed node are kept for this
-                                # time and thereafter removed. If and old data entry that was never pruned is
-                                # injected and merged with existing data after this time the value will not be correct.
-                                # This would be possible if replica with durable data didn't participate in the pruning
-                                # (e.g. it was shutdown) and later started after this time. A durable replica should not 
-                                # be stopped for longer time than this duration and if it is joining again after this
-                                # duration its data should first be manually removed (from the lmdb directory).
-                                # It should be in the magnitude of days. Note that there is a corresponding setting
-                                # for non-durable data: 'akka.cluster.distributed-data.pruning-marker-time-to-live'.
-                                pruning-marker-time-to-live = 10 d
-
-                                # Fully qualified class name of the durable store actor. It must be a subclass
-                                # of akka.actor.Actor and handle the protocol defined in 
-                                # akka.cluster.ddata.DurableStore. The class must have a constructor with 
-                                # com.typesafe.config.Config parameter.
-                                store-actor-class = "Akka.DistributedData.LightningDB.LmdbDurableStore, Akka.DistributedData.LightningDB"
-
-                                use-dispatcher = akka.cluster.distributed-data.durable.pinned-store
-
-                                pinned-store {
-                                    executor = thread-pool-executor
-                                    type = PinnedDispatcher
-                                }
-                                lmdb {
-                                    # Directory of LMDB file. There are two options:
-                                    # 1. A relative or absolute path to a directory that ends with 'ddata'
-                                    #    the full name of the directory will contain name of the ActorSystem
-                                    #    and its remote port.
-                                    # 2. Otherwise the path is used as is, as a relative or absolute path to
-                                    #    a directory.
-                                    #
-                                    # When running in production you may want to configure this to a specific
-                                    # path (alt 2), since the default directory contains the remote port of the
-                                    # actor system to make the name unique. If using a dynamically assigned 
-                                    # port (0) it will be different each time and the previously stored data 
-                                    # will not be loaded.
-                                    dir = "bin/Debug/net461/ddata"
-
-                                    # Size in bytes of the memory mapped file.
-                                    #map-size = 100 MiB
-                                    map-size = 100000000
-
-                                    # Accumulate changes before storing improves performance with the
-                                    # risk of losing the last writes if the JVM crashes.
-                                    # The interval is by default set to 'off' to write each update immediately.
-                                    # Enabling write behind by specifying a duration, e.g. 200ms, is especially 
-                                    # efficient when performing many writes to the same key, because it is only 
-                                    # the last value for each key that will be serialized and stored.  
-                                    write-behind-interval = 200 ms
-                                    #write-behind-interval = off
-                                }                                
-                            }
-                        }                        
-                    }
                     #persistence {
                     #    journal.plugin = "akka.persistence.journal.inmem"
                     #    snapshot-store.plugin = "akka.persistence.snapshot-store.local"
                     #}
                     %s
                 }
-                """ endpoint.IP endpoint.IP endpoint.Port seedNodes sqliteSpec
+                """ endpoint.IP endpoint.IP endpoint.Port sqliteSpec
                 |> Configuration.parse
     
         let system = config//.WithFallback (DistributedPubSub.DefaultConfig())
@@ -440,7 +284,7 @@ module Node =
             Mat = system.Materializer()
             OverflowStrategy = overflowStrategy
             MaxBuffer = maxBuffer
-            Mediator = lazy(DistributedPubSub.Get(system).Mediator)
+            // Mediator = lazy(DistributedPubSub.Get(system).Mediator)
             Journal = lazy(readJournal system)
              }            
 

@@ -27,7 +27,7 @@ group Server
 
   nuget FSharp.Control.Reactive
   nuget FSharp.Control.AsyncSeq
-  nuget FSharpx.Extras
+  nuget TaskBuilder.fs 
 
   nuget Fable.Remoting.Giraffe
   nuget Fable.JsonConverter
@@ -35,7 +35,6 @@ group Server
   nuget Sodium.Core
   nuget TypeShape
   nuget FParsec
-  nuget FSharp.Control.FusionTasks.FS41
   nuget VaultSharp
 
   nuget Proto.Actor

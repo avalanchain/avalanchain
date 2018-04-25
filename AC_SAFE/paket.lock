@@ -800,14 +800,6 @@ NUGET
     FSharp.Control.AsyncSeq (2.0.21)
       FSharp.Core (>= 3.1.2) - restriction: >= net45
       FSharp.Core (>= 4.3.2) - restriction: && (< net45) (>= netstandard2.0)
-    FSharp.Control.FusionTasks.FS41 (1.1.1)
-      FSharp.Core (>= 4.1.17) - restriction: >= portable-net45+win8+wp8+wpa81
-      Microsoft.Bcl (>= 1.1.10) - restriction: && (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81)
-      Microsoft.Bcl.Async (>= 1.0.168) - restriction: && (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81)
-      Microsoft.Bcl.Build (>= 1.0.21) - restriction: && (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81)
-      System.Collections.Immutable (>= 1.3.1) - restriction: || (&& (< net45) (>= netstandard1.6)) (&& (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81))
-      System.Reflection.Metadata (>= 1.4.2) - restriction: || (&& (< net45) (>= netstandard1.6)) (&& (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81))
-      System.Threading.Tasks.Extensions (>= 4.3) - restriction: >= portable-net45+win8+wp8+wpa81
     FSharp.Control.Reactive (4.0)
       FSharp.Core (>= 4.2.3) - restriction: || (>= net45) (>= netstandard2.0)
       System.Reactive (>= 3.1.1) - restriction: || (>= net45) (>= netstandard2.0)
@@ -835,14 +827,6 @@ NUGET
       System.Threading.Thread (>= 4.0) - restriction: && (< net45) (>= netstandard1.6) (< netstandard2.0)
       System.Threading.ThreadPool (>= 4.0.10) - restriction: && (< net45) (>= netstandard1.6) (< netstandard2.0)
       System.Threading.Timer (>= 4.0.1) - restriction: && (< net45) (>= netstandard1.6) (< netstandard2.0)
-    FSharpx.Async (1.13.2)
-      FSharp.Control.AsyncSeq
-      FSharp.Core
-    FSharpx.Collections (1.17)
-      FSharp.Core
-    FSharpx.Extras (2.2.1)
-      FSharpx.Async
-      FSharpx.Collections
     Giraffe (1.1) - restriction: >= netstandard2.0
       FSharp.Core (>= 4.2.3) - restriction: || (>= net461) (>= netstandard2.0)
       Microsoft.AspNetCore.Authentication (>= 2.0.1) - restriction: || (>= net461) (>= netstandard2.0)
@@ -1027,11 +1011,6 @@ NUGET
     Microsoft.AspNetCore.WebUtilities (2.0.1)
       Microsoft.Net.Http.Headers (>= 2.0.1) - restriction: >= netstandard2.0
       System.Text.Encodings.Web (>= 4.4) - restriction: >= netstandard2.0
-    Microsoft.Bcl (1.1.10) - restriction: && (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81)
-      Microsoft.Bcl.Build (>= 1.0.14)
-    Microsoft.Bcl.Async (1.0.168) - restriction: && (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81)
-      Microsoft.Bcl (>= 1.1.8)
-    Microsoft.Bcl.Build (1.0.21) - import_targets: false, restriction: && (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81)
     Microsoft.CSharp (4.4.1) - restriction: >= netstandard2.0
     Microsoft.Data.Sqlite (2.0.1) - restriction: || (>= net452) (>= netstandard1.5)
       Microsoft.Data.Sqlite.Core (>= 2.0.1) - restriction: >= netstandard2.0
@@ -1710,8 +1689,7 @@ NUGET
       Microsoft.NETCore.Targets (>= 1.1) - restriction: || (>= dnxcore50) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.0) (< win8) (< wp8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos))
       System.Reflection (>= 4.3) - restriction: || (>= dnxcore50) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.0) (< win8) (< wp8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos))
       System.Runtime (>= 4.3) - restriction: || (>= dnxcore50) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.0) (< win8) (< wp8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos))
-    System.Reflection.Metadata (1.5) - restriction: || (&& (< net45) (>= netstandard1.6)) (&& (< net45) (< netstandard1.6) (>= portable-net45+win8+wp8+wpa81))
-      NETStandard.Library (>= 1.6.1) - restriction: && (< monoandroid) (< monotouch) (>= netstandard1.1) (< netstandard2.0) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)
+    System.Reflection.Metadata (1.5) - restriction: >= netstandard2.0
       System.Collections.Immutable (>= 1.4) - restriction: || (>= monoandroid) (>= monotouch) (&& (< netcoreapp2.0) (>= netstandard2.0)) (&& (>= netstandard1.1) (< netstandard2.0)) (&& (< netstandard1.1) (>= portable-net45+win8)) (&& (< portable-net45+win8) (>= portable-net45+win8+wpa81)) (>= xamarinios) (>= xamarinmac) (>= xamarintvos) (>= xamarinwatchos)
     System.Reflection.Primitives (4.3) - restriction: || (&& (>= dnxcore50) (>= netstandard1.6)) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.6) (< netstandard2.0) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos))
       Microsoft.NETCore.Platforms (>= 1.1) - restriction: || (>= dnxcore50) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.0) (< win8) (< wp8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos))
@@ -2011,7 +1989,7 @@ NUGET
       System.Threading (>= 4.3) - restriction: || (>= dnxcore50) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.3) (< win8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos))
       System.Xml.ReaderWriter (>= 4.3) - restriction: || (>= dnxcore50) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.3) (< win8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos)) (&& (< monoandroid) (< net45) (>= netstandard1.0) (< netstandard1.3) (< win8) (< wp8) (< wpa81))
       System.Xml.XmlDocument (>= 4.3) - restriction: || (>= dnxcore50) (&& (< monoandroid) (< monotouch) (< net45) (>= netstandard1.3) (< win8) (< wpa81) (< xamarinios) (< xamarinmac) (< xamarintvos) (< xamarinwatchos))
-    TaskBuilder.fs (1.1.1) - restriction: >= netstandard2.0
+    TaskBuilder.fs (1.1.1)
       FSharp.Core (>= 4.2.3) - restriction: >= netstandard1.6
       NETStandard.Library (>= 1.6.1) - restriction: >= netstandard1.6
       System.ValueTuple (>= 4.4) - restriction: >= netstandard1.6

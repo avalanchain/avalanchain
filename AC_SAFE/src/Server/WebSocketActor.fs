@@ -1,19 +1,19 @@
 namespace Avalanchain.Server
-open System.Threading
-open FSharp.Control
-open Akka.Streams
-open Akka.Streams.Dsl
-open Akkling.Streams
 
 module WebSocketActor = 
+    open System
+    open System.Net.WebSockets
+    open System.Threading
+
     open Proto
     open Proto.FSharp
     open Giraffe
     open Giraffe.Common
     open Giraffe.WebSocket
-
-    open System
-    open System.Net.WebSockets
+    open FSharp.Control
+    open Akka.Streams
+    open Akka.Streams.Dsl
+    open Akkling.Streams
 
     type WebSocketMessage = | WebSocketMessage of string
         with member __.Value = match __ with | WebSocketMessage msg -> msg
@@ -30,12 +30,12 @@ module WebSocketActor =
             let name = ref.ID
 
             let dispatcher (msg: WebSocketMessage) = 
-                if isBroadcast then async { match msg with | WebSocketMessage msg -> do! connectionManager.BroadcastTextAsync(msg, cancellationToken) }
-                else async { match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken) }
+                if isBroadcast then async { match msg with | WebSocketMessage msg -> do! connectionManager.BroadcastTextAsync(msg, cancellationToken) |> Async.AwaitTask }
+                else async { match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken) |> Async.AwaitTask }
             let mutable actorPid = None
             let disposer reason = async { 
                 actorPid |> Option.iter (fun pid -> pid <! PoisonPill) 
-                do! ref.CloseAsync(reason, cancellationToken) }
+                do! ref.CloseAsync(reason, cancellationToken) |> Async.AwaitTask }
             
             let handler = connection dispatcher disposer ref 
 
@@ -78,10 +78,10 @@ module WebSocketActor =
             printfn "WS Rec started:"
 
             while not endOfMessage do
-                let! received = reference.WebSocket.ReceiveAsync(buffer, cancellationToken)
+                let! received = reference.WebSocket.ReceiveAsync(buffer, cancellationToken) |> Async.AwaitTask
                 printfn "WS Mes: %A" received
                 if received.CloseStatus.HasValue then
-                    do! reference.WebSocket.CloseAsync(received.CloseStatus.Value, received.CloseStatusDescription, cancellationToken)
+                    do! reference.WebSocket.CloseAsync(received.CloseStatus.Value, received.CloseStatusDescription, cancellationToken) |> Async.AwaitTask
                     keepRunning <- false
                     endOfMessage <- true
                 else
@@ -112,15 +112,15 @@ module WebSocketActor =
             match msg with | WebSocketMessage msg -> printfn "%s:%s" str msg 
             msg
 
-        async { do! socket.ConnectAsync(url, cancellationToken) } |> Async.RunSynchronously
+        async { do! socket.ConnectAsync(url, cancellationToken) |> Async.AwaitTask } |> Async.RunSynchronously
         printfn "Socket state: %A" (socket.State)    
         let dispatcher (msg: WebSocketMessage) = 
             logger "Disp" msg |> ignore; 
-            async { match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken) }
+            async { match msg with | WebSocketMessage msg -> do! ref.SendTextAsync(msg, cancellationToken) |> Async.AwaitTask }
         let mutable actorPid = None
         let disposer reason = async { 
             actorPid |> Option.iter (fun pid -> pid <! PoisonPill) 
-            do! ref.CloseAsync(reason, cancellationToken) }
+            do! ref.CloseAsync(reason, cancellationToken) |> Async.AwaitTask }
         let handler = logger "Rec" >> connection dispatcher disposer ref 
         let receiver msg = async {
             let mutable running = true

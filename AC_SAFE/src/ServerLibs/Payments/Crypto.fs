@@ -94,15 +94,21 @@ module Crypto =
         
     type IKeyVault =
         abstract member Get: JwtKeyId -> KeyVaultEntry option
+        abstract member Active: KeyVaultEntry 
         
     type KeyVault (entries: KeyVaultEntry seq) = 
+        let entries = entries |> Seq.toArray 
         let keyEntries = entries |> Seq.map(fun kve -> kve.Kid, kve) |> Map.ofSeq
+        let active = entries |> Array.head
         interface IKeyVault with 
             member __.Get kid = keyEntries |> Map.tryFind kid 
+            member __.Active = active
 
-    let toHeader pos = JwtTokenHeader.Create pos // Kid will be populated by signing anyway    
+    let toHeader pos = JwtTokenHeader.Create UInt64.MaxValue pos // Kid will be populated by signing anyway    
 
-    let prepareToSign header payload = prepareToSignStrings (toJson header) (toJson payload) // TODO: Cache out the pickler generation
+    let prepareToSign header payload = 
+        let json = toJson payload
+        json, prepareToSignStrings (toJson header) json // TODO: Cache out the pickler generation
 
     let prepareToVerify (token: string) = 
         let idx = token.LastIndexOf "."
@@ -118,10 +124,10 @@ module Crypto =
 
     let sign (kve: KeyVaultEntry) header payload = maybe {
         let header = { header with kid = kve.Kid } 
-        let prepared = prepareToSign header payload
+        let json, prepared = prepareToSign header payload
         let! signature = prepared |> kve.KeyRing.Sign 
         let signatureStr = encodeBase64Bytes signature
-        return prepared +.+ signatureStr, header, signatureStr
+        return prepared +.+ signatureStr, header, json, signatureStr
     }
 
     let unpack verify (kv: IKeyVault) token = maybe {
@@ -144,6 +150,7 @@ module Crypto =
 
     type JwtToken<'t> = {
         Token: string
+        Json: string
         Ref: TokenRef
         Payload: 't
         Header: JwtTokenHeader
@@ -158,8 +165,9 @@ module Crypto =
     // }
 
     let toJwt (kve: KeyVaultEntry) header (payload: 'T) = maybe {
-        let! token, header, signature = sign kve header payload
+        let! token, header, json, signature = sign kve header payload
         return {Token = token
+                Json = json
                 Ref = signature |> toRef kve
                 Payload = payload 
                 Header = header
@@ -167,8 +175,9 @@ module Crypto =
     }
 
     let fromJwt<'T> (kv: IKeyVault) verify (token: string): JwtToken<'T> option = maybe {
-        let! token, header, payload, signature = verify kv token
+        let! token, header, payload, signature = unpack verify kv token
         return {Token = token
+                Json = payload
                 Ref = signature |> toRef (kv.Get header.kid).Value // Can use Value safely here as the kid was already extracted in the verify() call above 
                 Payload = fromJson<'T> payload 
                 Header = header
