@@ -11,7 +11,7 @@
         $scope.foo = $stateParams.symbol;
         vm.symbol = $stateParams.symbol;
         vm.ind = $stateParams.index;
-        
+        vm.chartLoading = 'sk-loading';
         //dataservice.getData().then(function (data) {
         //    vm.nodes = data.nodes;
         //    vm.node = vm.nodes.filter(function (node) {
@@ -62,7 +62,7 @@
                     top: 20,
                     right: 20,
                     bottom: 40,
-                    left: 60
+                    left: 80
                 },
                 x: function (d) { return d['date']; },
                 y: function (d) { return d['close']; },
@@ -72,7 +72,8 @@
                     scaleType: 'log',
                     axisLabel: 'Dates',
                     tickFormat: function (d) {
-                        return d3.time.format('%x')(new Date(new Date() - (20000 * 86400000) + (d * 86400000)));
+                        return vm.symbol!='AIM'? d3.time.format('%x')(new Date(d*1000)) :d3.time.format('%x')(new Date(new Date() - (20000 * 86400000) + (d * 86400000)));
+                        // return d3.time.format('%x')(new Date(new Date() - (20000 * 86400000) + (d * 86400000)));
                     },
                     showMaxMin: false
                 },
@@ -81,13 +82,13 @@
                     scaleType: 'log',
                     axisLabel: 'Price',
                     tickFormat: function (d) {
-                        return '$' + d3.format(',.1f')(d);
+                        return '$' + d3.format(',.3f')(d);
                     },
                     showMaxMin: true
                 },
                 zoom: {
                     enabled: true,
-                    scaleExtent: [1, 10],
+                    scaleExtent: [1, 100],
                     useFixedDomain: false,
                     useNiceScale: false,
                     horizontalOff: false,
@@ -175,7 +176,7 @@
                 
                 vm.loading = false;
                 var formula = (index+1)*3
-                sampleData(formula);
+                //sampleData(formula);
                 vm.symbols = data.data;
             });
         }
@@ -196,6 +197,37 @@
                 vm.fullOrdersCount = data.data;
             });
         }
+
+        vm.show = true;
+        vm.period = 'histominute';
+        // vm.period = 'histohour';
+        // vm.period = 'histoday';
+        vm.changeHisto = function(period){
+            vm.chartLoading = 'sk-loading';
+            vm.period = period;
+            getHistoday(vm.symbol);
+        }
+        function getHistoday(symbol) {
+            
+            vm.show = false;
+            return dataservice.getHisto(symbol, vm.period).then(function (data) {
+                vm.histodata =data.data.Data;
+                var pos = 0;
+                vm.sampledata1[0].values.splice(vm.histodata.length, vm.sampledata1[0].values.length - vm.histodata.length)
+                vm.sampledata1[0].values.forEach(element => {
+                    element.date = vm.histodata[pos].time;
+                    element.open = vm.histodata[pos].open;
+                    element.high = vm.histodata[pos].high;
+                    element.low = vm.histodata[pos].low;
+                    element.close = vm.histodata[pos].close;
+                    element.adjusted =(vm.histodata[pos].low+vm.histodata[pos].high)/2;
+                    pos++;
+                });
+                vm.show = true;
+                vm.chartLoading = '';
+                vm.sampledata = vm.sampledata1;
+            });
+        }
         activate();
         function activate() {
             common.activateController([getData()], controllerId)
@@ -213,6 +245,14 @@
         //     symbolFullOrdersCount(vm.symbol);
         //     orderStackView(vm.symbol);
         // }
+        
+        sampleData();
+        if(vm.symbol!='AIM'){
+            
+            getHistoday(vm.symbol);
+        }else{
+            vm.sampledata = vm.sampledata1;
+        }
 
         function getData() {
             //orderStack(vm.symbol);
@@ -225,10 +265,12 @@
             symbolOrderEventsCount(vm.symbol);
             symbolFullOrdersCount(vm.symbol);
             orderStackView(vm.symbol);
+
+            
         }
 
         function sampleData(index) {
-            vm.sampledata = [{
+            vm.sampledata1 = [{
                 values: [
                     { "date": 19854, "open": 165.42, "high": 165.8, "low": 164.34, "close": 165.22, "volume": 160363400, "adjusted": 164.35 },
                     { "date": 19855, "open": 165.35, "high": 166.59, "low": 165.22, "close": 165.83, "volume": 107793800, "adjusted": 164.96 },
@@ -302,13 +344,7 @@
                     { "date": 19953, "open": 165.85, "high": 166.4, "low": 165.73, "close": 165.96, "volume": 62930500, "adjusted": 165.96 }
                 ]
             }];
-            vm.sampledata[0].values.forEach(element => {
-                element.open = element.open-index;
-                element.high = element.high-index;
-                element.low = element.low-index;
-                element.close = element.close-index;
-                element.adjusted = element.adjusted-index;
-            });
+
             
         }
     };

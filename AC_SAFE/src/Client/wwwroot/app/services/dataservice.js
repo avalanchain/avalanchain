@@ -49,7 +49,9 @@
             mapping: mapping,
             addAsset: addAsset,
             getAssets: getAssets,
-            setCurrentAccount: setCurrentAccount
+            setCurrentAccount: setCurrentAccount,
+            getHisto:getHisto,
+            getCoinlist:getCoinlist
         };
 
         return service;
@@ -348,11 +350,14 @@
 
             return defer.promise;
         }
-        function getPrices(currency) {
+        function getPrices(currency, list) {
             if (!currency)
                 currency = 'USD';
 
-            var url = "https://min-api.cryptocompare.com/data/price?fsym=" + currency + "&tsyms=BTC,ETH,EUR,LTC";
+            if (!list)
+                list = 'BTC,ETH,EUR,LTC';
+
+            var url = "https://min-api.cryptocompare.com/data/price?fsym=" + currency + "&tsyms="+list;
             
             var sc = {};
 
@@ -363,6 +368,28 @@
 
         }
 
+
+        function getHisto(currency, period) {
+            var url = "https://min-api.cryptocompare.com/data/"+period+"?fsym=" + currency + "&tsym=USD&limit=60&aggregate=3&e=CCCAGG"
+            
+            var sc = {};
+
+            return dataProvider.get(sc, url, function(data, status) {
+            });
+
+        }
+
+        function getCoinlist(currency, period) {
+
+            // var url = "https://www.cryptocompare.com/api/data/coinlist/"
+            
+            var url = "https://min-api.cryptocompare.com/data/all/coinlist"
+            var sc = {};
+
+            return dataProvider.get(sc, url, function(data, status) {
+            });
+
+        }
         function getTime(d) {
             var seconds = d.getSeconds() < 10 ? '0' + d.getSeconds() : d.getSeconds();
             return d.getHours() + ":" + d.getMinutes() + ":" + seconds;

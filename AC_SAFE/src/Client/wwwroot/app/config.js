@@ -254,7 +254,26 @@
                 //     label: 'Wallet'
                 // }
             })
-            .state('index.transactions',
+            
+            .state('wallet.bridge',
+            {
+                url: "/bridge",
+                templateUrl: "/wwwroot/app/views/accounts/bridge.html",
+                data: {
+                    pageTitle: 'Bridge'
+                },
+                resolve: {
+                    loadPlugin: function ($ocLazyLoad) {
+                        return $ocLazyLoad.load([c3chart, c3chartAngul]);
+                    }
+                },
+                // ncyBreadcrumb: {
+                //     parent: function () {
+                //         return 'index.accounts';
+                //     },
+                //     label: 'Wallet'
+                // }
+            }).state('index.transactions',
             {
                 url: "/transactions",
                 templateUrl: "/wwwroot/app/views/transactions/transactions.html",
@@ -395,6 +414,15 @@
                 },
                 ncyBreadcrumb: {
                     label: 'Dashboard'
+                },
+                resolve: {
+                    loadPlugin: function ($ocLazyLoad) {
+                        return $ocLazyLoad.load([
+                            {
+                                files: ['/wwwroot/lib/jquery-sparkline/jquery.sparkline.min.js']
+                            }
+                        ]);
+                    }
                 }
             }).state('exchange.trader',
             {

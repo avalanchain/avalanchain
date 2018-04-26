@@ -1,0 +1,144 @@
+<div data-ng-controller="bridge as vm">
+    
+    <div class="container animated fadeInRight">
+        <div class="col-lg-12">
+            <!--<div class="col-lg-9">-->
+            <div class="wrapper wrapper-content ">
+                <div class="ibox">
+                    <div class="ibox-content">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="m-b-md">
+                                    <!--<a href="" class="btn btn-white btn-xs pull-right">Edit project</a>-->
+
+                                    <h2>Bridge Client</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                    
+                                    <div class="ibox-content">
+                                            <form class="form-horizontal">
+                                                    <div class="form-group">
+                                                        <div class=" control-label">
+                                                                <h3 class="font-bold">Transfer COINS</h3>
+                                                                <p>You can send coins from one NET to another</p>
+                                                        </div>
+                                                            
+                                                        </div>
+                                                        <div class="form-group">
+                                                                <label class="col-lg-2 control-label">Choose Net</label>
+                                
+                                                                <div class="col-lg-10">
+                                                                        <select chosen class="form-control" ng-model="vm.net" ng-options="net.net for net in vm.context.nets"></select>
+                                                                </div>
+                                                            </div>
+                    
+                                                <div class="form-group">
+                                                    <label class="col-lg-2 control-label">From</label>
+                    
+                                                    <div class="col-lg-10">
+                                                        <input type="text" placeholder="home address" ng-model="vm.context.nets.home.address" value="{{vm.context.nets.home.address}}" class="form-control" disabled>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-lg-2 control-label">To</label>
+                    
+                                                    <div class="col-lg-10">
+                                                            <input type="text" placeholder="address" ng-model="vm.net.address" value="{{vm.net.address}}" class="form-control" disabled>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-lg-2 control-label">Amount</label>
+                    
+                                                    <div class="col-lg-10">
+                                                        <input type="number" ng-model="vm.amount" placeholder="please, enter amount" class="form-control">
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <div class="col-lg-offset-2 col-lg-10">
+                                                        <button class="btn btn-info pull-right" ng-disabled="vm.net.net==undefined" type="button" ng-click="sendPayment()">
+                                                            <span class="bold">Send</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                            </div>
+                            <div class="col-lg-6 col-md-6">
+                                <dl class="dl-horizontal">
+                                    <dt>Status:</dt>
+                                    <dd>
+                                        <span class="label label-active">Active</span>
+                                    </dd>
+                                    <br/>
+                                    <dt>NET HOME:</dt>
+                                    <dd>{{vm.context.nets.home.net}}</dd>
+                                    <br/>
+                                    <dt>Address:</dt>
+                                    <dd>{{vm.context.nets.home.address}}</dd>
+                                    <br/>
+                                    <dt>Wallet</dt>
+                                    <dd>{{vm.context.nets.home.wallet}}</dd>
+                                    <br/>
+                                    <dt>Max:</dt>
+                                    <dd>{{vm.context.nets.home.max}}</dd>
+                                    <br/>
+                                    <dt>Min:</dt>
+                                    <dd>{{vm.context.nets.home.min}}</dd>
+                                    <br/>
+                                    <dt>Currency:</dt>
+                                    <dd>
+                                            {{vm.context.nets.home.currency}} 
+                                    </dd>
+                                    <dt>Balance:</dt>
+                                    <dd>
+                                        <b style="font-size:large">{{vm.context.nets.home.amount | number}}</b>
+                                        </dd>
+
+                                </dl>
+                            </div>
+                            <div class="col-lg-6 col-md-6">
+                                    <dl class="dl-horizontal">
+                                            <dt>Status:</dt>
+                                            <dd>
+                                                <span ng-if="vm.net.net" class="label label-active">Active</span>
+                                                <span ng-if="!vm.net.net" class="label label-disable">not connected</span>
+                                            </dd>
+                                            <br/>
+                                            <dt>NET:</dt>
+                                    <dd>{{vm.net.net}}</dd>
+                                    <br/>
+                                    <dt>Address:</dt>
+                                    <dd>{{vm.net.address}}</dd>
+                                    <br/>
+                                    <dt>Wallet</dt>
+                                    <dd>{{vm.net.wallet}}</dd>
+                                    <br/>
+                                    <dt>Max:</dt>
+                                    <dd>{{vm.net.max}}</dd>
+                                    <br/>
+                                    <dt>Min:</dt>
+                                    <dd>{{vm.net.min}}</dd>
+                                    <br/>
+                                    <dt>Currency:</dt>
+                                    <dd>
+                                            {{vm.net.currency}} 
+                                    </dd>
+                                    <dt>Balance:</dt>
+                                    <dd>
+                                        <b style="font-size:large">{{vm.net.amount | number}}</b>
+                                        </dd>
+        
+                                        </dl>
+                            </div>
+                        </div>
+                       
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               
+
+            </div>
+        </div>

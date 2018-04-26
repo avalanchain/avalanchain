@@ -1,19 +1,25 @@
 /// <reference path="create_account.html" />
 (function() {
     'use strict';
-    var controllerId = 'wallet';
-    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$filter', '$uibModal', '$rootScope', '$stateParams', '$interval', '$state', wallet]);
+    var controllerId = 'bridge';
+    angular.module('avalanchain').controller(controllerId, ['common', 'dataservice', '$scope', '$filter', '$uibModal', '$rootScope', '$stateParams', '$interval', '$state', bridge]);
 
-    function wallet(common, dataservice, $scope, $filter, $uibModal, $rootScope, $stateParams, $interval, $state) {
+    function bridge(common, dataservice, $scope, $filter, $uibModal, $rootScope, $stateParams, $interval, $state) {
         var getLogFn = common.logger.getLogFn;
         var log = getLogFn(controllerId);
         var vm = this;
 
-        var accountId = $stateParams.accountId;
 
+        vm.context ={};
+        vm.context.nets=[];
+        // vm.context.nets.push({net:'Avalanchain', currency:'AIM', wallet:'AC wallet',address:'0xE405F6872cE38a7a4Ff63DcF946236D458c2ca3a',limit:1999.99, max:0.1,min:0.001,home:true})
+        vm.context.nets.push({net:'Etherium',currency:'AIM 20', wallet:'kovan',address:'0xE405F6872cE38a7a4Ff63DcF946236D458c2ca3a',limit:1999.99, max:0.1,min:0.001,amount:500,home:false})
+        vm.context.nets.push({net:'EOS',currency:'EOS', wallet:'kovan',address:'0xE115F6872cR38a7a4Ff63DcF946236D458c2ca3a',limit:1999.99, max:0.1,min:0.001,amount:780,home:false})
+        var accountId = $stateParams.accountId;
+        vm.context.nets.home = {net:'Avalanchain', currency:'AIM', wallet:'AC wallet',address:'0xABb4C1399DcC28FBa3Beb76CAE2b50Be3e087353',limit:1999.99, max:0.1,min:0.001,amount:10000,home:true};
         $scope.currencies = [{
             id: 0,
-            currency: 'AIM',
+            currency: 'AVC',
             name: 'AVCOIN'
         },{
             id: 1,
@@ -29,30 +35,15 @@
             name: 'British Pound'
         }];
         $scope.currency = $scope.currencies[0];
-        // dataservice.getData().then(function(data) {
-        //     $scope.accounts = data.accounts;
-        //     $scope.current = data.accounts.filter(function(acc) {
-        //         return acc.address === accountId;
-        //     })[0];
-
-        //     if(!$scope.current){
-        //       $state.go('index.accounts');
-        //     }
-        //     // $scope.getTransactions();
-        // });
 
         dataservice.getData().then(function(data) {
-            $scope.accounts = data.accounts;
-            $scope.current = data.account;
-            
-            // data.accounts.filter(function(acc) {
-            //     return acc.address === accountId;
-            // })[0];
+            // $scope.accounts = data.accounts;
+            // $scope.current = data.account;
 
-            if(!$scope.current){
-              $state.go('index.accounts');
-            }
-            // $scope.getTransactions();
+            // if(!$scope.current){
+            //   $state.go('index.accounts');
+            // }
+            // // $scope.getTransactions();
         });
         $scope.openSend = function (currency) {
             $rootScope.modal = {};
@@ -124,10 +115,14 @@
         // }
 
         $scope.sendPayment = function() {
-            dataservice.sendPayment($scope.payment).then(function(data) {
-                $scope.getTransactions($scope.current.ref.address);
-                getAccounts();
-            });
+            vm.context.nets.home.amount  =vm.context.nets.home.amount -vm.amount;
+            vm.net.amount  = vm.net.amount + vm.amount;
+
+            log('Succesfully transfer: '+vm.amount);
+            // dataservice.sendPayment($scope.payment).then(function(data) {
+            //     $scope.getTransactions($scope.current.ref.address);
+            //     getAccounts();
+            // });
         }
 
         // return data;

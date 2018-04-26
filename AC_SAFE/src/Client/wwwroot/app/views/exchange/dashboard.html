@@ -1,77 +1,20 @@
 ﻿<div class="wrapper wrapper-content animated fadeInRight" ng-controller="Exchangedashboard as vm">
     <div class="row">
-        <div class="col-lg-12">
-            <div class="col-lg-3">
-                <div class="widget style1 blue-bg">
-                    <div class="row">
-                        <div class="col-xs-4">
-                            <i class="fa fa-hand-o-down fa-5x"></i>
-                        </div>
-                        <div class="col-xs-8 text-right">
-                            <span>ALL Orders</span>
-
-                            <h2 class="font-bold">{{vm.orderCommandsCount}}</h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-3">
-                <div class="widget style1 lazur-bg">
-                    <div class="row">
-                        <div class="col-xs-4">
-                            <i class="fa fa-flash fa-5x"></i>
-                        </div>
-                        <div class="col-xs-8 text-right">
-                            <span>ALL Events</span>
-
-                            <h2 class="font-bold">{{vm.orderEventsCount}}</h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-3">
-                <div class="widget style1 yellow-bg">
-                    <div class="row">
-                        <div class="col-xs-4">
-                            <i class="fa fa-files-o fa-5x"></i>
-                        </div>
-                        <div class="col-xs-8 text-right">
-                            <span>ALL Full Orders</span>
-                            <h2 class="font-bold">{{vm.fullOrdersCount}}</h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3">
-                <div class="widget style1 text-navy">
-                    <div class="row">
-                        <div class="col-xs-4 text-center">
-                            <i class="fa fa-money fa-5x"></i>
-                        </div>
-                        <div class="col-xs-8 text-right">
-                            <span>Main Symbol </span>
-                            <h2 class="font-bold">{{vm.symbol}}</h2>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-12">
+        
+<!-- delete -->
+        <div class="col-lg-12" ng-if="false">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
-                    <span class="label label-warning pull-right">Top symbols</span>
-                    <h5>Symbols</h5>
+                    <span class="label label-warning pull-right">Top</span>
+                    <h5>Coins</h5>
                 </div>
-                <div class="ibox-content" >
+                <div class="ibox-content">
                     <div class="row">
                         <!--<div class="col-xs-2" style="cursor: pointer" ng-repeat="symbol in vm.symbols" ng-click="vm.showSymbol(symbol)"> 
                             <small class="stats-label">Currency / Page</small>
                             <h2>{{symbol}}</h2>
                         </div>-->
-                        <div class="col-md-2" style="cursor: pointer" ng-repeat="symbol in vm.symbols" ng-click="vm.showSymbol(symbol)">
+                        <div class="col-md-4 col-lg-3" style="cursor: pointer" ng-repeat="symbol in vm.symbols" ng-click="vm.showSymbol(symbol)">
                             <div class="ibox">
                                 <div class="ibox-content product-box">
 
@@ -82,68 +25,240 @@
                                         <!--<span class="product-price">
                                             $10
                                         </span>-->
-                                        <small class="text-muted">Category</small>
-                                        <strong class="product-name"> {{symbol.Symbol}}</strong>
+                                        <small class="text-muted">Price:</small>
+                                        <div class="pull-right">$ {{1/vm.topPrices[symbol.Symbol] | number}}</div>
+
+                                        <div class="row">
+                                            <div class="col-lg-6">
+                                                <strong class="product-name">
+                                                    <img ng-show="symbol.ImageUrl.length>0" class="img-rounded img-sm" ng-src="{{'https://www.cryptocompare.com'+ symbol.ImageUrl}}"> {{symbol.Symbol}} </strong>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <button class="btn btn-xs btn-outline btn-primary pull-right">OPEN
+                                                    <i class="fa fa-long-arrow-right"></i>
+                                                </button>
+                                            </div>
 
 
+                                        </div>
+                                        <!-- <div class="m-t text-righ">
+                                                    <button class="btn btn-xs btn-outline btn-primary">OPEN <i class="fa fa-long-arrow-right"></i> </button>
+                                                </div> -->
 
                                         <!--<div class="small m-t-xs">
                                             Many desktop publishing packages and web page editors now.
                                         </div>-->
-                                        <div class="m-t text-righ">
+                                        <div class="row">
+                                            <div class="col-lg-12">
+                                                <div class="" sparkline ng-if="symbol.histodata.length>0" spark-data="symbol.histodata" spark-options="vm.inlineOptions"></div>
+                                            </div>
 
-                                            <button class="btn btn-xs btn-outline btn-primary">OPEN <i class="fa fa-long-arrow-right"></i> </button>
                                         </div>
+
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <!--<div class="col-xs-4">
-                            <small class="stats-label">% New Visits</small>
-                            <h4>46.11%</h4>
-                        </div>
-                        <div class="col-xs-4">
-                            <small class="stats-label">Last week</small>
-                            <h4>432.021</h4>
-                        </div>-->
                     </div>
                 </div>
-                <!--<div class="ibox-content">
-                    <div class="row">
-                        <div class="col-xs-4">
-                            <small class="stats-label">Pages / Visit</small>
-                            <h4>643 321.10</h4>
-                        </div>
 
-                        <div class="col-xs-4">
-                            <small class="stats-label">% New Visits</small>
-                            <h4>92.43%</h4>
-                        </div>
-                        <div class="col-xs-4">
-                            <small class="stats-label">Last week</small>
-                            <h4>564.554</h4>
-                        </div>
-                    </div>
-                </div>-->
-                <!--<div class="ibox-content">
-                    <div class="row">
-                        <div class="col-xs-4">
-                            <small class="stats-label">Pages / Visit</small>
-                            <h4>436 547.20</h4>
-                        </div>
-
-                        <div class="col-xs-4">
-                            <small class="stats-label">% New Visits</small>
-                            <h4>150.23%</h4>
-                        </div>
-                        <div class="col-xs-4">
-                            <small class="stats-label">Last week</small>
-                            <h4>124.990</h4>
-                        </div>
-                    </div>
-                </div>-->
             </div>
         </div>
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <span class="label label-warning pull-right">Top</span>
+                    <h5>Coins</h5>
+                </div>
+                <div class="ibox-content">
+                    <div class="row">
+                        <!--<div class="col-xs-2" style="cursor: pointer" ng-repeat="symbol in vm.symbols" ng-click="vm.showSymbol(symbol)"> 
+                            <small class="stats-label">Currency / Page</small>
+                            <h2>{{symbol}}</h2>
+                        </div>-->
+                        <div class="col-md-4 col-lg-3" style="cursor: pointer" ng-repeat="symbol in vm.symbols" ng-click="vm.showSymbol(symbol)">
+                            <div class="ibox float-e-margins">
+                                <div class="ibox-title">
+                                    <h5>{{symbol.Symbol}} - USD</h5>
+                                    <span class="label label-primary">TOP</span>
+                                    <div  class="pull-right font-bold">
+                                        $ {{1/vm.topPrices[symbol.Symbol] | number}}
+                                    </div>
+                                </div>
+                                <div class="ibox-content">
+                                    <div>
+
+                                        <div class="pull-right text-right">
+                                            <div class="" sparkline ng-if="symbol.histodata.length>0" spark-data="symbol.histodata" spark-options="vm.inlineOptions"></div>
+                                        </div>
+                                        <h4><img ng-show="symbol.ImageUrl.length>0" class="img-rounded img-sm" ng-src="{{'https://www.cryptocompare.com'+ symbol.ImageUrl}}"> {{symbol.FullName}} </strong>
+                                       
+                                            <br>
+                                            <small class="m-r">
+                                                <br>
+                                                <button class="btn btn-xs btn-outline btn-primary ">OPEN
+                                                        <i class="fa fa-long-arrow-right"></i>
+                                                    </button>
+                                                <!-- <a > Check the stock price! </a> -->
+                                            </small>
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="col-lg-12">
+                <div class="col-lg-3">
+                    <div class="widget style1 blue-bg">
+                        <div class="row">
+                            <div class="col-xs-4">
+                                <i class="fa fa-hand-o-down fa-5x"></i>
+                            </div>
+                            <div class="col-xs-8 text-right">
+                                <span>ALL Orders</span>
+    
+                                <h2 class="font-bold">{{vm.orderCommandsCount}}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <div class="col-lg-3">
+                    <div class="widget style1 lazur-bg">
+                        <div class="row">
+                            <div class="col-xs-4">
+                                <i class="fa fa-flash fa-5x"></i>
+                            </div>
+                            <div class="col-xs-8 text-right">
+                                <span>ALL Events</span>
+    
+                                <h2 class="font-bold">{{vm.orderEventsCount}}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    
+                <div class="col-lg-3">
+                    <div class="widget style1 yellow-bg">
+                        <div class="row">
+                            <div class="col-xs-4">
+                                <i class="fa fa-files-o fa-5x"></i>
+                            </div>
+                            <div class="col-xs-8 text-right">
+                                <span>ALL Full Orders</span>
+                                <h2 class="font-bold">{{vm.fullOrdersCount}}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="widget style1 text-navy">
+                        <div class="row">
+                            <div class="col-xs-4 text-center">
+                                <i class="fa fa-money fa-5x"></i>
+                            </div>
+                            <div class="col-xs-8 text-right">
+                                <span>Main Symbol </span>
+                                <h2 class="font-bold">{{vm.symbol}}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Coin List: {{vm.coinlist.length}} </h5>
+
+                    <div ibox-tools></div>
+                </div>
+                <div class="ibox-content">
+                    <div class="row m-b-sm m-t-sm">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <input type="text" placeholder="Search Coin" class="input-sm form-control" ng-model="searchCoins">
+                                <span class="input-group-btn">
+                                    <button type="button" class="btn btn-sm btn-info" ng-click="searchCoins=''"> Clean</button>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row m-t-sm">
+                        <div class="col-lg-12">
+                            <div class="panel blank-panel ui-tab">
+                                <div class="project-list">
+                                    <!--<tab heading="Last activity" active="tab.active" class="dsads">-->
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Logo</th>
+                                                <th>Name</th>
+                                                <th>Symbol</th>
+                                                <th>Full Name</th>
+                                                <th>Algorithm</th>
+                                                <th>Proof Type</th>
+                                                <th>Total Coin Supply</th>
+                                                <!-- <th>Quantity</th>
+                                                    <th>Date</th> -->
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr ng-repeat="coin in vm.coinlist | filter:{Name : searchCoins} | pagination:(coinsPage-1)*10 | limitTo:10 ">
+                                                <td class="project-title">
+                                                    {{$index+1+((coinsPage-1)*10)}}
+                                                </td>
+                                                <td class="project-title">
+                                                    <img class="img-rounded img-md" ng-src="{{'https://www.cryptocompare.com'+coin.ImageUrl}}">
+                                                </td>
+                                                <td class="project-title">
+                                                    <strong>{{coin.Name}}</strong>
+                                                </td>
+                                                <td class="project-title">
+                                                    <span class="label label-primary">{{coin.Symbol}}</span>
+                                                    <!--{{order}}-->
+                                                </td>
+                                                <td class="project-title">
+                                                    <small>{{coin.FullName}}</small>
+                                                </td>
+
+                                                <td class="project-title">
+                                                    <small>{{coin.Algorithm}}</small>
+                                                </td>
+                                                <td class="project-title">
+                                                    <small>{{coin.ProofType}}</small>
+                                                </td>
+
+                                                <td class="project-title">
+                                                    {{coin.TotalCoinSupply}}
+                                                </td>
+
+                                                <!-- <td class="project-title">
+                                                            {{coin.SortOrder}}
+                                                    </td>
+                                                    -->
+
+                                            </tr>
+
+                                        </tbody>
+                                    </table>
+                                    <!--</tab>-->
+                                    <uib-pagination total-items="vm.coinlist.length" ng-model="coinsPage" boundary-link-numbers="true" max-size="5" class="pagination-sm"
+                                        boundary-links="true" num-pages="numPages"></uib-pagination>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
         <div class="col-lg-12" ng-hide="true">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
@@ -209,7 +324,8 @@
                                         </tbody>
                                     </table>
                                     <!--</tab>-->
-                                    <uib-pagination total-items="vm.orders.length" ng-model="ordersPage" boundary-link-numbers="true" max-size="5" class="pagination-sm" boundary-links="true" num-pages="numPages"></uib-pagination>
+                                    <uib-pagination total-items="vm.orders.length" ng-model="ordersPage" boundary-link-numbers="true" max-size="5" class="pagination-sm"
+                                        boundary-links="true" num-pages="numPages"></uib-pagination>
                                 </div>
 
                             </div>

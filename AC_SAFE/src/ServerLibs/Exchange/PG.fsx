@@ -27,7 +27,7 @@ let orders (bm, bc) (am, ac) =
     @ [for i in am .. 1M .. ac -> toAsk (100M<price> + i * 5M<price>) 10M<qty> ]
 
 let test ords (expBid, expAsk) =
-    let sym = Symbol "AVC"
+    let sym = Symbol "AIM"
     let ms = Facade.MatchingService(5M<price>, 100UL, false)
     ords
     |> List.map OrderCommand.Create

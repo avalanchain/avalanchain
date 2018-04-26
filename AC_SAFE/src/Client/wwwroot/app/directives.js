@@ -321,6 +321,27 @@ function icheck($timeout) {
     };
 }
 
+function sparkline() {
+    return {
+        restrict: 'A',
+        scope: {
+            sparkData: '=',
+            sparkOptions: '=',
+        },
+        link: function (scope, element, attrs) {
+            scope.$watch(scope.sparkData, function () {
+                render();
+            });
+            scope.$watch(scope.sparkOptions, function(){
+                render();
+            });
+            var render = function () {
+                $(element).sparkline(scope.sparkData, scope.sparkOptions);
+            };
+        }
+    }
+};
+
 /**
  *
  * Pass all functions into module
@@ -337,4 +358,5 @@ angular
     .directive('fullScroll', fullScroll)
     .directive('slimScroll', slimScroll)
     .directive('icheck', icheck)
-    .directive('touchSpin', touchSpin);
+    .directive('touchSpin', touchSpin)
+    .directive('sparkline', sparkline);

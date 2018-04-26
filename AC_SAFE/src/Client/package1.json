@@ -1,0 +1,7 @@
+{
+  "name": "avalanchain",
+  "private": true,
+  "dependencies": {
+    "jquery-sparkline": "2.4.0"
+  }
+}

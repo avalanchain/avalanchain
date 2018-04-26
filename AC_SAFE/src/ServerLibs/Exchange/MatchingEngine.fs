@@ -426,7 +426,7 @@ module MatchingEngine =
                         tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2
                 }
 
-            do if runBot then tradingBot(__, ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]) |> Async.Start
+            do if runBot then tradingBot(__, ["AIM"; "BTC"; "XRP"; "ETH"; "WAVES"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "BNB"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "ICX" ]) |> Async.Start
 
             let getPage (lst: ResizeArray<_>) (startIndex: uint64) (pageSize: uint32) = 
                 let startIndexI = startIndex |> int
@@ -446,7 +446,7 @@ module MatchingEngine =
             
             member __.SubmitOrder orderCommand = processCommand orderCommand posLimit
 
-            member __.MainSymbol = Symbol "AVC"
+            member __.MainSymbol = Symbol "AIM"
             member __.Symbols with get() = symbolStackMap |> Map.toSeq |> Seq.map fst |> Seq.filter(fun s -> s <> __.MainSymbol)
             member __.SymbolStrings = __.Symbols |> Seq.map(fun (Symbol s) -> s) |> Seq.toArray
             member __.OrderStack symbol: OrderStack = (findSymbolStack symbol).OrderStack

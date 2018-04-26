@@ -4,10 +4,36 @@
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Price</h5>
-                    <div class="text-success pull-right"> <strong>{{vm.symbol}}</strong> </div>
+                    
+
+                    
+                    <div class="text-success m-l pull-right"> 
+                        <strong> {{vm.symbol}}</strong> </div>
+
+                        <div class=" pull-right"> 
+                                <a class="btn-sm btn-white btn-bitbucket" ng-click="vm.changeHisto('histominute')">
+                                        m
+                                            <!-- <i class="fa fa-user-md"></i> -->
+                                        </a>
+                                        <a class="btn-sm btn-white btn-bitbucket" ng-click="vm.changeHisto('histohour')">
+                                        h
+                                            <!-- <i class="fa fa-user-md"></i> -->
+                                        </a>
+                                        <a class="btn-sm btn-white btn-bitbucket" ng-click="vm.changeHisto('histoday')">
+                                        d
+                                            <!-- <i class="fa fa-user-md"></i> -->
+                                        </a>
+                            </div>
                 </div>
-                <div class="ibox-content">
-                    <nvd3 ng-if="vm.sampledata" options="options" data="vm.sampledata"></nvd3>
+                <div class="ibox-content {{vm.chartLoading}}" style="min-height: 360px;">
+                        <div class="sk-spinner sk-spinner-wave">
+                                <div class="sk-rect1"></div>
+                                <div class="sk-rect2"></div>
+                                <div class="sk-rect3"></div>
+                                <div class="sk-rect4"></div>
+                                <div class="sk-rect5"></div>
+                            </div>
+                    <nvd3 ng-if="vm.show" options="options" data="vm.sampledata"></nvd3>
                 </div>
             </div>
             <div class="row">
