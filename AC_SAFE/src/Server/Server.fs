@@ -2,7 +2,6 @@
 open System.IO
 open System.Threading
 open System.Threading.Tasks
-open System.Reactive.Subjects
 open Microsoft.AspNetCore
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
@@ -26,6 +25,7 @@ open Giraffe.ModelBinding
 open Fable.Remoting.Giraffe
 
 open Shared
+open Avalanchain.Common
 open Avalanchain.Common.MatchingEngine
 open Avalanchain.Core
 open Avalanchain.Core.Crypto
@@ -86,6 +86,8 @@ let docAddendums =
             (path,verb,pathDef) 
             |> adjustOperationId
             |> tagPartitioner "/api/exchange/" "Exchange"
+            |> tagPartitioner "/api/exchange/token/" "Token"
+            |> tagPartitioner "/api/exchange/jwt/" "Jwt"
             |> addQueryParam "string" "symbol" false   ["OrderStack"; "OrderStackView";
                                                         "SymbolOrderCommands"; "SymbolOrderEvents"; "SymbolFullOrders";
                                                         "SymbolLastOrderCommands"; "SymbolLastOrderEvents"; "SymbolLastFullOrders";
@@ -258,6 +260,20 @@ let prepareSymbolStreams mat (symbols: Symbol list) =
   
 // let prepareStreams (streams: Symbol list)
 
+let prefix = "/aa"
+let eventLogViewSection<'T> name (eventLog: EventLogView<'T>) = //(handler: HttpHandler) = 
+    choose [
+        routeCi  (prefix + "/" + name)       >=> bindPageStartQuery eventLog.GetPage
+        routeCi  (prefix + "/token/" + name) >=> bindPageStartQuery eventLog.GetPageToken
+        routeCi  (prefix + "/jwt/" + name)   >=> bindPageStartQuery eventLog.GetPageJwt
+
+        routeCi  (prefix + "/Last" + name)       >=> bindPageQuery eventLog.GetLastPage
+        routeCi  (prefix + "/token/Last" + name) >=> bindPageQuery eventLog.GetLastPageToken
+        routeCi  (prefix + "/jwt/Last" + name)   >=> bindPageQuery eventLog.GetLastPageJwt
+
+        routeCi  (prefix + "/" + name + "Count") >=> primitive eventLog.GetCount
+    ]
+
 let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService) port cancellationToken : HttpHandler =
   let counterProcotol = 
     { getInitCounter = getInitCounter >> Async.AwaitTask }
@@ -289,13 +305,12 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                     routeCi  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands.GetPage
                                     routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents.GetPage
                                     routeCi  "/FullOrders"      >=> bindPageStartQuery ms.FullOrders.GetPage
-                                    routeCi  "/token/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands.GetPageToken
-                                    routeCi  "/token/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents.GetPageToken
-                                    routeCi  "/token/FullOrders"      >=> bindPageStartQuery ms.FullOrders.GetPageToken
-                                    
-                                    routeCi  "/OrderCommandsCount" >=> primitive ms.OrderCommands.GetCount
-                                    routeCi  "/OrderEventsCount"   >=> primitive ms.OrderEvents.GetCount
-                                    routeCi  "/FullOrdersCount"    >=> primitive ms.FullOrders.GetCount
+                                    routeCi  "/token/OrderCommands" >=> bindPageStartQuery ms.OrderCommands.GetPageToken
+                                    routeCi  "/token/OrderEvents"   >=> bindPageStartQuery ms.OrderEvents.GetPageToken
+                                    routeCi  "/token/FullOrders"    >=> bindPageStartQuery ms.FullOrders.GetPageToken
+                                    routeCi  "/jwt/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands.GetPageJwt
+                                    routeCi  "/jwt/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents.GetPageJwt
+                                    routeCi  "/jwt/FullOrders"      >=> bindPageStartQuery ms.FullOrders.GetPageJwt
                                     
                                     routeCi  "/LastOrderCommands"  >=> bindPageQuery ms.OrderCommands.GetLastPage
                                     routeCi  "/LastOrderEvents"    >=> bindPageQuery ms.OrderEvents.GetLastPage
@@ -303,13 +318,23 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                     routeCi  "/token/LastOrderCommands"  >=> bindPageQuery ms.OrderCommands.GetLastPageToken
                                     routeCi  "/token/LastOrderEvents"    >=> bindPageQuery ms.OrderEvents.GetLastPageToken
                                     routeCi  "/token/LastFullOrders"     >=> bindPageQuery ms.FullOrders.GetLastPageToken
+                                    routeCi  "/jwt/LastOrderCommands"  >=> bindPageQuery ms.OrderCommands.GetLastPageJwt
+                                    routeCi  "/jwt/LastOrderEvents"    >=> bindPageQuery ms.OrderEvents.GetLastPageJwt
+                                    routeCi  "/jwt/LastFullOrders"     >=> bindPageQuery ms.FullOrders.GetLastPageJwt
+
+                                    routeCi  "/OrderCommandsCount"       >=> primitive ms.OrderCommands.GetCount
+                                    routeCi  "/OrderEventsCount"         >=> primitive ms.OrderEvents.GetCount
+                                    routeCi  "/FullOrdersCount"          >=> primitive ms.FullOrders.GetCount
                                    
                                     routeCi  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetPage)
                                     routeCi  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetPage)
                                     routeCi  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetPage)
-                                    routeCi  "/SymbolOrderCommands"   >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetPageToken)
-                                    routeCi  "/SymbolOrderEvents"     >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetPageToken)
-                                    routeCi  "/SymbolFullOrders"      >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetPageToken)
+                                    routeCi  "/token/SymbolOrderCommands"   >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetPageToken)
+                                    routeCi  "/token/SymbolOrderEvents"     >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetPageToken)
+                                    routeCi  "/token/SymbolFullOrders"      >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetPageToken)
+                                    routeCi  "/jwt/SymbolOrderCommands"   >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetPageJwt)
+                                    routeCi  "/jwt/SymbolOrderEvents"     >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetPageJwt)
+                                    routeCi  "/jwt/SymbolFullOrders"      >=> bindSymbolPageStartQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetPageJwt)
                                    
                                     routeCi  "/SymbolOrderCommandsCount" >=> bindSymbolUInt64Query (fun symbol -> (ms.SymbolOrderCommands symbol).GetCount)
                                     routeCi  "/SymbolOrderEventsCount"   >=> bindSymbolUInt64Query (fun symbol -> (ms.SymbolOrderEvents symbol).GetCount)
@@ -321,6 +346,11 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                     routeCi  "/token/SymbolLastOrderCommands"  >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetLastPageToken)
                                     routeCi  "/token/SymbolLastOrderEvents"    >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetLastPageToken)
                                     routeCi  "/token/SymbolLastFullOrders"     >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetLastPageToken)
+                                    routeCi  "/jwt/SymbolLastOrderCommands"  >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolOrderCommands symbol).GetLastPageJwt)
+                                    routeCi  "/jwt/SymbolLastOrderEvents"    >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolOrderEvents symbol).GetLastPageJwt)
+                                    routeCi  "/jwt/SymbolLastFullOrders"     >=> bindSymbolPageQuery (fun symbol -> (ms.SymbolFullOrders symbol).GetLastPageJwt)
+
+                                    // eventLogViewSection "OrderCommands" ms.OrderCommands // TODO: Investigate possibility of not loosing swagger defs 
                                   ]
                               ])
                             subRouteCi "/Currency" (
@@ -408,13 +438,10 @@ type StreamingConfig = {
 
 let eventLog<'T> (config: StreamingConfig) pidPrefix =
     let pid = pidPrefix + "__" + typedefof<'T>.Name
-    let getCount() =  async {let kv = config.KeyVault
-                             let sys = config.Node.System
-                             let si = config.SnapshotInterval
-                             let! count = streamCurrentPos config.KeyVault config.Node.System config.SnapshotInterval pid
+    let getCount() =  async {let! count = streamCurrentPos<'T> config.KeyVault config.Node.System config.SnapshotInterval pid
                              return count + 1L |> uint64 }
-    let getPage from count = async {let! items = currentEventsSource config.KeyVault config.Node.System config.Verify pid (int64 from) (int64 count)
-                                                    |> Source.runWith config.Node.Mat (Sink.Seq()) 
+    let getPage from count = async {let! items = currentEventsSource<'T> config.KeyVault config.Node.System config.Verify pid (int64 from) (int64 count)
+                                                    |> Source.runWith (config.Node.System.Materializer()) (Sink.Seq()) 
                                                     |> Async.AwaitTask
                                     return items |> Seq.toArray |> Array.choose id }
     let getLastPage count = async { let countL = uint64(count)
@@ -422,15 +449,15 @@ let eventLog<'T> (config: StreamingConfig) pidPrefix =
                                     return! if length > uint64(countL) then getPage (length - countL) count
                                             else getPage 0UL count } 
     let eventLogView() = {  GetCount = getCount
-                            GetPageToken = getPage
+                            GetPageJwt = getPage
                             GetPage = fun from count -> async { let! page = getPage from count 
                                                                 return page |> Array.map (fun t -> t.Payload)} 
-                            GetPageJwt = fun from count -> async { let! page = getPage from count 
-                                                                   return page |> Array.map (fun t -> t.Token)}
-                            GetLastPageToken = getLastPage
+                            GetPageToken = fun from count -> async {let! page = getPage from count 
+                                                                    return page |> Array.map (fun t -> t.Token)}
+                            GetLastPageJwt = getLastPage
                             GetLastPage = fun count -> async { let! page = getLastPage count 
                                                                return page |> Array.map (fun t -> t.Payload)}
-                            GetLastPageJwt = fun count -> async {  let! page = getLastPage count 
+                            GetLastPageToken = fun count -> async {let! page = getLastPage count 
                                                                    return page |> Array.map (fun t -> t.Token)}
                         }
                         
@@ -477,15 +504,15 @@ let matchingService () =
                              KeyVault = keyVault }
     let symbols = ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]
     let streaming: MatchingServiceStreaming = matchingServiceStreaming streamingConfig "matchingService" symbols
-    MatchingService (streaming.Streams, streaming.SymbolStreams, 1M<price>, 100UL) //Facade.MatchingService.Instance
-
-// TradingBot.tradingBot(matchingService, ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]) |> Async.Start
+    let ms = MatchingService (streaming.Streams, streaming.SymbolStreams, 1M<price>, 100UL) //Facade.MatchingService.Instance
+    TradingBot.tradingBot(ms, symbols) |> Async.Start
+    ms
 
 let configureApp port (app : IApplicationBuilder) =
   app
     .UseStaticFiles()
     .UseWebSockets()
-    .UseGiraffe (webApp wsConnectionManager (matchingService() (*TypeShape.Tools.Empty.empty<MatchingServiceStreaming>*)) port CancellationToken.None)
+    .UseGiraffe (webApp wsConnectionManager (matchingService()) port CancellationToken.None)
 
 let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore

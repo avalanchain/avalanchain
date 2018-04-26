@@ -129,11 +129,11 @@ module Chains =
 
     let currentEventsSource<'T> keyVault system verify pid from count = 
         (readJournal system).CurrentEventsByPersistenceId(pid, from, from + count) 
-        |> Source.map(fun e -> (e.Event :?> string) |> fromJwt<'T> keyVault verify) 
+        |> Source.map(fun e -> (e.Event :?> PersistEvent).Token |> fromJwt<'T> keyVault verify (*|> toResult*) ) 
 
     let allEventsSource<'T> keyVault system pid verify from count = 
         (readJournal system).EventsByPersistenceId(pid, from, from + count) 
-        |> Source.map(fun e -> (e.Event :?> string) |> fromJwt<'T> keyVault verify) 
+        |> Source.map(fun e -> (e.Event :?> PersistEvent).Token |> fromJwt<'T> keyVault verify (*|> toResult*) ) 
 
     let persistFlow<'T> keyVault system snapshotInterval verify pid = 
         let sink = persistSink<'T> system snapshotInterval keyVault pid 

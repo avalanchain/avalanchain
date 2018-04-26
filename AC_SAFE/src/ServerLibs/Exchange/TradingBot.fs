@@ -3,7 +3,6 @@ namespace Avalanchain.Common
 module TradingBot = 
     open System
 
-    open Avalanchain.Common
     open Avalanchain.Common.MatchingEngine
     open Avalanchain.Common.MatchingEngine.Facade
     let tradingBot(ms: MatchingService, symbols) = 
@@ -62,6 +61,6 @@ module TradingBot =
         async {
             do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
             for i in 1 .. 10000000 do
-                do! Async.Sleep 100
+                do! Async.Sleep 1000
                 do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2
         }

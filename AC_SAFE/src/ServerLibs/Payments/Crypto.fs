@@ -19,7 +19,7 @@ module Crypto =
         | 0 -> output
         | 2 -> output + "=="
         | 3 -> output + "="
-        | _ -> raise (System.ArgumentOutOfRangeException("input", "Illegal base64url string!"))
+        | _ -> output //raise (System.ArgumentOutOfRangeException("input", "Illegal base64url string!"))
         |> System.Convert.FromBase64String 
 
     let encodeBase64 (input: string) = input |> System.Text.Encoding.UTF8.GetBytes |> encodeBase64Bytes
@@ -70,8 +70,6 @@ module Crypto =
                 member inline __.Sign (str: string) = __.PrivateKey |> Option.map (fun privKey -> PublicKeyAuth.SignDetached(str, privKey)) 
                 member inline __.Verify (str: string) signature = 
                     PublicKeyAuth.VerifyDetached(signature, Text.Encoding.UTF8.GetBytes(str), __.PublicKey.Bytes)
-                member inline __.Hash (str: string) = GenericHash.Hash (str, string(null), 32)
-                member inline __.Hash (bytes: byte[]) = GenericHash.Hash (bytes, null, 32)
                 interface IDisposable with member __.Dispose() = match __ with  | NaClPair kp -> kp.Dispose() 
                                                                                 | NaClPub _ -> ()
     and NaClPubKey = NaClPubKey of byte[] 
@@ -79,13 +77,18 @@ module Crypto =
             member __.Bytes = match __ with NaClPubKey bts -> bts
             member __.Kid() = BitConverter.ToUInt64(ShortHash.Hash(__.Bytes, (Array.zeroCreate<byte> 16)), 0)
 
+    let private hashKey = Array.zeroCreate<byte> 32
+    let hash (bytes: byte[]) = GenericHash.Hash (bytes, hashKey, 32)
+    let hashString (str: string) = GenericHash.Hash (str, hashKey, 32)
+
+
     type KeyVaultEntry = {
         Kid: JwtKeyId
         KeyRing: KeyRing
     }   with interface IDisposable with member __.Dispose() = (__.KeyRing :> IDisposable).Dispose()
 
     module KeyVaultEntry =
-        let private load keyRing = { KeyRing = keyRing; Kid = (keyRing.Kid()) }
+        let private load keyRing = { KeyRing = keyRing; Kid = keyRing.Kid() }
         let loadPair = NaClPair >> load 
         let loadPairHex publicKeyHex privateKeyHex = new KeyPair((publicKeyHex |> Utilities.HexToBinary), (privateKeyHex |> Utilities.HexToBinary)) |> loadPair
         let loadPub = NaClPub >> load 
@@ -130,29 +133,30 @@ module Crypto =
         return prepared +.+ signatureStr, header, json, signatureStr
     }
 
-    let unpack verify (kv: IKeyVault) token = maybe {
+    let unpack verify (kv: IKeyVault) token = maybe { // Change to Results with explicit errors
         let! (headerWithPayload, signature) = prepareToVerify token
-        let! (headerStr, payload) = extractHeader headerWithPayload 
-        let header = fromJson<JwtTokenHeader>(headerStr)
-        let! keyEntry = kv.Get header.kid
-        if (not verify) || keyEntry.KeyRing.Verify headerWithPayload (decodeBase64Bytes signature) then
-            return token, header, payload, signature 
-        else return! None
+        let! (headerStr, payloadStr) = extractHeader headerWithPayload 
+        let header = headerStr |> decodeBase64 |> fromJson<JwtTokenHeader>
+        let payload = payloadStr |> decodeBase64 
+        if verify then 
+            let! keyEntry = kv.Get header.kid
+            if keyEntry.KeyRing.Verify headerWithPayload (decodeBase64Bytes signature) then return token, header, payload, signature
+            else return! None
+        else return token, header, payload, signature
     }
 
-    let toRef (kve: KeyVaultEntry) (str: string) = 
-        { Cid = str |> kve.KeyRing.Hash |> Utilities.BinaryToHex } 
+    let toRef (str: string) = { Cid = str |> hashString |> Utilities.BinaryToHex } 
 
     type SignedProof<'T> = { 
         Value: 'T
         Proof: string 
     }
 
-    type JwtToken<'t> = {
+    type JwtToken<'T> = {
         Token: string
         Json: string
         Ref: TokenRef
-        Payload: 't
+        Payload: 'T
         Header: JwtTokenHeader
         Signature: string
     }
@@ -164,21 +168,23 @@ module Crypto =
     //     From: JwtFromHeader
     // }
 
+    let toResult (opt: _ option) = match opt with | Some o -> Ok o | None -> Error "Error during token unpacking"
+
     let toJwt (kve: KeyVaultEntry) header (payload: 'T) = maybe {
         let! token, header, json, signature = sign kve header payload
         return {Token = token
                 Json = json
-                Ref = signature |> toRef kve
+                Ref = signature |> toRef
                 Payload = payload 
                 Header = header
                 Signature = signature }
     }
 
-    let fromJwt<'T> (kv: IKeyVault) verify (token: string): JwtToken<'T> option = maybe {
+    let fromJwt<'T> (kv: IKeyVault) verify (token: string) = maybe {
         let! token, header, payload, signature = unpack verify kv token
         return {Token = token
                 Json = payload
-                Ref = signature |> toRef (kv.Get header.kid).Value // Can use Value safely here as the kid was already extracted in the verify() call above 
+                Ref = signature |> toRef 
                 Payload = fromJson<'T> payload 
                 Header = header
                 Signature = signature }
