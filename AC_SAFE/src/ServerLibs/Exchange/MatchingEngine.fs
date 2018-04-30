@@ -313,14 +313,16 @@ module MatchingEngine =
                                                                 Pos = 0UL
                                                                 OrderStack = OrderStack.Create priceStep }
 
+        type EventLogError = | IntegrityError of IntegrityError
+
         type EventLogView<'T> = {
-            GetCount: unit -> Async<uint64>
-            GetPage: uint64 -> uint32 -> Async<'T[]>
-            GetPageToken: uint64 -> uint32 -> Async<string[]>
-            GetPageJwt: uint64 -> uint32 -> Async<JwtToken<'T>[]>
-            GetLastPage: uint32 -> Async<'T[]>
-            GetLastPageToken: uint32 -> Async<string[]>
-            GetLastPageJwt: uint32 -> Async<JwtToken<'T>[]>
+            GetCount:           unit -> Async<uint64>
+            GetPage:            uint64 -> uint32 -> Async<Result<'T, EventLogError>[]>
+            GetPageToken:       uint64 -> uint32 -> Async<Result<string, EventLogError>[]>
+            GetPageJwt:         uint64 -> uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
+            GetLastPage:        uint32 -> Async<Result<'T, EventLogError>[]>
+            GetLastPageToken:   uint32 -> Async<Result<string, EventLogError>[]>
+            GetLastPageJwt:     uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
         }
 
         type EventLog<'T> = {

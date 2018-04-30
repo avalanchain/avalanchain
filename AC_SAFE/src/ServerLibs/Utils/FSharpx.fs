@@ -16,7 +16,9 @@ module Result =
         member __.ReturnFrom(m: Result<_, _>) = m
 
         member __.Bind(m, f) = Result.bind f m
-        member __.Bind((m, error): (Option<'T> * 'E), f) = m |> ofOption error |> Result.bind f
+        /// Binding to (Error, Option<'T>) tuple in order to make interop with functions returning Option<'T> easier
+        /// Having error as the first parameter is surprisingly more natural in usage
+        member __.Bind((error, m): ('E * Option<'T>), f) = m |> ofOption error |> Result.bind f
 
         member __.Zero() = None
 
@@ -55,7 +57,7 @@ module Result =
     //       printfn "A: %A" a
     //     //   let! b = Error Err2
     //     //   printfn "B: %A" b
-    //       let! c = (Some "c string", Err1)
+    //       let! c = Err1, Some "c string"
     //     //   let! c = (None, Err1)
     //       printfn "C: %A" c
     //       let d = if true then a else c

@@ -436,14 +436,16 @@ type StreamingConfig = {
     KeyVault: IKeyVault
 }
 
-let eventLog<'T> (config: StreamingConfig) pidPrefix =
+// let mapLogError = Result.mapError IntegrityError
+let mapLogPage f = Array.map (Result.map f)
+
+let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): EventLog<'T> =
     let pid = pidPrefix + "__" + typedefof<'T>.Name
-    let getCount() =  async {let! count = streamCurrentPos<'T> config.KeyVault config.Node.System config.SnapshotInterval pid
+    let getCount() =  async {let! count = streamCurrentPos<_> config.KeyVault config.Node.System config.SnapshotInterval pid
                              return count + 1L |> uint64 }
     let getPage from count = async {let! items = currentEventsSource<'T> config.KeyVault config.Node.System config.Verify pid (int64 from) (int64 count)
-                                                    |> Source.runWith (config.Node.System.Materializer()) (Sink.Seq()) 
-                                                    |> Async.AwaitTask
-                                    return items |> Seq.toArray |> Array.choose id }
+                                                    |> Source.runWith (config.Node.System.Materializer()) (Akkling.Streams.Sink.fold [] (fun s e -> e :: s)) 
+                                    return items |> List.rev |> List.toArray |> Array.map (Result.mapError IntegrityError) }
     let getLastPage count = async { let countL = uint64(count)
                                     let! length = getCount()
                                     return! if length > uint64(countL) then getPage (length - countL) count
@@ -451,14 +453,14 @@ let eventLog<'T> (config: StreamingConfig) pidPrefix =
     let eventLogView() = {  GetCount = getCount
                             GetPageJwt = getPage
                             GetPage = fun from count -> async { let! page = getPage from count 
-                                                                return page |> Array.map (fun t -> t.Payload)} 
+                                                                return page |> mapLogPage (fun t -> t.Payload) } 
                             GetPageToken = fun from count -> async {let! page = getPage from count 
-                                                                    return page |> Array.map (fun t -> t.Token)}
+                                                                    return page |> mapLogPage (fun t -> t.Token) }
                             GetLastPageJwt = getLastPage
                             GetLastPage = fun count -> async { let! page = getLastPage count 
-                                                               return page |> Array.map (fun t -> t.Payload)}
+                                                               return page |> mapLogPage (fun t -> t.Payload) }
                             GetLastPageToken = fun count -> async {let! page = getLastPage count 
-                                                                   return page |> Array.map (fun t -> t.Token)}
+                                                                   return page |> mapLogPage (fun t -> t.Token) }
                         }
                         
     let queue: ISourceQueueWithComplete<'T> = Source.queue config.OverflowStrategy config.QueueMaxBuffer 

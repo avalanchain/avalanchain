@@ -6,6 +6,7 @@ module Crypto =
     open TypeShape.Core.Utils
     open Sodium
     open FSharpx.Option
+    open FSharpx.Result
 
     // open Jose
 
@@ -39,6 +40,19 @@ module Crypto =
     } with static member Create kid pos = { alg = Ed25519; typ = JWT; kid = kid; pos = pos; enc = false }
 
     type TokenRef = { Cid: string }
+
+    type IntegrityError =
+        | SigningError of SigningError
+        | VerificationError of VerificationError
+    and SigningError =
+        | KeyIdNotFould of JwtKeyId
+        | NoPrivateKayAvailable of JwtKeyId
+        | SigningFailed
+    and VerificationError =
+        | InvalidTokenFormat
+        | InvalidTokenHeaderFormat
+        | KeyIdNotFould of JwtKeyId
+        | SignatureVerificationFailed    
 
     let (+.+) (l: string) r = l + "." + r
 
@@ -125,23 +139,23 @@ module Crypto =
         | -1 -> None
         | _ -> (token.Substring(0, idx), token.Substring(idx + 1)) |> Some        
 
-    let sign (kve: KeyVaultEntry) header payload = maybe {
+    let sign (kve: KeyVaultEntry) header payload = result {
         let header = { header with kid = kve.Kid } 
         let json, prepared = prepareToSign header payload
-        let! signature = prepared |> kve.KeyRing.Sign 
+        let! signature = NoPrivateKayAvailable kve.Kid, prepared |> kve.KeyRing.Sign 
         let signatureStr = encodeBase64Bytes signature
         return prepared +.+ signatureStr, header, json, signatureStr
     }
 
-    let unpack verify (kv: IKeyVault) token = maybe { // Change to Results with explicit errors
-        let! (headerWithPayload, signature) = prepareToVerify token
-        let! (headerStr, payloadStr) = extractHeader headerWithPayload 
+    let unpack verify (kv: IKeyVault) token = result { 
+        let! (headerWithPayload, signature) = InvalidTokenFormat, prepareToVerify token
+        let! (headerStr, payloadStr) = InvalidTokenHeaderFormat, extractHeader headerWithPayload
         let header = headerStr |> decodeBase64 |> fromJson<JwtTokenHeader>
         let payload = payloadStr |> decodeBase64 
         if verify then 
-            let! keyEntry = kv.Get header.kid
+            let! keyEntry = KeyIdNotFould header.kid, kv.Get header.kid
             if keyEntry.KeyRing.Verify headerWithPayload (decodeBase64Bytes signature) then return token, header, payload, signature
-            else return! None
+            else return! Error SignatureVerificationFailed
         else return token, header, payload, signature
     }
 
@@ -168,9 +182,7 @@ module Crypto =
     //     From: JwtFromHeader
     // }
 
-    let toResult (opt: _ option) = match opt with | Some o -> Ok o | None -> Error "Error during token unpacking"
-
-    let toJwt (kve: KeyVaultEntry) header (payload: 'T) = maybe {
+    let toJwt (kve: KeyVaultEntry) header (payload: 'T) = result {
         let! token, header, json, signature = sign kve header payload
         return {Token = token
                 Json = json
@@ -180,7 +192,7 @@ module Crypto =
                 Signature = signature }
     }
 
-    let fromJwt<'T> (kv: IKeyVault) verify (token: string) = maybe {
+    let fromJwt<'T> (kv: IKeyVault) verify (token: string) = result {
         let! token, header, payload, signature = unpack verify kv token
         return {Token = token
                 Json = payload

@@ -1,6 +1,7 @@
 namespace Avalanchain.Core
 
 open System.Collections.Generic
+open FSharpx.Result
 module Chains =
 
     open System
@@ -31,7 +32,7 @@ module Chains =
 
     type PersistEvent = {   
         Pos: Pos
-        Token: string 
+        Token: Result<string, IntegrityError> 
     }
 
     type PersistCommand<'T> =
@@ -74,10 +75,12 @@ module Chains =
                 | Offer v -> 
                     let newPos = state.LastPos + 1L |> uint64
                     let header = newPos |> Some |> toHeader 
-                    let token = toJwt keyVault.Active header v
-                    let evt = { Pos = newPos; Token = match token with None -> "<ERROR>" | Some t -> t.Token }
+                    let token = result {    let! jwt = toJwt keyVault.Active header v 
+                                            return jwt.Token } 
+                                |> Result.mapError SigningError
+                    let evt = { Pos = newPos; Token = token }
                     updateStatePos newPos
-                    actor.PersistAsync(evt, fun event -> updateState event)
+                    actor.PersistAsync(evt, Action<_>(updateState))
                     if state.LastPos % snapshotInterval = 0L then actor.SaveSnapshot(state)
                 | PrintState -> __.Log.Info ("Actor state: " + (state.ToString()) + " PosN: " + (actor.LastSequenceNr.ToString()))
                 | TakeSnapshot -> actor.SaveSnapshot(state)
@@ -127,13 +130,17 @@ module Chains =
 
     let readJournal system = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
 
-    let currentEventsSource<'T> keyVault system verify pid from count = 
+    let currentEventsSource<'T> keyVault system verify pid from count: Source<Result<JwtToken<'T>, IntegrityError>, Akka.NotUsed> = 
         (readJournal system).CurrentEventsByPersistenceId(pid, from, from + count) 
-        |> Source.map(fun e -> (e.Event :?> PersistEvent).Token |> fromJwt<'T> keyVault verify (*|> toResult*) ) 
+        |> Source.map (fun e -> result {let event = (e.Event :?> PersistEvent)
+                                        let! token = event.Token 
+                                        return! fromJwt<'T> keyVault verify token |> Result.mapError VerificationError })
 
     let allEventsSource<'T> keyVault system pid verify from count = 
         (readJournal system).EventsByPersistenceId(pid, from, from + count) 
-        |> Source.map(fun e -> (e.Event :?> PersistEvent).Token |> fromJwt<'T> keyVault verify (*|> toResult*) ) 
+        |> Source.map(fun e -> result { let event = (e.Event :?> PersistEvent)
+                                        let! token = event.Token 
+                                        return! fromJwt<'T> keyVault verify token |> Result.mapError VerificationError }) 
 
     let persistFlow<'T> keyVault system snapshotInterval verify pid = 
         let sink = persistSink<'T> system snapshotInterval keyVault pid 
