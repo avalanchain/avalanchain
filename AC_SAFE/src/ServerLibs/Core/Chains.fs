@@ -1,11 +1,11 @@
 namespace Avalanchain.Core
 
-open System.Collections.Generic
-open FSharpx.Result
 module Chains =
 
     open System
+    open System.Collections.Generic
     open System.Text.RegularExpressions
+    open FSharpx.Result
 
     open Akka.Actor
     open Akka.Configuration

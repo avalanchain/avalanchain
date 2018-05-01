@@ -37,6 +37,8 @@ group Server
   nuget TypeShape
   nuget FParsec
   nuget VaultSharp
+  nuget EtcdGrpcClient
+  nuget LightningDB
 
   nuget Proto.Actor
   nuget Proto.Actor.Extensions

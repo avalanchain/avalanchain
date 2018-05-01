@@ -25,8 +25,11 @@ module Crypto =
         | _ -> output //raise (System.ArgumentOutOfRangeException("input", "Illegal base64url string!"))
         |> System.Convert.FromBase64String 
 
-    let encodeBase64 (input: string) = input |> System.Text.Encoding.UTF8.GetBytes |> encodeBase64Bytes
-    let decodeBase64 = decodeBase64Bytes >> System.Text.Encoding.UTF8.GetString
+    let getBytes (str: string) = System.Text.Encoding.UTF8.GetBytes str
+    let getString = System.Text.Encoding.UTF8.GetString
+
+    let encodeBase64 (input: string) = input |> getBytes |> encodeBase64Bytes
+    let decodeBase64 = decodeBase64Bytes >> getString
 
     type Pos = uint64
 

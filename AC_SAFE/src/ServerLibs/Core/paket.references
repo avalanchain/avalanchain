@@ -5,6 +5,8 @@ group Server
   Sodium.Core
   VaultSharp
   TaskBuilder.fs
+  EtcdGrpcClient
+  LightningDB
 
   Proto.Actor
   Proto.Actor.Extensions
