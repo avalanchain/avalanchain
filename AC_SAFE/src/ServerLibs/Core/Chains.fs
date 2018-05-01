@@ -22,13 +22,13 @@ module Chains =
     // open Akkling.Cluster
     // open Akkling.Cluster.Sharding
     open Akkling.Streams
-    open Akkling.Persistence
 
     open Akka.Persistence.Query
     open Akka.Persistence.Query.Sql   
 
     open Crypto
     open ChainDefs 
+    open Node
 
     type PersistEvent = {   
         Pos: Pos
@@ -151,3 +151,85 @@ module Chains =
         let actor = getSinkActor<'T> system (snapshotInterval: int64) keyVault pid
         async { let! (pos: GetPosResult) = actor <? GetPos
                 return match pos with GetPosResult p -> p }
+
+    module PagedLog = 
+        type EventLogError = | IntegrityError of IntegrityError
+
+        type EventLogView<'T> = {
+            GetCount:           unit -> Async<uint64>
+            GetPage:            uint64 -> uint32 -> Async<Result<'T, EventLogError>[]>
+            GetPageToken:       uint64 -> uint32 -> Async<Result<string, EventLogError>[]>
+            GetPageJwt:         uint64 -> uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
+            GetLastPage:        uint32 -> Async<Result<'T, EventLogError>[]>
+            GetLastPageToken:   uint32 -> Async<Result<string, EventLogError>[]>
+            GetLastPageJwt:     uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
+        }
+
+        type EventLog<'T> = {
+            OfferAsync: 'T -> Async<unit> // TODO: Add error handling
+            View: EventLogView<'T>
+        }
+
+        type LogCommand<'T> =
+            | Offer of 'T
+            | GetPage of indexStart: uint64 * pageSize: uint32
+            | GetPageStreamed of requestId: Guid * indexStart: uint64 * pageSize: uint32
+            | GetLastPage of pageSize: uint32
+            | GetLastPageStreamed of requestId: Guid * pageSize: uint32
+            | GetPos
+        type LogReply<'T> =
+            | Pos of int64
+            | Event of LogEvent<'T>
+            | EventPage of LogEvent<'T> list
+            | SeqEvent of Guid * LogEvent<'T>
+            | SeqComplete of Guid
+        and LogEvent<'T> = {
+            Pos: int64
+            Val: 'T
+            Hash: string
+            Token: string
+        }
+
+        type StreamingConfig = {
+            Node: ACNode
+            SnapshotInterval: int64
+            OverflowStrategy: OverflowStrategy
+            QueueMaxBuffer: int
+            Verify: bool 
+            KeyVault: IKeyVault
+        }
+
+        // let mapLogError = Result.mapError IntegrityError
+        let private mapLogPage f = Array.map (Result.map f)
+
+        let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): EventLog<'T> =
+            let pid = pidPrefix + "__" + typedefof<'T>.Name
+            let getCount() =  async {let! count = streamCurrentPos<_> config.KeyVault config.Node.System config.SnapshotInterval pid
+                                     return count + 1L |> uint64 }
+            let getPage from count = async {let! items = currentEventsSource<'T> config.KeyVault config.Node.System config.Verify pid (int64 from) (int64 count)
+                                                            |> Source.runWith (config.Node.System.Materializer()) (Akkling.Streams.Sink.fold [] (fun s e -> e :: s)) 
+                                            return items |> List.rev |> List.toArray |> Array.map (Result.mapError IntegrityError) }
+            let getLastPage count = async { let countL = uint64(count)
+                                            let! length = getCount()
+                                            return! if length > uint64(countL) then getPage (length - countL) count
+                                                    else getPage 0UL count } 
+            let eventLogView() = {  GetCount = getCount
+                                    GetPageJwt = getPage
+                                    GetPage = fun from count -> async { let! page = getPage from count 
+                                                                        return page |> mapLogPage (fun t -> t.Payload) } 
+                                    GetPageToken = fun from count -> async {let! page = getPage from count 
+                                                                            return page |> mapLogPage (fun t -> t.Token) }
+                                    GetLastPageJwt = getLastPage
+                                    GetLastPage = fun count -> async { let! page = getLastPage count 
+                                                                       return page |> mapLogPage (fun t -> t.Payload) }
+                                    GetLastPageToken = fun count -> async {let! page = getLastPage count 
+                                                                           return page |> mapLogPage (fun t -> t.Token) }
+                                }
+                                
+            let queue: ISourceQueueWithComplete<'T> = Source.queue config.OverflowStrategy config.QueueMaxBuffer 
+                                                        |> Source.map (PersistCommand.Offer)
+                                                        |> Source.toMat (persistSink config.Node.System config.SnapshotInterval config.KeyVault pid) Keep.left 
+                                                        |> Graph.run config.Node.Mat
+            {   View = eventLogView()
+                OfferAsync = fun v -> async {   let! _ = queue.AsyncOffer v
+                                                () } }                

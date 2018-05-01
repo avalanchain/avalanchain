@@ -8,9 +8,9 @@ module ChainDefs =
     type Sig = { Sig: string } // TODO: Redo this
 
     type Uid = 
-    | UUID of Guid
-    | Hash of Hash
-    | Sig of Sig
+        | UUID of Guid
+        | Hash of Hash
+        | Sig of Sig
 
     type NodeRef = { Nid: string }
     type MasterNodeRef = { MNid: string }

@@ -1,4 +1,5 @@
 ﻿open System
+open System.Collections.Concurrent
 open System.IO
 open System.Threading
 open System.Threading.Tasks
@@ -25,18 +26,21 @@ open Giraffe.ModelBinding
 open Fable.Remoting.Giraffe
 
 open Shared
-open Avalanchain.Common
-open Avalanchain.Common.MatchingEngine
+open Avalanchain.Exchange.MatchingEngine
+open Facade
 open Avalanchain.Core
 open Avalanchain.Core.Crypto
 open Avalanchain.Core.Chains
 open Avalanchain.Server.WebSocketActor
-open Avalanchain.Node
+open Avalanchain.Core.Node
 open Network
 
+open Akka
+open Akka.Actor
 open Akka.Streams
 open Akka.Streams.Dsl
 open Akkling.Streams
+
 
 let wsConnectionManager = ConnectionManager()
 
@@ -69,12 +73,8 @@ module ParamHelper =
         path, verb, pathDef
 
 open ParamHelper
-open System.Collections.Concurrent
-open Avalanchain.Common.MatchingEngine.Facade
-open Akka
-open Akka.Actor
-open Akkling.Streams
-
+open Avalanchain.Core.Chains.PagedLog
+open Avalanchain.Exchange
 let docAddendums =
     fun (route:Analyzer.RouteInfos) (path:string,verb:HttpVerb,pathDef:PathDefinition) ->
     
@@ -420,56 +420,14 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                     ) 
                                 cancellationToken
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
-          FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder ]
+          FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder 
+          ]
 
 type MatchingServiceStreaming = {
     Streams: MatchingServiceLogs
     SymbolStreams: MatchingServiceSymbolLogs
 }
 
-type StreamingConfig = {
-    Node: ACNode
-    SnapshotInterval: int64
-    OverflowStrategy: OverflowStrategy
-    QueueMaxBuffer: int
-    Verify: bool 
-    KeyVault: IKeyVault
-}
-
-// let mapLogError = Result.mapError IntegrityError
-let mapLogPage f = Array.map (Result.map f)
-
-let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): EventLog<'T> =
-    let pid = pidPrefix + "__" + typedefof<'T>.Name
-    let getCount() =  async {let! count = streamCurrentPos<_> config.KeyVault config.Node.System config.SnapshotInterval pid
-                             return count + 1L |> uint64 }
-    let getPage from count = async {let! items = currentEventsSource<'T> config.KeyVault config.Node.System config.Verify pid (int64 from) (int64 count)
-                                                    |> Source.runWith (config.Node.System.Materializer()) (Akkling.Streams.Sink.fold [] (fun s e -> e :: s)) 
-                                    return items |> List.rev |> List.toArray |> Array.map (Result.mapError IntegrityError) }
-    let getLastPage count = async { let countL = uint64(count)
-                                    let! length = getCount()
-                                    return! if length > uint64(countL) then getPage (length - countL) count
-                                            else getPage 0UL count } 
-    let eventLogView() = {  GetCount = getCount
-                            GetPageJwt = getPage
-                            GetPage = fun from count -> async { let! page = getPage from count 
-                                                                return page |> mapLogPage (fun t -> t.Payload) } 
-                            GetPageToken = fun from count -> async {let! page = getPage from count 
-                                                                    return page |> mapLogPage (fun t -> t.Token) }
-                            GetLastPageJwt = getLastPage
-                            GetLastPage = fun count -> async { let! page = getLastPage count 
-                                                               return page |> mapLogPage (fun t -> t.Payload) }
-                            GetLastPageToken = fun count -> async {let! page = getLastPage count 
-                                                                   return page |> mapLogPage (fun t -> t.Token) }
-                        }
-                        
-    let queue: ISourceQueueWithComplete<'T> = Source.queue config.OverflowStrategy config.QueueMaxBuffer 
-                                                |> Source.map (PersistCommand.Offer)
-                                                |> Source.toMat (persistSink config.Node.System config.SnapshotInterval config.KeyVault pid) Keep.left 
-                                                |> Graph.run config.Node.Mat
-    {   View = eventLogView()
-        OfferAsync = fun v -> async {   let! _ = queue.AsyncOffer v
-                                        () } }                      
 
 let matchingServiceLogs (config: StreamingConfig) pidPrefix = {   
     OrderCommands = eventLog<OrderCommand> config pidPrefix

@@ -1,11 +1,10 @@
 group Server
   FSharp.Core
-  Microsoft.AspNetCore
-  Microsoft.AspNetCore.StaticFiles
-  Microsoft.AspNetCore.WebSockets
-  Fable.JsonConverter
-  Microsoft.DotNet.Watcher.Tools
-  Giraffe
+  FSharp.Control.Reactive
+  FSharp.Control.AsyncSeq
+  Sodium.Core
+  VaultSharp
+  TaskBuilder.fs
 
   Proto.Actor
   Proto.Actor.Extensions
@@ -29,4 +28,7 @@ group Server
   Akka.Persistence.Query
   Akka.Persistence.Query.Sql
   Akka.Cluster
-  Akka.Cluster.Tools  
+  Akka.Cluster.Tools
+
+  Akkling.Streams
+  Akkling.Persistence

@@ -1,16 +1,18 @@
 namespace Avalanchain.Core
-open System.Collections.Generic
 
 module Crypto = 
     open System
-    open TypeShape.Core.Utils
+    open System.Collections.Generic
+
     open Sodium
     open FSharpx.Option
     open FSharpx.Result
 
+    open TypeShape.Core.Utils
+    open TypeShape.Tools
+
     // open Jose
 
-    open TypeShape.Tools
 
     let encodeBase64Bytes = 
         Convert.ToBase64String >> fun output -> output.Split('=').[0].Replace('+', '-').Replace('/', '_') 

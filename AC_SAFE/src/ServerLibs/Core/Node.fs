@@ -1,4 +1,4 @@
-namespace Avalanchain
+namespace Avalanchain.Core
 
 module Node =
 
@@ -24,8 +24,6 @@ module Node =
 
     open Microsoft.FSharp.Quotations
 
-    open Avalanchain.Core
-    
     module Network =
         type Endpoint = {
             IP: string
@@ -33,7 +31,6 @@ module Node =
         }
 
     open Network
-    open Chains
 
     [<RequireQualifiedAccess>]
     type PersistTo = 
@@ -47,7 +44,7 @@ module Node =
         OverflowStrategy: OverflowStrategy
         MaxBuffer: int
         // Mediator: Lazy<IActorRef> 
-        Journal: Lazy<SqlReadJournal>
+        // Journal: Lazy<SqlReadJournal>
     }
 
     let createSystem (name : string) (config : Akka.Configuration.Config) = ActorSystem.Create(name, config)
@@ -285,7 +282,7 @@ module Node =
             OverflowStrategy = overflowStrategy
             MaxBuffer = maxBuffer
             // Mediator = lazy(DistributedPubSub.Get(system).Mediator)
-            Journal = lazy(readJournal system)
+            // Journal = lazy(readJournal system)
              }            
 
 

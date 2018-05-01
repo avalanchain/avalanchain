@@ -1,16 +1,11 @@
-﻿namespace Avalanchain.Common
+﻿namespace Avalanchain.Exchange
 
 module MatchingEngine = 
 
     open System
-    open System.Threading
-    open System.Collections.Generic
-    open System.Collections.Concurrent
-    //open FSharpx.Collections
-    open Akka.Streams.Dsl
     
     open Avalanchain.Core
-    open Crypto
+    open Avalanchain.Core.Chains.PagedLog
 
     type MatchType = | Partial | Full
     type MarketSide = | Bid | Ask
@@ -249,58 +244,8 @@ module MatchingEngine =
             PriceStep = orderStack.PriceStep
         }
 
-    let orderData = {
-        OrderType = Limit 5M<price>
-        Symbol = Symbol "AVC"
-        MarketSide = Bid
-        Quantity = 10M<qty>
-        ClOrdID = ClOrdID "1"
-        Account = TradingAccount "TRA-1"
-        CreatedTime = DateTimeOffset.UtcNow
-    }
-
-    let orderData2 = {
-        OrderType = Limit 10M<price>
-        Symbol = Symbol "AVC"
-        MarketSide = Bid
-        Quantity = 10M<qty>
-        ClOrdID = ClOrdID "2"
-        Account = TradingAccount "TRA-2"
-        CreatedTime = DateTimeOffset.UtcNow
-    }
-
-    let aorderData = {
-        OrderType = Limit 15M<price>
-        Symbol = Symbol "AVC"
-        MarketSide = Ask
-        Quantity = 15M<qty>
-        ClOrdID = ClOrdID "3"
-        Account = TradingAccount "TRA-3"
-        CreatedTime = DateTimeOffset.UtcNow
-    }
-
-    let aorderData2 = {
-        OrderType = Limit 10M<price>
-        Symbol = Symbol "AVC"
-        MarketSide = Ask
-        Quantity = 5M<qty>
-        ClOrdID = ClOrdID "4"
-        Account = TradingAccount "TRA-4"
-        CreatedTime = DateTimeOffset.UtcNow
-    }
-
-    let aorderData3 = {
-        OrderType = Limit 2M<price>
-        Symbol = Symbol "AVC"
-        MarketSide = Ask
-        Quantity = 27M<qty>
-        ClOrdID = ClOrdID "5"
-        Account = TradingAccount "TRA-5"
-        CreatedTime = DateTimeOffset.UtcNow
-    }
-
-
     module Facade = 
+        open PagedLog
 
         type SymbolStack = {
             Symbol: Symbol
@@ -312,24 +257,6 @@ module MatchingEngine =
                                                                 ExpirationPosLimit = posLimit
                                                                 Pos = 0UL
                                                                 OrderStack = OrderStack.Create priceStep }
-
-        type EventLogError = | IntegrityError of IntegrityError
-
-        type EventLogView<'T> = {
-            GetCount:           unit -> Async<uint64>
-            GetPage:            uint64 -> uint32 -> Async<Result<'T, EventLogError>[]>
-            GetPageToken:       uint64 -> uint32 -> Async<Result<string, EventLogError>[]>
-            GetPageJwt:         uint64 -> uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
-            GetLastPage:        uint32 -> Async<Result<'T, EventLogError>[]>
-            GetLastPageToken:   uint32 -> Async<Result<string, EventLogError>[]>
-            GetLastPageJwt:     uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
-        }
-
-        type EventLog<'T> = {
-            OfferAsync: 'T -> Async<unit> // TODO: Add error handling
-            View: EventLogView<'T>
-        }
-        
 
         type MatchingServiceLogs = {
             OrderCommands: EventLog<OrderCommand>

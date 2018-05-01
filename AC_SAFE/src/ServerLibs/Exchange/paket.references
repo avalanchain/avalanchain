@@ -2,10 +2,9 @@ group Server
   FSharp.Core
   Microsoft.AspNetCore
   Microsoft.AspNetCore.StaticFiles
-  Microsoft.AspNetCore.WebSockets
   Fable.JsonConverter
+  Fable.Remoting.Giraffe
   Microsoft.DotNet.Watcher.Tools
-  Giraffe
 
   Proto.Actor
   Proto.Actor.Extensions

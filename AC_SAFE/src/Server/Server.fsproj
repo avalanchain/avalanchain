@@ -4,17 +4,15 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ServerLibs\Giraffe\Giraffe.fsproj" />
-    <ProjectReference Include="..\ServerLibs\Giraffe.Swagger\Giraffe.Swagger.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Libs\Utils\Utils.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Libs\Giraffe.Swagger\Giraffe.Swagger.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Core\Core.fsproj" />
     <ProjectReference Include="..\ServerLibs\Payments\Payments.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Exchange\Exchange.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Shared/Shared.fs" />
-    <Compile Include="../ServerLibs/Utils/PersistentVector.fs" />
-    <Compile Include="../ServerLibs/Exchange/MatchingEngine.fs" />
-    <Compile Include="../ServerLibs/Exchange/TradingBot.fs" />
     <Compile Include="WebSocketActor.fs" />
-    <Compile Include="Node.fs" />
     <Compile Include="Server.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

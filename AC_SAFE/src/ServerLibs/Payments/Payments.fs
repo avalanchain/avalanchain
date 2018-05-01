@@ -1,7 +1,7 @@
-namespace Avalanchain.Core
+namespace Avalanchain
 
-open Avalanchain
 module Payments = 
+    open Avalanchain.Core
     open Crdt
     open Crypto
     open ChainDefs

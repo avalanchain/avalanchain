@@ -28,6 +28,7 @@ group Server
   nuget FSharp.Control.Reactive
   nuget FSharp.Control.AsyncSeq
   nuget TaskBuilder.fs 
+  nuget Giraffe
 
   nuget Fable.Remoting.Giraffe
   nuget Fable.JsonConverter
