@@ -245,7 +245,7 @@ module MatchingEngine =
         }
 
     module Facade = 
-        open PagedLog
+        open Avalanchain.Core.Chains.PagedLog
 
         type SymbolStack = {
             Symbol: Symbol
