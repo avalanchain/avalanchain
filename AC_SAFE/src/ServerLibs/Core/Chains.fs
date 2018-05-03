@@ -156,13 +156,13 @@ module Chains =
         type EventLogError = | IntegrityError of IntegrityError
 
         type EventLogView<'T> = {
-            GetCount:           unit -> Async<uint64>
-            GetPage:            uint64 -> uint32 -> Async<Result<'T, EventLogError>[]>
-            GetPageToken:       uint64 -> uint32 -> Async<Result<string, EventLogError>[]>
-            GetPageJwt:         uint64 -> uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
-            GetLastPage:        uint32 -> Async<Result<'T, EventLogError>[]>
-            GetLastPageToken:   uint32 -> Async<Result<string, EventLogError>[]>
-            GetLastPageJwt:     uint32 -> Async<Result<JwtToken<'T>, EventLogError>[]>
+            GetCount:           unit -> Async<Pos>
+            GetPage:            Pos -> PageSize -> Async<Result<'T, EventLogError>[]>
+            GetPageToken:       Pos -> PageSize -> Async<Result<string, EventLogError>[]>
+            GetPageJwt:         Pos -> PageSize -> Async<Result<JwtToken<'T>, EventLogError>[]>
+            GetLastPage:        PageSize -> Async<Result<'T, EventLogError>[]>
+            GetLastPageToken:   PageSize -> Async<Result<string, EventLogError>[]>
+            GetLastPageJwt:     PageSize -> Async<Result<JwtToken<'T>, EventLogError>[]>
         }
 
         type EventLog<'T> = {

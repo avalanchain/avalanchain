@@ -13,12 +13,12 @@ module KVStore =
 
     type ValueSetIssue =
         | ValueAlreadySet
-        | AccessDenied
+        | WriteAccessDenied
         | WriteTechIssue of string
 
     type ValueAccessIssue = 
         | NoDataExists 
-        | AccessDenied
+        | ReadAccessDenied
         | DataIntegrityFailure
         | ReadTechIssue of string
 
@@ -30,17 +30,88 @@ module KVStore =
 
     [<Interface>]
     type IKVStore<'TK> = 
-        abstract member Get : 'TK -> Task<Result<ValueSlot, ValueAccessIssue>>
-        abstract member GetRange : 'TK * uint32 -> Task<Result<IDictionary<'TK, ValueSlot>, ValueAccessIssue>>
-        abstract member GetRange : 'TK * 'TK * uint32  -> Task<Result<IDictionary<'TK, ValueSlot>, ValueAccessIssue>>
-        abstract member Put : 'TK * string -> Task<Result<unit, ValueSetIssue>>
-        abstract member Put : ('TK * string)[] -> Task<Result<unit, ValueSetIssue>>
+        abstract member Get : key: 'TK -> Task<Result<ValueSlot, ValueAccessIssue>>
+        abstract member GetRange : keyPrefix: 'TK * pageSize: PageSize -> Task<IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>>>
+        abstract member GetRange : 'TK * 'TK * pageSize: PageSize -> Task<IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>>>
+        abstract member Put : key: 'TK * value: string -> Task<Result<unit, ValueSetIssue>>
+        abstract member Put : keyValues: ('TK * string)[] -> Task<Result<unit, ValueSetIssue>>
+
+    module PagedLog =
+        type LogView = {
+            GetCount:    unit -> Task<uint64>
+            GetPage:     Pos -> PageSize -> Task<IDictionary<Pos, Result<ValueSlot, ValueAccessIssue>>>
+            GetLastPage: PageSize -> Task<IDictionary<Pos, Result<ValueSlot, ValueAccessIssue>>>
+        }
+        
+        type Log = {
+            OfferAsync:  string -> Task<Pos> // TODO: Add error handling
+            View:        LogView
+        }
+        
+        type LogKey = 
+            | Length of LogId: string
+            | Item of LogId: string * Pos: Pos
+        
+        let createLogView (store: IKVStore<LogKey>) logId = task {
+            let setLength (length: Pos) = task {
+                let! putResult = store.Put(Length logId, length.ToString())
+                match putResult with    | Ok _ -> () 
+                                        | Error ValueAlreadySet -> ()
+                                        | Error WriteAccessDenied -> failwith "AccessDenied write length" 
+                                        | Error (WriteTechIssue err) -> failwith err
+            }
+            let getLength() = task {
+                let! lengthResult = store.Get(Length logId)  
+                let length = match lengthResult with  
+                                | Ok v -> Some v
+                                | Error NoDataExists -> None 
+                                | Error ReadAccessDenied -> failwith "AccessDenied read length"
+                                | Error DataIntegrityFailure -> failwith "DataIntegrityFailure read length" 
+                                | Error (ReadTechIssue err) -> failwith err
+                if length.IsNone then do! setLength 0UL
+                return match length with 
+                        | Some (ValueSlot vs) -> vs |> UInt64.Parse
+                        | None -> 0UL
+            }
+            
+            let extractPos = function   | Item (_, pos) -> pos
+                                        | Length _ -> failwith "Inconsistent Data"
+                                                    
+            let getPage from pageSize = task { 
+                let! page = store.GetRange (Item (logId, from), pageSize)
+                return page 
+                        |> Seq.map (fun kv -> extractPos kv.Key, kv.Value) 
+                        |> Map.ofSeq
+                        :> IDictionary<Pos, Result<ValueSlot, ValueAccessIssue>>
+            }
+            let getLastPage pageSize = task {
+                let! length = getLength()
+                return! 
+                    if length <= uint64(pageSize) then getPage 0UL (uint32 length)
+                    else getPage (length - uint64(pageSize) - 1UL) pageSize
+            }
+
+            let view = {   LogView.GetCount =   getLength
+                           GetPage =            getPage
+                           GetLastPage =        getLastPage }
+                           
+            let offer str = task {
+                let! lastPos = getLength()
+                let newPos = lastPos + 1UL
+                let! _ = store.Put(Item (logId, newPos), str) // TODO: Handle error
+                return newPos
+            }
+
+            return {    OfferAsync = offer
+                        View       = view }
+        }
+            
 
     type IHashStore = IKVStore<Hash>
 
     let newLightningEnvironment envName =
         let env = new LightningEnvironment(envName)
-        env.MaxDatabases <- 5
+        env.MaxDatabases <- 10
         env.MapSize <- 1073741824L
         env.Open()
         env
@@ -64,18 +135,17 @@ module KVStore =
                 use cursor = tx.CreateCursor(db)
                 let mutable i = pageSize
                 let mutable hasCurrent = keyPrefix |> keyBytes |> cursor.MoveToFirstAfter
-                let ar = ResizeArray<'TK * ValueSlot>()
+                let ar = ResizeArray<'TK * Result<ValueSlot, ValueAccessIssue>>()
 
                 while i > 0u && hasCurrent do
                     let key = cursor.Current.Key |> toKey
-                    let value = cursor.Current.Value |> getString |> fromJson<ValueSlot>
+                    let value = cursor.Current.Value |> getString |> fromJson<ValueSlot> |> Ok 
                     ar.Add(key, value)
                     hasCurrent <- cursor.MoveNext()
                     i <- i - 1u
                     
                 ar  |> Map.ofSeq 
-                    :> IDictionary<'TK, ValueSlot> 
-                    |> Ok 
+                    :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
                     |> Task.FromResult
            
             member __.GetRange (keyFrom, keyTo, pageSize) = 
@@ -84,21 +154,20 @@ module KVStore =
                 use cursor = tx.CreateCursor(db)
                 let mutable i = pageSize
                 let mutable hasCurrent = keyFrom |> keyBytes |> cursor.MoveToFirstAfter
-                let ar = ResizeArray<'TK * ValueSlot>()
+                let ar = ResizeArray<'TK * Result<ValueSlot, ValueAccessIssue>>()
 
                 while i > 0u && hasCurrent do
                     let key = cursor.Current.Key |> toKey
                     hasCurrent <- 
                         if (keyTo = key) then false
                         else 
-                            let value = cursor.Current.Value |> getString |> fromJson<ValueSlot>
+                            let value = cursor.Current.Value |> getString |> fromJson<ValueSlot> |> Ok
                             ar.Add(key, value)
                             cursor.MoveNext()
                     i <- i - 1u
                     
                 ar  |> Map.ofSeq 
-                    :> IDictionary<'TK, ValueSlot> 
-                    |> Ok 
+                    :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
                     |> Task.FromResult
             member __.Put (key, value) = 
                 use tx = env.BeginTransaction()
@@ -126,21 +195,19 @@ module KVStore =
             }
             member __.GetRange (keyPrefix, pageSize) = task {
                 let! result = etcdClient.GetRange(keyBytes keyPrefix)
-                return  if isNull result then NoDataExists |> Error
+                return  if isNull result then Map.empty
                         else seq { for kv in result |> Seq.truncate (int pageSize) -> 
-                                    kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> } 
+                                    kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> |> Ok } 
                                 |> Map.ofSeq
-                                :> IDictionary<'TK, ValueSlot> 
-                                |> Ok
+                        :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
             }
             member __.GetRange (keyFrom, keyTo, pageSize) = task {
                 let! result = etcdClient.GetRange(keyBytes keyFrom, keyBytes keyTo)
-                return  if isNull result then NoDataExists |> Error
+                return  if isNull result then Map.empty
                         else seq { for kv in result |> Seq.truncate (int pageSize) -> 
-                                    kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> } 
+                                    kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> |> Ok } 
                                 |> Map.ofSeq
-                                :> IDictionary<'TK, ValueSlot> 
-                                |> Ok
+                        :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
             }
             member __.Put (key, value) = task {
                 let! result = etcdClient.Put(keyBytes key, value)

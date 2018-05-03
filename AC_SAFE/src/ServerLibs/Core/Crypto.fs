@@ -32,6 +32,7 @@ module Crypto =
     let decodeBase64 = decodeBase64Bytes >> getString
 
     type Pos = uint64
+    type PageSize = uint32
 
     type JwtAlgo = Ed25519
     type JwtType = JWT
@@ -51,12 +52,12 @@ module Crypto =
         | VerificationError of VerificationError
     and SigningError =
         | KeyIdNotFould of JwtKeyId
-        | NoPrivateKayAvailable of JwtKeyId
+        | NoPrivateKeyAvailable of JwtKeyId
         | SigningFailed
     and VerificationError =
         | InvalidTokenFormat
         | InvalidTokenHeaderFormat
-        | KeyIdNotFould of JwtKeyId
+        | KeyIdNotFound of JwtKeyId
         | SignatureVerificationFailed    
 
     let (+.+) (l: string) r = l + "." + r
@@ -147,7 +148,7 @@ module Crypto =
     let sign (kve: KeyVaultEntry) header payload = result {
         let header = { header with kid = kve.Kid } 
         let json, prepared = prepareToSign header payload
-        let! signature = NoPrivateKayAvailable kve.Kid, prepared |> kve.KeyRing.Sign 
+        let! signature = NoPrivateKeyAvailable kve.Kid, prepared |> kve.KeyRing.Sign 
         let signatureStr = encodeBase64Bytes signature
         return prepared +.+ signatureStr, header, json, signatureStr
     }
@@ -158,7 +159,7 @@ module Crypto =
         let header = headerStr |> decodeBase64 |> fromJson<JwtTokenHeader>
         let payload = payloadStr |> decodeBase64 
         if verify then 
-            let! keyEntry = KeyIdNotFould header.kid, kv.Get header.kid
+            let! keyEntry = KeyIdNotFound header.kid, kv.Get header.kid
             if keyEntry.KeyRing.Verify headerWithPayload (decodeBase64Bytes signature) then return token, header, payload, signature
             else return! Error SignatureVerificationFailed
         else return token, header, payload, signature

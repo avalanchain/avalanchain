@@ -20,8 +20,6 @@ module Result =
         /// Having error as the first parameter is surprisingly more natural in usage
         member __.Bind((error, m): ('E * Option<'T>), f) = m |> ofOption error |> Result.bind f
 
-        member __.Zero() = None
-
         member __.Combine(m, f) = Result.bind f m
 
         member __.Delay(f: unit -> _) = f
