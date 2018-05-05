@@ -6,23 +6,28 @@ module KVStore =
     open System.Collections.Generic
     open System.Threading.Tasks
     open FSharp.Control.Tasks
+    open FSharpx.Result
     open LightningDB
     open EtcdGrpcClient
     open Crypto
     open ChainDefs
 
-    type ValueSetIssue =
+    type ValueIssue = 
+        | ValueSetIssue of ValueSetIssue
+        | ValueAccessIssue of ValueAccessIssue
+    and ValueSetIssue =
         | ValueAlreadySet
         | WriteAccessDenied
         | WriteTechIssue of string
-
-    type ValueAccessIssue = 
+    and ValueAccessIssue = 
         | NoDataExists 
         | ReadAccessDenied
-        | DataIntegrityFailure
+        | DataIntegrityFailure of string
         | ReadTechIssue of string
 
     type ValueSlot = ValueSlot of string
+        with member __.Value = match __ with ValueSlot s -> s
+          
     type KeySerializer<'TK> = {
         Serializer: 'TK -> string
         Deserializer: string -> 'TK 
@@ -30,48 +35,74 @@ module KVStore =
 
     [<Interface>]
     type IKVStore<'TK> = 
-        abstract member Get : key: 'TK -> Task<Result<ValueSlot, ValueAccessIssue>>
-        abstract member GetRange : keyPrefix: 'TK * pageSize: PageSize -> Task<IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>>>
-        abstract member GetRange : 'TK * 'TK * pageSize: PageSize -> Task<IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>>>
-        abstract member Put : key: 'TK * value: string -> Task<Result<unit, ValueSetIssue>>
-        abstract member Put : keyValues: ('TK * string)[] -> Task<Result<unit, ValueSetIssue>>
+        abstract member Get : key: 'TK -> Task<Result<ValueSlot, ValueIssue>>
+        abstract member GetRange : keyPrefix: 'TK * pageSize: PageSize -> Task<IDictionary<'TK, Result<ValueSlot, ValueIssue>>>
+        abstract member GetRange : 'TK * 'TK * pageSize: PageSize -> Task<IDictionary<'TK, Result<ValueSlot, ValueIssue>>>
+        abstract member Put : key: 'TK * value: string -> Task<Result<unit, ValueIssue>>
+        abstract member Put : keyValues: ('TK * string)[] -> Task<Result<unit, ValueIssue>>
 
     module PagedLog =
         type LogView = {
-            GetCount:    unit -> Task<uint64>
-            GetPage:     Pos -> PageSize -> Task<IDictionary<Pos, Result<ValueSlot, ValueAccessIssue>>>
-            GetLastPage: PageSize -> Task<IDictionary<Pos, Result<ValueSlot, ValueAccessIssue>>>
+            GetCount:    unit ->            Task<Result<Pos, ValueIssue>>
+            GetPage:     Pos -> PageSize -> Task<IDictionary<Pos, Result<ValueSlot, ValueIssue>>>
+            GetLastPage: PageSize ->        Task<IDictionary<Pos, Result<ValueSlot, ValueIssue>>>
         }
         
         type Log = {
-            OfferAsync:  string -> Task<Pos> // TODO: Add error handling
+            OfferAsync:  string -> Task<Result<unit, ValueIssue>>  
             View:        LogView
         }
         
         type LogKey = 
             | Length of LogId: string
             | Item of LogId: string * Pos: Pos
+            
+        let logKeySerializer prefix = { Serializer = function   | Length logId      -> sprintf "%s%s.--length--" prefix logId
+                                                                | Item (logId, pos) -> sprintf "%s%s.%010i" prefix logId pos
+                                        Deserializer = fun s -> 
+                                                            let pr = s.Substring(0, prefix.Length)
+                                                            let logId = s.Substring(prefix.Length, s.Length - 10)
+                                                            let last = s.Substring (s.Length - 10, 10) 
+                                                            match last with 
+                                                            | "--length--" -> Length(logId)
+                                                            | l -> match UInt64.TryParse l with 
+                                                                    | (true, pos) -> Item(logId, pos) 
+                                                                    | _ -> failwithf "Incorrect Key %s" s }
+            
+        type TaskBuilder = 
+            member __.Bind(m: Task<Result<'a, 'e>>, f: 'a -> Result<Task<'b>, 'e>) = task { let! mr = m
+                                                                                            let res = result {
+                                                                                                let! inner = mr
+                                                                                                return! f inner  
+                                                                                            }
+                                                                                            return! match res with 
+                                                                                                    | Ok t -> task {    let! ret = t 
+                                                                                                                        return Ok ret }
+                                                                                                    | Error e -> e |> Error |> Task.FromResult }
+            member __.Bind(m: Result<'a, 'e>, f: 'a -> Result<'b, 'e>) = Result.bind f m |> Task.FromResult
+                                                                                            
         
-        let createLogView (store: IKVStore<LogKey>) logId = task {
+        let createLogView (store: IKVStore<LogKey>) logId = 
             let setLength (length: Pos) = task {
                 let! putResult = store.Put(Length logId, length.ToString())
-                match putResult with    | Ok _ -> () 
-                                        | Error ValueAlreadySet -> ()
-                                        | Error WriteAccessDenied -> failwith "AccessDenied write length" 
-                                        | Error (WriteTechIssue err) -> failwith err
+                return match putResult with | Error (ValueSetIssue(ValueAlreadySet)) -> Ok ()
+                                            | res -> res  
             }
             let getLength() = task {
                 let! lengthResult = store.Get(Length logId)  
-                let length = match lengthResult with  
-                                | Ok v -> Some v
-                                | Error NoDataExists -> None 
-                                | Error ReadAccessDenied -> failwith "AccessDenied read length"
-                                | Error DataIntegrityFailure -> failwith "DataIntegrityFailure read length" 
-                                | Error (ReadTechIssue err) -> failwith err
-                if length.IsNone then do! setLength 0UL
-                return match length with 
-                        | Some (ValueSlot vs) -> vs |> UInt64.Parse
-                        | None -> 0UL
+                return! match lengthResult with 
+                        | Error (ValueAccessIssue(NoDataExists)) -> task {
+                                let! setLengthResult = setLength 0UL
+                                return setLengthResult |> Result.map (fun _ -> 0UL)  
+                            } 
+                        | res -> result {   let! v = res 
+                                            return! match UInt64.TryParse v.Value with 
+                                                    | (true, length) -> Ok length 
+                                                    | _ -> sprintf "Incorrect Length field format '%s'" v.Value 
+                                                            |> DataIntegrityFailure
+                                                            |> ValueAccessIssue 
+                                                            |> Error } 
+                                    |> Task.FromResult
             }
             
             let extractPos = function   | Item (_, pos) -> pos
@@ -82,29 +113,31 @@ module KVStore =
                 return page 
                         |> Seq.map (fun kv -> extractPos kv.Key, kv.Value) 
                         |> Map.ofSeq
-                        :> IDictionary<Pos, Result<ValueSlot, ValueAccessIssue>>
+                        :> IDictionary<Pos, Result<ValueSlot, ValueIssue>>
             }
             let getLastPage pageSize = task {
                 let! length = getLength()
-                return! 
-                    if length <= uint64(pageSize) then getPage 0UL (uint32 length)
-                    else getPage (length - uint64(pageSize) - 1UL) pageSize
+                return! match length with 
+                        | Ok len -> if len <= uint64(pageSize) then getPage 0UL (uint32 len)
+                                    else getPage (len - uint64(pageSize) - 1UL) pageSize
+                        | Error e -> failwith (e.ToString()) // e |> Error |> Task.FromResult   // TODO: Investigate other error reporting options 
             }
 
-            let view = {   LogView.GetCount =   getLength
+            let view = {   LogView.GetCount =   getLength  
                            GetPage =            getPage
                            GetLastPage =        getLastPage }
                            
             let offer str = task {
                 let! lastPos = getLength()
-                let newPos = lastPos + 1UL
-                let! _ = store.Put(Item (logId, newPos), str) // TODO: Handle error
-                return newPos
+                return! match lastPos with 
+                            | Ok lastPos -> 
+                                let newPos = lastPos + 1UL
+                                store.Put(Item (logId, newPos), str) // TODO: Handle error
+                            | Error e -> e.ToString() |> WriteTechIssue |> ValueSetIssue |> Error |> Task.FromResult
             }
 
-            return {    OfferAsync = offer
-                        View       = view }
-        }
+            {   OfferAsync = offer
+                View       = view }
             
 
     type IHashStore = IKVStore<Hash>
@@ -127,7 +160,7 @@ module KVStore =
                 use db = tx.OpenDatabase(dbName)
                 let found, result = tx.TryGet(db, keyBytes key) // TODO: Add error handling
                 if found then result |> getString |> fromJson<ValueSlot> |> Ok
-                else NoDataExists |> Error
+                else NoDataExists |> ValueAccessIssue |> Error
                 |> Task.FromResult
             member __.GetRange (keyPrefix, pageSize) = 
                 use tx = env.BeginTransaction(TransactionBeginFlags.ReadOnly)
@@ -135,7 +168,7 @@ module KVStore =
                 use cursor = tx.CreateCursor(db)
                 let mutable i = pageSize
                 let mutable hasCurrent = keyPrefix |> keyBytes |> cursor.MoveToFirstAfter
-                let ar = ResizeArray<'TK * Result<ValueSlot, ValueAccessIssue>>()
+                let ar = ResizeArray<'TK * Result<ValueSlot, ValueIssue>>()
 
                 while i > 0u && hasCurrent do
                     let key = cursor.Current.Key |> toKey
@@ -145,7 +178,7 @@ module KVStore =
                     i <- i - 1u
                     
                 ar  |> Map.ofSeq 
-                    :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
+                    :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
                     |> Task.FromResult
            
             member __.GetRange (keyFrom, keyTo, pageSize) = 
@@ -154,7 +187,7 @@ module KVStore =
                 use cursor = tx.CreateCursor(db)
                 let mutable i = pageSize
                 let mutable hasCurrent = keyFrom |> keyBytes |> cursor.MoveToFirstAfter
-                let ar = ResizeArray<'TK * Result<ValueSlot, ValueAccessIssue>>()
+                let ar = ResizeArray<'TK * Result<ValueSlot, ValueIssue>>()
 
                 while i > 0u && hasCurrent do
                     let key = cursor.Current.Key |> toKey
@@ -167,7 +200,7 @@ module KVStore =
                     i <- i - 1u
                     
                 ar  |> Map.ofSeq 
-                    :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
+                    :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
                     |> Task.FromResult
             member __.Put (key, value) = 
                 use tx = env.BeginTransaction()
@@ -190,7 +223,7 @@ module KVStore =
         interface IKVStore<'TK> with
             member __.Get key = task {
                 let! result = etcdClient.Get(keyBytes key)
-                return  if isNull result then NoDataExists |> Error
+                return  if isNull result then NoDataExists |> ValueAccessIssue |> Error
                         else result |> fromJson<ValueSlot> |> Ok
             }
             member __.GetRange (keyPrefix, pageSize) = task {
@@ -199,7 +232,7 @@ module KVStore =
                         else seq { for kv in result |> Seq.truncate (int pageSize) -> 
                                     kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> |> Ok } 
                                 |> Map.ofSeq
-                        :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
+                        :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
             }
             member __.GetRange (keyFrom, keyTo, pageSize) = task {
                 let! result = etcdClient.GetRange(keyBytes keyFrom, keyBytes keyTo)
@@ -207,12 +240,12 @@ module KVStore =
                         else seq { for kv in result |> Seq.truncate (int pageSize) -> 
                                     kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> |> Ok } 
                                 |> Map.ofSeq
-                        :> IDictionary<'TK, Result<ValueSlot, ValueAccessIssue>> 
+                        :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
             }
             member __.Put (key, value) = task {
                 let! result = etcdClient.Put(keyBytes key, value)
                 return  if result |> isNull |> not then () |> Ok
-                        else WriteTechIssue "No response" |> Error 
+                        else WriteTechIssue "No response" |> ValueSetIssue |> Error 
             }
             member __.Put keyValues = task {
                 for (key, value) in keyValues do
