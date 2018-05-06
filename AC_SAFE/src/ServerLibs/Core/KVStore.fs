@@ -61,7 +61,7 @@ module KVStore =
                                                                 | Item (logId, pos) -> sprintf "%s%s.%010i" prefix logId pos
                                         Deserializer = fun s -> 
                                                             let pr = s.Substring(0, prefix.Length)
-                                                            let logId = s.Substring(prefix.Length, s.Length - 10)
+                                                            let logId = s.Substring(prefix.Length, s.Length - 11)
                                                             let last = s.Substring (s.Length - 10, 10) 
                                                             match last with 
                                                             | "--length--" -> Length(logId)
@@ -109,7 +109,8 @@ module KVStore =
                                         | Length _ -> failwith "Inconsistent Data"
                                                     
             let getPage from pageSize = task { 
-                let! page = store.GetRange (Item (logId, from), pageSize)
+                let! page = store.GetRange (Item (logId, from), pageSize) 
+                let page = page |> Seq.toArray
                 return page 
                         |> Seq.map (fun kv -> extractPos kv.Key, kv.Value) 
                         |> Map.ofSeq
@@ -154,6 +155,12 @@ module KVStore =
         let keyBytes = keySerializer.Serializer >> getBytes
         let valueBytes = ValueSlot >> toJson >> getBytes
         let toKey = getString >> keySerializer.Deserializer
+        let writeTimeStamp() =
+            use tx = env.BeginTransaction()
+            use db = tx.OpenDatabase(dbName, new DatabaseConfiguration (Flags = DatabaseOpenFlags.Create ))
+            tx.Put(db, "LastAccessed" |> getBytes, DateTimeOffset.Now.ToString() |> getBytes, putOptions)
+            tx.Commit()
+        do writeTimeStamp()
         interface IKVStore<'TK> with
             member __.Get key =
                 use tx = env.BeginTransaction(TransactionBeginFlags.ReadOnly)
