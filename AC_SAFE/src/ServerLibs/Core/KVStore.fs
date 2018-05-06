@@ -133,7 +133,8 @@ module KVStore =
                 return! match lastPos with 
                             | Ok lastPos -> 
                                 let newPos = lastPos + 1UL
-                                store.Put(Item (logId, newPos), str) // TODO: Handle error
+                                store.Put([|    Item (logId, lastPos), str 
+                                                (Length logId), newPos.ToString() |]) // TODO: Handle error
                             | Error e -> e.ToString() |> WriteTechIssue |> ValueSetIssue |> Error |> Task.FromResult
             }
 
