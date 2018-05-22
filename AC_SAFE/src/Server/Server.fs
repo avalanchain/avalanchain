@@ -430,9 +430,9 @@ type MatchingServiceStreaming = {
 
 
 let matchingServiceLogs (config: StreamingConfig) pidPrefix = {   
-    OrderCommands = eventLog<OrderCommand> config pidPrefix
-    OrderEvents = eventLog<OrderEvent> config pidPrefix
-    FullOrders = eventLog<Order> config pidPrefix 
+    OrderCommands = eventLog<OrderCommand> config pidPrefix |> Async.RunSynchronously
+    OrderEvents = eventLog<OrderEvent> config pidPrefix |> Async.RunSynchronously
+    FullOrders = eventLog<Order> config pidPrefix  |> Async.RunSynchronously
 }
 
 let symbolMatchingServiceLogs (config: StreamingConfig) pidPrefix (symbol: Symbol) = matchingServiceLogs config (pidPrefix + "__" + symbol.Value)

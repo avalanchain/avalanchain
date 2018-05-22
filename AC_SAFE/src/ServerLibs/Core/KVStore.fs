@@ -4,13 +4,19 @@ namespace Avalanchain.Core
 module KVStore =
     open System
     open System.Collections.Generic
+    open System.Data.Common
     open System.Threading.Tasks
     open FSharp.Control.Tasks
+    open FSharp.Control.Reactive
     open FSharpx.Result
     open LightningDB
     open EtcdGrpcClient
+    open Akavache
+    open System.Reactive.Linq
+    open System.Reactive.Threading.Tasks
     open Crypto
     open ChainDefs
+    open Database
 
     type ValueIssue = 
         | ValueSetIssue of ValueSetIssue
@@ -82,7 +88,7 @@ module KVStore =
             member __.Bind(m: Result<'a, 'e>, f: 'a -> Result<'b, 'e>) = Result.bind f m |> Task.FromResult
                                                                                             
         
-        let createLogView (store: IKVStore<LogKey>) logId = 
+        let createLogView1 (store: IKVStore<LogKey>) logId = 
             let setLength (length: Pos) = task {
                 let! putResult = store.Put(Length logId, length.ToString())
                 return match putResult with | Error (ValueSetIssue(ValueAlreadySet)) -> Ok ()
@@ -141,6 +147,53 @@ module KVStore =
             {   OfferAsync = offer
                 View       = view }
             
+/// Sqlite
+        let createLogView (connection: #DbConnection) (connectionReadOnly: #DbConnection) logId = task {
+            let tableName = tableName logId
+            let! createTableResult = createTable connection tableName
+            match createTableResult with
+            | Error e -> failwithf "Table creation Exception: '%A'" e
+            | Ok _ -> () 
+            
+            let getLength() = task {
+                let! lengthResult = getMaxId connectionReadOnly tableName
+                return match lengthResult with 
+                        | Error exn -> exn.Message |> ReadTechIssue |> ValueAccessIssue |> Error
+                        | Ok None -> Ok 0UL
+                        | Ok (Some i) -> Ok i
+            }
+            
+            let getPage from pageSize = task { 
+                let! page = Database.getPage connectionReadOnly tableName from pageSize
+                return match page with
+                        | Ok items -> items
+                                        |> Seq.map (fun ci -> ci.Id, (ci.Data |> ValueSlot |> Ok))
+                                        |> Map.ofSeq
+                                        :> IDictionary<Pos, Result<ValueSlot, ValueIssue>>
+                        | Error exn -> failwith (exn.ToString()) // e |> Error |> Task.FromResult   // TODO: Investigate other error reporting options                  
+            }
+            let getLastPage pageSize = task {
+                let! length = getLength()
+                return! match length with 
+                        | Ok len -> if len <= uint64(pageSize) then getPage 0UL (uint32 len)
+                                    else getPage (len - uint64(pageSize) - 1UL) pageSize
+                        | Error e -> failwith (e.ToString()) // e |> Error |> Task.FromResult   // TODO: Investigate other error reporting options 
+            }
+
+            let view = {   LogView.GetCount =   getLength  
+                           GetPage =            getPage
+                           GetLastPage =        getLastPage }
+                           
+            let offer str = task {
+                let! res = insert connection tableName { ChainItem.Id = 0UL; Data = str; Hash = str.Substring 10 }
+                return match res with 
+                        | Ok _ -> Ok ()
+                        | Error e -> e.ToString() |> WriteTechIssue |> ValueSetIssue |> Error
+            }
+
+            return {OfferAsync = offer
+                    View       = view }            
+        }
 
     type IHashStore = IKVStore<Hash>
 
@@ -148,7 +201,8 @@ module KVStore =
         let env = new LightningEnvironment(envName)
         env.MaxDatabases <- 10
         env.MapSize <- 1073741824L
-        env.Open()
+        env.MaxReaders <- 1000
+        env.Open(EnvironmentOpenFlags.NoThreadLocalStorage ||| EnvironmentOpenFlags.NoSync)
         env
 
 
@@ -159,15 +213,19 @@ module KVStore =
         let writeTimeStamp() =
             use tx = env.BeginTransaction()
             use db = tx.OpenDatabase(dbName, new DatabaseConfiguration (Flags = DatabaseOpenFlags.Create ))
-            tx.Put(db, "LastAccessed" |> getBytes, DateTimeOffset.Now.ToString() |> getBytes, putOptions)
+            tx.Put(db, "LastAccessed" |> getBytes |> ArraySegment, DateTimeOffset.Now.ToString() |> getBytes |> ArraySegment, putOptions)
             tx.Commit()
         do writeTimeStamp()
         interface IKVStore<'TK> with
             member __.Get key =
                 use tx = env.BeginTransaction(TransactionBeginFlags.ReadOnly)
                 use db = tx.OpenDatabase(dbName)
-                let found, result = tx.TryGet(db, keyBytes key) // TODO: Add error handling
-                if found then result |> getString |> fromJson<ValueSlot> |> Ok
+                //let found, result = tx.TryGet(db, keyBytes key) // TODO: Add error handling
+                use cursor = tx.CreateCursor(db)
+                let found = cursor.MoveTo(keyBytes key)
+                if found then
+                    let result = cursor.GetCurrent().Value
+                    result |> getString |> fromJson<ValueSlot> |> Ok
                 else NoDataExists |> ValueAccessIssue |> Error
                 |> Task.FromResult
             member __.GetRange (keyPrefix, pageSize) = 
@@ -184,7 +242,7 @@ module KVStore =
                     ar.Add(key, value)
                     hasCurrent <- cursor.MoveNext()
                     i <- i - 1u
-                    
+                   
                 ar  |> Map.ofSeq 
                     :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
                     |> Task.FromResult
@@ -206,23 +264,25 @@ module KVStore =
                             ar.Add(key, value)
                             cursor.MoveNext()
                     i <- i - 1u
-                    
+                   
                 ar  |> Map.ofSeq 
                     :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
                     |> Task.FromResult
             member __.Put (key, value) = 
                 use tx = env.BeginTransaction()
                 use db = tx.OpenDatabase(dbName, new DatabaseConfiguration (Flags = DatabaseOpenFlags.Create ))
-                tx.Put(db, keyBytes key, valueBytes value, putOptions)
-                tx.Commit() |> Ok
-                |> Task.FromResult
+                let mutable keyB = keyBytes key |> ArraySegment
+                let mutable valB = valueBytes value |> ArraySegment
+                tx.Put(db, keyB, valB, putOptions)
+                tx.Commit()
+                () |> Ok |> Task.FromResult
             member __.Put keyValues = 
                 use tx = env.BeginTransaction()
                 use db = tx.OpenDatabase(dbName, new DatabaseConfiguration (Flags = DatabaseOpenFlags.Create ))
                 for (key, value) in keyValues do
-                    tx.Put(db, keyBytes key, valueBytes value, putOptions)
-                tx.Commit() |> Ok
-                |> Task.FromResult
+                    tx.Put(db, keyBytes key |> ArraySegment, valueBytes value |> ArraySegment, putOptions)
+                tx.Commit()
+                () |> Ok |> Task.FromResult
 
    
     type EtcdKVStore<'TK when 'TK: comparison>(keySerializer: KeySerializer<'TK>, etcdClient: EtcdClient) =
@@ -261,3 +321,43 @@ module KVStore =
                     ()
                 return  () |> Ok
             }
+
+    // type AkavacheKVStore<'TK when 'TK: comparison>(keySerializer: KeySerializer<'TK>, blobPath: string option) =
+    //     let keyBytes = keySerializer.Serializer 
+    //     let valueBytes = ValueSlot >> toJson
+    //     do BlobCache.ApplicationName <- "Avalanchain"
+    //     let blobPath = defaultArg blobPath "./AC.akv"
+    //     let blob = new Akavache.Sqlite3.SQLitePersistentBlobCache(blobPath)
+    //     interface IKVStore<'TK> with
+    //         member __.Get key = task {
+    //             let! result = blob.Get([keyBytes key]).FirstAsync().ToTask()
+    //             return  if result.Count = 0 then NoDataExists |> ValueAccessIssue |> Error
+    //                     else result |> Seq.head |> (fun kv -> kv.Value |> getString |> fromJson<ValueSlot>) |> Ok
+    //         }
+    //         member __.GetRange (keyPrefix, pageSize) = task {
+    //             let! result = blob.Get([keyBytes key]).FirstAsync().ToTask()
+    //             return  if isNull result then Map.empty
+    //                     else seq { for kv in result |> Seq.truncate (int pageSize) -> 
+    //                                 kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> |> Ok } 
+    //                             |> Map.ofSeq
+    //                     :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
+    //         }
+    //         member __.GetRange (keyFrom, keyTo, pageSize) = task {
+    //             let! result = etcdClient.GetRange(keyBytes keyFrom, keyBytes keyTo)
+    //             return  if isNull result then Map.empty
+    //                     else seq { for kv in result |> Seq.truncate (int pageSize) -> 
+    //                                 kv.Key |> keySerializer.Deserializer, kv.Value |> fromJson<ValueSlot> |> Ok } 
+    //                             |> Map.ofSeq
+    //                     :> IDictionary<'TK, Result<ValueSlot, ValueIssue>> 
+    //         }
+    //         member __.Put (key, value) = task {
+    //             let! result = etcdClient.Put(keyBytes key, value)
+    //             return  if result |> isNull |> not then () |> Ok
+    //                     else WriteTechIssue "No response" |> ValueSetIssue |> Error 
+    //         }
+    //         member __.Put keyValues = task {
+    //             for (key, value) in keyValues do
+    //                 let! result = etcdClient.Put(keyBytes key, value) // TODO: Add per-key error reporting
+    //                 ()
+    //             return  () |> Ok
+    //         }            

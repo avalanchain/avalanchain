@@ -6,12 +6,14 @@
   <ItemGroup>
     <ProjectReference Include="..\Libs\Utils\Utils.fsproj" />
     <ProjectReference Include="..\Libs\TypeShape.Tools\TypeShape.Tools.fsproj" />
+    <ProjectReference Include="..\Libs\LightningDB\LightningDB.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../../../paket-files/server/cotyar/protoactor-fsharp/src/Proto.Actor.FSharp/Proto.FSharp.fs" />
     <Compile Include="Node.fs" />
     <Compile Include="Crypto.fs" />
     <Compile Include="ChainDefs.fs" />
+    <Compile Include="Database.fs" />
     <Compile Include="KVStore.fs" />
     <Compile Include="Chains.fs" />
     <Compile Include="Communication.fs" />

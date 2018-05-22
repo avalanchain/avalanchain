@@ -38,7 +38,19 @@ group Server
   nuget FParsec
   nuget VaultSharp
   nuget EtcdGrpcClient
-  nuget LightningDB
+  nuget Dapper
+  nuget Microsoft.Data.Sqlite
+
+  nuget System.Reactive = 4.0.0-preview.3.build.380
+  nuget System.Reactive.Core = 4.0.0-preview.3.build.380
+  nuget System.Reactive.Interfaces = 4.0.0-preview.2.build.380
+  nuget System.Reactive.Linq = 4.0.0-preview.3.build.380
+  nuget System.Reactive.PlatformServices = 4.0.0-preview.3.build.380
+  nuget System.Reactive.Experimental = 4.0.0-preview.3.build.380
+  nuget System.Reactive.Compatibility = 4.0.0-preview.3.build.380
+  nuget System.Reactive.Observable.Aliases = 4.0.0-preview.3.build.380
+  
+  nuget Akavache = 6.0.0-alpha0038
 
   nuget Proto.Actor
   nuget Proto.Actor.Extensions

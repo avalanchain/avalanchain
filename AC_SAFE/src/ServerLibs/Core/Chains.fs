@@ -30,6 +30,7 @@ module Chains =
 
     open Crypto
     open ChainDefs 
+    open Database
     open Node
 
     type PersistEvent = {   
@@ -243,19 +244,21 @@ module Chains =
         open PagedLog
         open LightningDB
             
-        let private env = newLightningEnvironment "ac"
-        let private kvStore = LmdbKVStore(logKeySerializer "", env, "streams", PutOptions.None) 
-                                                
-        let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): EventLog<'T> =
+        let connectionString = """DataSource=./database.sqlite"""
+        let connectionStringReadOnly = """DataSource=./database.sqlite?mode=ro"""
+        let connection = connect connectionString
+        // let connectionReadOnly = connect connectionStringReadOnly
+
+        let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): Async<EventLog<'T>> = async {
             let pid = pidPrefix + "__" + typedefof<'T>.Name
-            let pageLog = createLogView kvStore pid
+            let! pageLog = createLogView connection connection pid |> Async.AwaitTask
             
             let getCount() = async { let! countRes = pageLog.View.GetCount() |> Async.AwaitTask 
                                      return match countRes with 
                                             | Ok count -> count 
                                             | Error e -> failwith (e.ToString()) }
             let getPage from count = async {let! items = pageLog.View.GetPage from count |> Async.AwaitTask 
-                                            let page = [| for i in from .. from + uint64(count) -> result {
+                                            let page = [| for i in from .. 1UL .. from + uint64(count) - 1UL -> result {
                                                             let! value = match items.TryGetValue i with
                                                                             | (true, v) -> v |> Result.mapError DataStoreError
                                                                             | _ -> NoDataExists |> ValueAccessIssue |> DataStoreError |> Error
@@ -280,24 +283,82 @@ module Chains =
                                                                            return page |> mapLogPage (fun t -> t.Token) }
                                 }
                                 
-            let queue: ISourceQueueWithComplete<'T> = Source.queue config.OverflowStrategy config.QueueMaxBuffer 
-                                                        |> Source.map (PersistCommand.Offer)
-                                                        |> Source.toMat (persistSink config.Node.System config.SnapshotInterval config.KeyVault pid) Keep.left 
-                                                        |> Graph.run config.Node.Mat
-            {   View = eventLogView()
-                OfferAsync = fun v -> async {   let! lastPos = getCount()
-                                                let newPos = lastPos + 1UL 
-                                                let header = newPos |> Some |> toHeader 
-                                                let tokenResult = result {  let! jwt = toJwt config.KeyVault.Active header v 
-                                                                            return jwt.Token } 
-                                                                    |> Result.mapError (SigningError >> IntegrityError)
-                                                let! (offerResult: Result<unit, EventLogError>) = 
-                                                    match tokenResult with 
-                                                    | Ok token -> task {    let! offerResult = pageLog.OfferAsync token
-                                                                            return offerResult |> Result.mapError DataStoreError }
-                                                    | Error e -> e |> Error |> Task.FromResult 
-                                                    |> Async.AwaitTask
-                                                return match offerResult with
-                                                        | Ok () -> ()
-                                                        | Error e -> failwithf "Error on save '%A'" e
-                                                } }                                                               
+            return {    EventLog.View = eventLogView()
+                        OfferAsync = fun v -> async {   let! lastPos = getCount()
+                                                        let newPos = lastPos + 1UL 
+                                                        let header = newPos |> Some |> toHeader 
+                                                        let tokenResult = result {  let! jwt = toJwt config.KeyVault.Active header v 
+                                                                                    return jwt.Token } 
+                                                                            |> Result.mapError (SigningError >> IntegrityError)
+                                                        let! (offerResult: Result<unit, EventLogError>) = 
+                                                            match tokenResult with 
+                                                            | Ok token -> task {    let! offerResult = pageLog.OfferAsync token
+                                                                                    return offerResult |> Result.mapError DataStoreError }
+                                                            | Error e -> e |> Error |> Task.FromResult 
+                                                            |> Async.AwaitTask
+                                                        return match offerResult with
+                                                                | Ok () -> ()
+                                                                | Error e -> failwithf "Error on save '%A'" e
+                                                        } }  
+        }                                                             
+
+        //////////////////////////////
+
+        // let private env = newLightningEnvironment "ac"
+        // let private kvStore = LmdbKVStore(logKeySerializer "", env, "streams", PutOptions.None) 
+                                                
+        // let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): EventLog<'T> =
+        //     let pid = pidPrefix + "__" + typedefof<'T>.Name
+        //     let pageLog = createLogView kvStore pid
+            
+        //     let getCount() = async { let! countRes = pageLog.View.GetCount() |> Async.AwaitTask 
+        //                              return match countRes with 
+        //                                     | Ok count -> count 
+        //                                     | Error e -> failwith (e.ToString()) }
+        //     let getPage from count = async {let! items = pageLog.View.GetPage from count |> Async.AwaitTask 
+        //                                     let page = [| for i in from .. from + uint64(count) -> result {
+        //                                                     let! value = match items.TryGetValue i with
+        //                                                                     | (true, v) -> v |> Result.mapError DataStoreError
+        //                                                                     | _ -> NoDataExists |> ValueAccessIssue |> DataStoreError |> Error
+        //                                                     let! jwt = fromJwt<'T> config.KeyVault config.Verify value.Value |> Result.mapError (VerificationError >> IntegrityError)
+        //                                                     return jwt 
+        //                                                 }|]
+        //                                     return page }
+        //     let getLastPage count = async { let countL = uint64(count)
+        //                                     let! length = getCount()
+        //                                     return! if length > uint64(countL) then getPage (length - countL) count
+        //                                             else getPage 0UL count } 
+        //     let eventLogView() = {  GetCount = getCount
+        //                             GetPageJwt = getPage
+        //                             GetPage = fun from count -> async { let! page = getPage from count 
+        //                                                                 return page |> mapLogPage (fun t -> t.Payload) } 
+        //                             GetPageToken = fun from count -> async {let! page = getPage from count 
+        //                                                                     return page |> mapLogPage (fun t -> t.Token) }
+        //                             GetLastPageJwt = getLastPage
+        //                             GetLastPage = fun count -> async { let! page = getLastPage count 
+        //                                                                return page |> mapLogPage (fun t -> t.Payload) }
+        //                             GetLastPageToken = fun count -> async {let! page = getLastPage count 
+        //                                                                    return page |> mapLogPage (fun t -> t.Token) }
+        //                         }
+                                
+        //     let queue: ISourceQueueWithComplete<'T> = Source.queue config.OverflowStrategy config.QueueMaxBuffer 
+        //                                                 |> Source.map (PersistCommand.Offer)
+        //                                                 |> Source.toMat (persistSink config.Node.System config.SnapshotInterval config.KeyVault pid) Keep.left 
+        //                                                 |> Graph.run config.Node.Mat
+        //     {   View = eventLogView()
+        //         OfferAsync = fun v -> async {   let! lastPos = getCount()
+        //                                         let newPos = lastPos + 1UL 
+        //                                         let header = newPos |> Some |> toHeader 
+        //                                         let tokenResult = result {  let! jwt = toJwt config.KeyVault.Active header v 
+        //                                                                     return jwt.Token } 
+        //                                                             |> Result.mapError (SigningError >> IntegrityError)
+        //                                         let! (offerResult: Result<unit, EventLogError>) = 
+        //                                             match tokenResult with 
+        //                                             | Ok token -> task {    let! offerResult = pageLog.OfferAsync token
+        //                                                                     return offerResult |> Result.mapError DataStoreError }
+        //                                             | Error e -> e |> Error |> Task.FromResult 
+        //                                             |> Async.AwaitTask
+        //                                         return match offerResult with
+        //                                                 | Ok () -> ()
+        //                                                 | Error e -> failwithf "Error on save '%A'" e
+        //                                         } }                                                               

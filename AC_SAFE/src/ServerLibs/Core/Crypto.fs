@@ -68,7 +68,7 @@ module Crypto =
     let toJson<'T> v = 
         use ctx = typeCache.CreateGenerationContext()
         let pickler = Json.genPicklerCached<'T> ctx
-        Json.serialize (pickler) v 
+        Json.serialize (pickler) v  
 
     let fromJson<'T> json = 
         use ctx = typeCache.CreateGenerationContext()

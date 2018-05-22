@@ -5,6 +5,7 @@ group Server
   Sodium.Core
   VaultSharp
   TaskBuilder.fs
+  Akavache
 
   Proto.Actor
   Proto.Actor.Extensions
