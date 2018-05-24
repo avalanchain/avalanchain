@@ -98,8 +98,17 @@ module Crypto =
             member __.Kid() = BitConverter.ToUInt64(ShortHash.Hash(__.Bytes, (Array.zeroCreate<byte> 16)), 0)
 
     let private hashKey = Array.zeroCreate<byte> 32
-    let hash (bytes: byte[]) = GenericHash.Hash (bytes, hashKey, 32)
-    let hashString (str: string) = GenericHash.Hash (str, hashKey, 32)
+    let rec hash (bytes: byte[]) = 
+        try
+            GenericHash.Hash (bytes, hashKey, 32)
+        with
+        | :? AccessViolationException as e -> GenericHash.Hash (bytes, hashKey, 32)
+
+    let hashString (str: string) = 
+        try
+            GenericHash.Hash (str, hashKey, 32)
+        with
+        | :? AccessViolationException as e -> GenericHash.Hash (str, hashKey, 32)
 
 
     type KeyVaultEntry = {

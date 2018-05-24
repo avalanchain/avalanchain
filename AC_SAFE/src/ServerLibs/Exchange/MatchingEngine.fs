@@ -9,7 +9,7 @@ module MatchingEngine =
 
     type MatchType = | Partial | Full
     type MarketSide = | Bid | Ask
-    with member __.Opposite = if __ = Bid then Ask else Bid
+        with member __.Opposite = if __ = Bid then Ask else Bid
   
 
     type OrderID = Guid //uint64
@@ -325,6 +325,8 @@ module MatchingEngine =
 
             member __.Orders (startIndex: uint64) (pageSize: uint32) = 
                 async { return orders |> Seq.skip (int startIndex) |> Seq.truncate (int pageSize) |> Seq.map (fun kv -> kv.Value) |> Seq.toArray } // TODO: Find a less expensive way
+            member __.OrdersCount() = async { return orders.Count }
+
             member __.OrderById orderID = orders |> Map.tryFind orderID
 
             member __.OrderById2 (orderID: string) = orders |> Map.toArray |> Array.map (fun kv -> (fst kv).ToString()) |> fun a -> orderID + " | " + String.Join(",", a)

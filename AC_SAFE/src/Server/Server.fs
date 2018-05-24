@@ -301,6 +301,7 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                                                                 | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
                                     routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
                                     routeCi  "/GetOrders"       >=> bindPageStartQuery ms.Orders
+                                    routeCi  "/GetOrdersCount"  >=> primitive ms.OrdersCount
                                     
                                     routeCi  "/OrderCommands"   >=> bindPageStartQuery ms.OrderCommands.GetPage
                                     routeCi  "/OrderEvents"     >=> bindPageStartQuery ms.OrderEvents.GetPage
