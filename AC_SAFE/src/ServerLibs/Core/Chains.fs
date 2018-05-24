@@ -244,7 +244,8 @@ module Chains =
         open PagedLog
         open LightningDB
             
-        let connectionString = """DataSource=./database.sqlite; Cache = Shared"""
+        //let connectionString = """DataSource=./database.sqlite; Cache = Shared"""
+        let connectionString = """DataSource=:memory:; Cache = Shared"""
         let connectionStringReadOnly = """DataSource=./database.sqlite?mode=ro"""
         let connection = connect connectionString
         // let connectionReadOnly = connect connectionStringReadOnly

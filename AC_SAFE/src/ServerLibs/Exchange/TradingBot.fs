@@ -116,5 +116,5 @@ module TradingBot =
             do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 200
             for i in 1 .. 10000000 do
                 do! Task.Delay 10
-                do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
+                do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 2000
         }
