@@ -24,6 +24,8 @@ open Giraffe.Serialization.Json
 open Giraffe.ModelBinding
 
 open Fable.Remoting.Giraffe
+open FSharp.Control.Tasks
+open FSharp.Control.Tasks.ContextInsensitive
 
 open Shared
 open Avalanchain.Exchange.MatchingEngine
@@ -53,12 +55,13 @@ module ParamHelper =
         path, verb, { pathDef with OperationId = path.Substring(1).Replace("/", "_").ToLowerInvariant() }
 
     let addParam (paramIn: ParamContainer) paramType name required (pathPostfixes: string list) (path: string, verb, pathDef: PathDefinition) = 
-        let pathDef =   if pathPostfixes |> List.exists (fun spath -> path.ToLowerInvariant().EndsWith (spath.ToLowerInvariant())) 
+        let lpath = path.Split "/" |> Array.last
+        let pathDef =   if pathPostfixes |> List.exists (fun spath -> lpath.ToLowerInvariant() = spath.ToLowerInvariant()) 
                         then 
-                            let param = { ParamDefinition.Name = name
-                                          Type = paramType |> Some
-                                          In = paramIn.ToString()
-                                          Required = required }
+                            let param = {   ParamDefinition.Name = name
+                                            Type = paramType |> Some
+                                            In = paramIn.ToString()
+                                            Required = required }
                             { pathDef with Parameters = param :: pathDef.Parameters } 
                         else pathDef
         path, verb, pathDef
@@ -151,18 +154,18 @@ type [<CLIMutable>] PageSymbolStartQuery = { symbol: string option; startIndex: 
 type [<CLIMutable>] PageSymbolPageQuery = { symbol: string option; pageSize: uint32 option }
 
 // let primitive value : HttpHandler = text (value.ToString())
-let textAsync (str : Async<string>) : HttpHandler =
+let textAsync (str : unit -> Task<string>) : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) -> task { 
-        let! s = str |> Async.StartAsTask
+        let! s = str() 
         return! ctx.WriteTextAsync s
     }
 
-let primitive (value: unit -> Async<_>): HttpHandler = async {  let! v = value()
-                                                                return v.ToString() } |> textAsync |> Successful.ok
+let primitive (value: unit -> Task<_>): HttpHandler = textAsync (fun () -> task {   let! v = value()
+                                                                                    return v.ToString() }) |> Successful.ok
 
-let jsonAsync (value: Async<'T>) : HttpHandler =
+let jsonAsync (value: Task<'T>) : HttpHandler =
     fun (next : HttpFunc) (ctx : HttpContext) -> task { 
-        let! v = value |> Async.StartAsTask
+        let! v = value 
         return! ctx.WriteJsonAsync v
     }
 
@@ -170,7 +173,7 @@ let bindSymbolQuery successHandler =
     bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> json |> Successful.ok)
 
 let bindSymbolUInt64Query successHandler = 
-    bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> primitive |> Successful.ok)
+    bindQuery<SymbolQuery> None (fun qs -> qs.symbol |> Option.defaultValue "" |> Symbol |> successHandler |> primitive)
 
 let bindSymbolMaxDepthQuery successHandler = 
     bindQuery<SymbolMaxDepthQuery> None (fun qs -> (successHandler (qs.symbol |> Option.defaultValue "" |> Symbol) (qs.maxDepth |> Option.defaultValue 10)) |> json |> Successful.ok)
@@ -430,11 +433,17 @@ type MatchingServiceStreaming = {
 }
 
 
-let matchingServiceLogs (config: StreamingConfig) pidPrefix = {   
-    OrderCommands = eventLog<OrderCommand> config pidPrefix |> Async.RunSynchronously
-    OrderEvents = eventLog<OrderEvent> config pidPrefix |> Async.RunSynchronously
-    FullOrders = eventLog<Order> config pidPrefix  |> Async.RunSynchronously
-}
+let matchingServiceLogs (config: StreamingConfig) pidPrefix = 
+    task {
+        let! commands = eventLog<OrderCommand> config pidPrefix
+        let! events = eventLog<OrderEvent> config pidPrefix
+        let! fullOrders = eventLog<Order> config pidPrefix
+        return {OrderCommands = commands
+                OrderEvents = events
+                FullOrders = fullOrders }
+    }
+    |> Async.AwaitTask 
+    |> Async.RunSynchronously
 
 let symbolMatchingServiceLogs (config: StreamingConfig) pidPrefix (symbol: Symbol) = matchingServiceLogs config (pidPrefix + "__" + symbol.Value)
 
@@ -449,31 +458,35 @@ let matchingServiceStreaming (config: StreamingConfig) pidPrefix (symbols: strin
     {   Streams = matchingServiceLogs config pidPrefix
         SymbolStreams = fun symbol -> symbolStreamsMap.[symbol] }
 
-let matchingService () =
-    let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
+let matchingService symbols =
+    // let endpoint1 = { IP = "127.0.0.1"; Port = 5000us }
 
-    let acNode = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
-    Threading.Thread.Sleep 1000 
+    // let acNode = setupNode "ac1" endpoint1 [endpoint1] (OverflowStrategy.DropNew) 1000 // None
+    // Threading.Thread.Sleep 1000 
     
     let keyVault = KeyVault([KeyVaultEntry.generate()]) // TODO: Add persistence
      
-    let streamingConfig = {  Node = acNode
+    let streamingConfig = {  //Node = acNode
                              SnapshotInterval = 1000L
                              OverflowStrategy = OverflowStrategy.Backpressure
                              QueueMaxBuffer = 10000
                              Verify = false
                              KeyVault = keyVault }
-    let symbols = ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]
     let streaming: MatchingServiceStreaming = matchingServiceStreaming streamingConfig "matchingService" symbols
     let ms = MatchingService (streaming.Streams, streaming.SymbolStreams, 1M<price>, 100UL) //Facade.MatchingService.Instance
-    TradingBot.tradingBot(ms, symbols) |> Async.Start
     ms
 
+let startSimulation ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+
 let configureApp port (app : IApplicationBuilder) =
+  let symbols = ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]
+  let ms = matchingService symbols
+  startSimulation ms symbols
+
   app
     .UseStaticFiles()
     .UseWebSockets()
-    .UseGiraffe (webApp wsConnectionManager (matchingService()) port CancellationToken.None)
+    .UseGiraffe (webApp wsConnectionManager ms port CancellationToken.None)
 
 let configureServices (services : IServiceCollection) =
     services.AddGiraffe() |> ignore

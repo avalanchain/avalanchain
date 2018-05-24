@@ -2,6 +2,9 @@ namespace Avalanchain.Exchange
 
 module TradingBot = 
     open System
+    open System.Threading.Tasks
+    open FSharp.Control.Tasks
+    open FSharp.Control.Tasks.ContextInsensitive
 
     open MatchingEngine
     open MatchingEngine.Facade
@@ -58,7 +61,7 @@ module TradingBot =
         
     let tradingBot(ms: MatchingService, symbols) = 
         let rnd = Random()
-        let tradeStep lowCap highCap (dt: DateTime) (dtStep: TimeSpan) (symbols: string list) count = async {
+        let tradeStep lowCap highCap (dt: DateTime) (dtStep: TimeSpan) (symbols: string list) count = task {
             for i in 1 .. count do
                 let timestamp = dt.Add(TimeSpan(dtStep.Ticks * int64(i))) |> DateTimeOffset
                 for sym in symbols do 
@@ -109,9 +112,9 @@ module TradingBot =
                                             CreatedTime = timestamp } |> OrderCommand.Create 
                     do! ms.SubmitOrder orderCommand
         }
-        async {
+        task {
             do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 200
             for i in 1 .. 10000000 do
-                //do! Async.Sleep 10
-                do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 200
+                do! Task.Delay 10
+                do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 20
         }

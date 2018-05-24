@@ -194,7 +194,7 @@ paket-files/
 .vs
 AC_SAFE/.idea/
 *.db
-*.db-journal
+*.*-journal
 *.sqlite
 AC_SAFE/.idea/.idea.AC_SAFE/.idea/contentModel.xml
 AC_SAFE/.idea/.idea.AC_SAFE/.idea/workspace.xml

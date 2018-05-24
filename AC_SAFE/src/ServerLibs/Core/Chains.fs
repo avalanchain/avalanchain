@@ -161,17 +161,17 @@ module Chains =
             | DataStoreError of KVStore.ValueIssue
 
         type EventLogView<'T> = {
-            GetCount:           unit -> Async<Pos>
-            GetPage:            Pos -> PageSize -> Async<Result<'T, EventLogError>[]>
-            GetPageToken:       Pos -> PageSize -> Async<Result<string, EventLogError>[]>
-            GetPageJwt:         Pos -> PageSize -> Async<Result<JwtToken<'T>, EventLogError>[]>
-            GetLastPage:        PageSize -> Async<Result<'T, EventLogError>[]>
-            GetLastPageToken:   PageSize -> Async<Result<string, EventLogError>[]>
-            GetLastPageJwt:     PageSize -> Async<Result<JwtToken<'T>, EventLogError>[]>
+            GetCount:           unit -> Task<Pos>
+            GetPage:            Pos -> PageSize -> Task<Result<'T, EventLogError>[]>
+            GetPageToken:       Pos -> PageSize -> Task<Result<string, EventLogError>[]>
+            GetPageJwt:         Pos -> PageSize -> Task<Result<JwtToken<'T>, EventLogError>[]>
+            GetLastPage:        PageSize -> Task<Result<'T, EventLogError>[]>
+            GetLastPageToken:   PageSize -> Task<Result<string, EventLogError>[]>
+            GetLastPageJwt:     PageSize -> Task<Result<JwtToken<'T>, EventLogError>[]>
         }
 
         type EventLog<'T> = {
-            OfferAsync: 'T -> Async<unit> // TODO: Add error handling
+            OfferAsync: 'T -> Task<Result<unit, EventLogError>> // TODO: Add error handling
             View: EventLogView<'T>
         }
 
@@ -196,7 +196,7 @@ module Chains =
         }
 
         type StreamingConfig = {
-            Node: ACNode
+//            Node: ACNode
             SnapshotInterval: int64
             OverflowStrategy: OverflowStrategy
             QueueMaxBuffer: int
@@ -207,57 +207,57 @@ module Chains =
         // let mapLogError = Result.mapError IntegrityError
         let private mapLogPage f = Array.map (Result.map f)
 
-        let eventLog1<'T> (config: StreamingConfig) (pidPrefix: string): EventLog<'T> =
-            let pid = pidPrefix + "__" + typedefof<'T>.Name
-            let getCount() =  async {let! count = streamCurrentPos<_> config.KeyVault config.Node.System config.SnapshotInterval pid
-                                     return count + 1L |> uint64 }
-            let getPage from count = async {let! items = currentEventsSource<'T> config.KeyVault config.Node.System config.Verify pid (int64 from) (int64 count)
-                                                            |> Source.runWith (config.Node.System.Materializer()) (Akkling.Streams.Sink.fold [] (fun s e -> e :: s)) 
-                                            return items |> List.rev |> List.toArray |> Array.map (Result.mapError IntegrityError) }
-            let getLastPage count = async { let countL = uint64(count)
-                                            let! length = getCount()
-                                            return! if length > uint64(countL) then getPage (length - countL) count
-                                                    else getPage 0UL count } 
-            let eventLogView() = {  GetCount = getCount
-                                    GetPageJwt = getPage
-                                    GetPage = fun from count -> async { let! page = getPage from count 
-                                                                        return page |> mapLogPage (fun t -> t.Payload) } 
-                                    GetPageToken = fun from count -> async {let! page = getPage from count 
-                                                                            return page |> mapLogPage (fun t -> t.Token) }
-                                    GetLastPageJwt = getLastPage
-                                    GetLastPage = fun count -> async { let! page = getLastPage count 
-                                                                       return page |> mapLogPage (fun t -> t.Payload) }
-                                    GetLastPageToken = fun count -> async {let! page = getLastPage count 
-                                                                           return page |> mapLogPage (fun t -> t.Token) }
-                                }
-                                
-            let queue: ISourceQueueWithComplete<'T> = Source.queue config.OverflowStrategy config.QueueMaxBuffer 
-                                                        |> Source.map (PersistCommand.Offer)
-                                                        |> Source.toMat (persistSink config.Node.System config.SnapshotInterval config.KeyVault pid) Keep.left 
-                                                        |> Graph.run config.Node.Mat
-            {   View = eventLogView()
-                OfferAsync = fun v -> async {   let! _ = queue.AsyncOffer v
-                                                () } }  
+//        let eventLog1<'T> (config: StreamingConfig) (pidPrefix: string): EventLog<'T> =
+//            let pid = pidPrefix + "__" + typedefof<'T>.Name
+//            let getCount() =  task { let! count = streamCurrentPos<_> config.KeyVault config.Node.System config.SnapshotInterval pid
+//                                     return count + 1L |> uint64 }
+//            let getPage from count = task { let! items = currentEventsSource<'T> config.KeyVault config.Node.System config.Verify pid (int64 from) (int64 count)
+//                                                            |> Source.runWith (config.Node.System.Materializer()) (Akkling.Streams.Sink.fold [] (fun s e -> e :: s)) 
+//                                            return items |> List.rev |> List.toArray |> Array.map (Result.mapError IntegrityError) }
+//            let getLastPage count = task {  let countL = uint64(count)
+//                                            let! length = getCount()
+//                                            return! if length > uint64(countL) then getPage (length - countL) count
+//                                                    else getPage 0UL count } 
+//            let eventLogView() = {  GetCount = getCount
+//                                    GetPageJwt = getPage
+//                                    GetPage = fun from count -> task {  let! page = getPage from count 
+//                                                                        return page |> mapLogPage (fun t -> t.Payload) } 
+//                                    GetPageToken = fun from count -> task { let! page = getPage from count 
+//                                                                            return page |> mapLogPage (fun t -> t.Token) }
+//                                    GetLastPageJwt = getLastPage
+//                                    GetLastPage = fun count -> task {  let! page = getLastPage count 
+//                                                                       return page |> mapLogPage (fun t -> t.Payload) }
+//                                    GetLastPageToken = fun count -> task { let! page = getLastPage count 
+//                                                                           return page |> mapLogPage (fun t -> t.Token) }
+//                                }
+//                                
+//            let queue: ISourceQueueWithComplete<'T> = Source.queue config.OverflowStrategy config.QueueMaxBuffer 
+//                                                        |> Source.map (PersistCommand.Offer)
+//                                                        |> Source.toMat (persistSink config.Node.System config.SnapshotInterval config.KeyVault pid) Keep.left 
+//                                                        |> Graph.run config.Node.Mat
+//            {   View = eventLogView()
+//                OfferAsync = fun v -> task {let! _ = queue.OfferAsync v
+//                                            return Ok () } }  // TODO: Handle error
         
         
         open KVStore
         open PagedLog
         open LightningDB
             
-        let connectionString = """DataSource=./database.sqlite"""
+        let connectionString = """DataSource=./database.sqlite; Cache = Shared"""
         let connectionStringReadOnly = """DataSource=./database.sqlite?mode=ro"""
         let connection = connect connectionString
         // let connectionReadOnly = connect connectionStringReadOnly
 
-        let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): Async<EventLog<'T>> = async {
+        let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): Task<EventLog<'T>> = task {
             let pid = pidPrefix + "__" + typedefof<'T>.Name
-            let! pageLog = createLogView connection connection pid |> Async.AwaitTask
+            let! pageLog = createLogView connection connection pid
             
-            let getCount() = async { let! countRes = pageLog.View.GetCount() |> Async.AwaitTask 
+            let getCount() = task {  let! countRes = pageLog.View.GetCount() 
                                      return match countRes with 
                                             | Ok count -> count 
                                             | Error e -> failwith (e.ToString()) }
-            let getPage from count = async {let! items = pageLog.View.GetPage from count |> Async.AwaitTask 
+            let getPage from count = task { let! items = pageLog.View.GetPage from count  
                                             let page = [| for i in from .. 1UL .. from + uint64(count) - 1UL -> result {
                                                             let! value = match items.TryGetValue i with
                                                                             | (true, v) -> v |> Result.mapError DataStoreError
@@ -266,25 +266,25 @@ module Chains =
                                                             return jwt 
                                                         }|]
                                             return page }
-            let getLastPage count = async { let countL = uint64(count)
+            let getLastPage count = task {  let countL = uint64(count)
                                             let! length = getCount()
                                             return! if length > uint64(countL) then getPage (length - countL) count
                                                     else getPage 0UL count } 
             let eventLogView() = {  GetCount = getCount
                                     GetPageJwt = getPage
-                                    GetPage = fun from count -> async { let! page = getPage from count 
+                                    GetPage = fun from count -> task {  let! page = getPage from count 
                                                                         return page |> mapLogPage (fun t -> t.Payload) } 
-                                    GetPageToken = fun from count -> async {let! page = getPage from count 
+                                    GetPageToken = fun from count -> task { let! page = getPage from count 
                                                                             return page |> mapLogPage (fun t -> t.Token) }
                                     GetLastPageJwt = getLastPage
-                                    GetLastPage = fun count -> async { let! page = getLastPage count 
+                                    GetLastPage = fun count -> task {  let! page = getLastPage count 
                                                                        return page |> mapLogPage (fun t -> t.Payload) }
-                                    GetLastPageToken = fun count -> async {let! page = getLastPage count 
+                                    GetLastPageToken = fun count -> task { let! page = getLastPage count 
                                                                            return page |> mapLogPage (fun t -> t.Token) }
                                 }
                                 
             return {    EventLog.View = eventLogView()
-                        OfferAsync = fun v -> async {   let! lastPos = getCount()
+                        OfferAsync = fun v -> task {    let! lastPos = getCount()
                                                         let newPos = lastPos + 1UL 
                                                         let header = newPos |> Some |> toHeader 
                                                         let tokenResult = result {  let! jwt = toJwt config.KeyVault.Active header v 
@@ -295,10 +295,7 @@ module Chains =
                                                             | Ok token -> task {    let! offerResult = pageLog.OfferAsync token
                                                                                     return offerResult |> Result.mapError DataStoreError }
                                                             | Error e -> e |> Error |> Task.FromResult 
-                                                            |> Async.AwaitTask
-                                                        return match offerResult with
-                                                                | Ok () -> ()
-                                                                | Error e -> failwithf "Error on save '%A'" e
+                                                        return offerResult
                                                         } }  
         }                                                             
 

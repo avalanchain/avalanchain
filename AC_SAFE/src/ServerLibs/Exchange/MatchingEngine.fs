@@ -3,6 +3,8 @@
 module MatchingEngine = 
 
     open System
+    open System.Threading.Tasks
+    open FSharp.Control.Tasks
     
     open Avalanchain.Core
     open Avalanchain.Core.Chains.PagedLog
@@ -277,37 +279,43 @@ module MatchingEngine =
                                             | None -> SymbolStack.Create symbol priceStep posLimit
 
             //orderStack = OrderStack.Create priceStep
-            let processCommand command expireLimit = async {
+            let processCommand command expireLimit = task {
                 match command with
                 | OrderCommand.Create order -> 
-                    do! streams.OrderCommands.OfferAsync command
-                    let symbolStack = findSymbolStack order.Symbol
-                    let newPos = symbolStack.Pos + 1UL
-                    let newOrderStack, evts, updatedOrders = order 
-                                                                |> Order.Create newPos expireLimit // TODO: Sum with current position
-                                                                |> symbolStack.OrderStack.AddOrder 
-                    // let newOrderStack, expireOrders = newOrderStack.RemoveExpired newPos
-                    // let expireEvts = [for o in expireOrders -> Expired(o.ID, o.Pos, newPos)]
-                    // let evts = evts @ expireEvts
-                    let newSymbolStack = { symbolStack with OrderStack = newOrderStack; Pos = newPos }
-                    let symbolMsStreams = symbolStreams symbolStack.Symbol
-                    for o in updatedOrders do 
-                        orders <- orders.Add(o.ID, o)
-                        if o.FullyAllocated then 
-                            do! symbolMsStreams.FullOrders.OfferAsync o
-                            do! streams.FullOrders.OfferAsync o
-                    do! symbolMsStreams.OrderCommands.OfferAsync command
-                    
-                    let revEvents = evts |> List.rev
-                    for re in revEvents do
-                        do! symbolMsStreams.OrderEvents.OfferAsync re
-                        do! streams.OrderEvents.OfferAsync re
-                    symbolStackMap <- symbolStackMap.Add (newSymbolStack.Symbol, newSymbolStack)
+                    let! offerResult = streams.OrderCommands.OfferAsync command
+                    match offerResult with 
+                    | Ok () -> 
+                        let symbolStack = findSymbolStack order.Symbol
+                        let newPos = symbolStack.Pos + 1UL
+                        let newOrderStack, evts, updatedOrders = order 
+                                                                    |> Order.Create newPos expireLimit // TODO: Sum with current position
+                                                                    |> symbolStack.OrderStack.AddOrder 
+                        // let newOrderStack, expireOrders = newOrderStack.RemoveExpired newPos
+                        // let expireEvts = [for o in expireOrders -> Expired(o.ID, o.Pos, newPos)]
+                        // let evts = evts @ expireEvts
+                        let newSymbolStack = { symbolStack with OrderStack = newOrderStack; Pos = newPos }
+                        let symbolMsStreams = symbolStreams symbolStack.Symbol
+                        for o in updatedOrders do 
+                            orders <- orders.Add(o.ID, o)
+                            if o.FullyAllocated then 
+                                let! _ = symbolMsStreams.FullOrders.OfferAsync o
+                                let! _ = streams.FullOrders.OfferAsync o
+                                ()
+                        
+                        let! a = symbolMsStreams.OrderCommands.OfferAsync command
+                        
+                        let revEvents = evts |> List.rev
+                        for re in revEvents do
+                            let! _ = symbolMsStreams.OrderEvents.OfferAsync re
+                            let! _ = streams.OrderEvents.OfferAsync re
+                            ()
+                        symbolStackMap <- symbolStackMap.Add (newSymbolStack.Symbol, newSymbolStack)
+                    | Error e -> printfn "Command Offer error: '%A'" e
                 | OrderCommand.Cancel oid -> failwith "Not supported yet"
             }
             
 
-            member __.SubmitOrder orderCommand: Async<unit> = processCommand orderCommand posLimit
+            member __.SubmitOrder orderCommand: Task<unit> = processCommand orderCommand posLimit
 
             member __.MainSymbol = Symbol "AVC"
             member __.Symbols with get() = symbolStackMap |> Map.toSeq |> Seq.map fst |> Seq.filter(fun s -> s <> __.MainSymbol)
@@ -324,8 +332,8 @@ module MatchingEngine =
             member __.SymbolFullOrders symbol = (symbolStreams symbol).FullOrders.View
 
             member __.Orders (startIndex: uint64) (pageSize: uint32) = 
-                async { return orders |> Seq.skip (int startIndex) |> Seq.truncate (int pageSize) |> Seq.map (fun kv -> kv.Value) |> Seq.toArray } // TODO: Find a less expensive way
-            member __.OrdersCount() = async { return orders.Count }
+                task { return orders |> Seq.skip (int startIndex) |> Seq.truncate (int pageSize) |> Seq.map (fun kv -> kv.Value) |> Seq.toArray } // TODO: Find a less expensive way
+            member __.OrdersCount() = orders.Count |> Task.FromResult
 
             member __.OrderById orderID = orders |> Map.tryFind orderID
 
