@@ -7,6 +7,7 @@ module Chains =
     open System.Text.RegularExpressions
     open System.Threading.Tasks
     open FSharp.Control.Tasks
+    open FSharp.Control.Tasks.ContextInsensitive
     open FSharpx.Result
 
     open Akka.Actor
@@ -244,15 +245,15 @@ module Chains =
         open PagedLog
         open LightningDB
             
-        //let connectionString = """DataSource=./database.sqlite; Cache = Shared"""
-        let connectionString = """DataSource=:memory:; Cache = Shared"""
+        let connectionString = """DataSource=./database.sqlite; Cache = Shared"""
+        // let connectionString = """DataSource=:memory:; Cache = Shared"""
         let connectionStringReadOnly = """DataSource=./database.sqlite?mode=ro"""
         let connection = connect connectionString
         // let connectionReadOnly = connect connectionStringReadOnly
 
         let eventLog<'T> (config: StreamingConfig) (pidPrefix: string): Task<EventLog<'T>> = task {
             let pid = pidPrefix + "__" + typedefof<'T>.Name
-            let! pageLog = createLogView connection connection pid
+            let! pageLog = createLog connection connection pid
             
             let getCount() = task {  let! countRes = pageLog.View.GetCount() 
                                      return match countRes with 

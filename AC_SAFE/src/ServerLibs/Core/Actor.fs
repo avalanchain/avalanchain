@@ -10,6 +10,7 @@ open Proto.Persistence.SnapshotStrategies
 open Proto.FSharp
 
 module Observable =
+    open System.Reactive
     open System.Reactive.Linq
     open FSharp.Control.Reactive
 

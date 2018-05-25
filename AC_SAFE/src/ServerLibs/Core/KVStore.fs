@@ -7,11 +7,13 @@ module KVStore =
     open System.Data.Common
     open System.Threading.Tasks
     open FSharp.Control.Tasks
+    open FSharp.Control.Tasks.ContextInsensitive
     open FSharp.Control.Reactive
     open FSharpx.Result
     open LightningDB
     open EtcdGrpcClient
     open Akavache
+    open System.Reactive.Concurrency
     open System.Reactive.Linq
     open System.Reactive.Threading.Tasks
     open Crypto
@@ -48,6 +50,8 @@ module KVStore =
         abstract member Put : keyValues: ('TK * string)[] -> Task<Result<unit, ValueIssue>>
 
     module PagedLog =
+        open System.Reactive.Subjects
+
         type LogView = {
             GetCount:    unit ->            Task<Result<Pos, ValueIssue>>
             GetPage:     Pos -> PageSize -> Task<IDictionary<Pos, Result<ValueSlot, ValueIssue>>>
@@ -88,7 +92,7 @@ module KVStore =
             member __.Bind(m: Result<'a, 'e>, f: 'a -> Result<'b, 'e>) = Result.bind f m |> Task.FromResult
                                                                                             
         
-        let createLogView1 (store: IKVStore<LogKey>) logId = 
+        let createKVBasedLogView (store: IKVStore<LogKey>) logId = 
             let setLength (length: Pos) = task {
                 let! putResult = store.Put(Length logId, length.ToString())
                 return match putResult with | Error (ValueSetIssue(ValueAlreadySet)) -> Ok ()
@@ -148,13 +152,9 @@ module KVStore =
                 View       = view }
             
 /// Sqlite
-        let createLogView (connection: #DbConnection) (connectionReadOnly: #DbConnection) logId = task {
+        let createLogView (connectionReadOnly: #DbConnection) logId = task {
             let tableName = tableName logId
-            let! createTableResult = createTable connection tableName
-            match createTableResult with
-            | Error e -> failwithf "Table creation Exception: '%A'" e
-            | Ok _ -> () 
-            
+           
             let getLength() = task {
                 let! lengthResult = getMaxId connectionReadOnly tableName
                 return match lengthResult with 
@@ -183,17 +183,72 @@ module KVStore =
             let view = {   LogView.GetCount =   getLength  
                            GetPage =            getPage
                            GetLastPage =        getLastPage }
-                           
+            
+            return view               
+        }
+
+        // let sink = new Subject<ChainItem>()
+        
+        // let flow = 
+        //     sink
+        //     |> Observable.iter (printfn "%A")
+        //     |> Observable.bufferSpanCount (TimeSpan.FromMilliseconds(100.)) 10000
+        //     //|> Observable.bind(fun o -> Observable.FromAsync(fun () -> insertBatch connection tableName o))
+        //     |> Observable.subscribe (fun _ -> 
+        //                                         printfn "Commited batch for logId: '%s'" "logId"
+        //                                         ()    )
+
+        let sink = new Subject<ChainItem>()
+        
+
+        // let connectionString = """DataSource=:memory:; Cache = Shared"""
+        let connectionString = """DataSource=./database.sqlite; Cache = Shared"""
+
+        let flow = 
+            sink
+            |> Observable.bufferSpanCount (TimeSpan.FromMilliseconds(1000.)) 10000
+            |> Observable.subscribe (fun o -> 
+                                            use connection = connect connectionString
+                                            insertBatch connection o
+                                            printfn "Commited batch for '%d' items" o.Count
+                                            ()    )
+
+        let createLog (connection: #DbConnection) (connectionReadOnly: #DbConnection) logId = task {
+            let tableName = tableName logId
+            let! createTableResult = createTable connection tableName
+            match createTableResult with
+            | Error e -> failwithf "Table creation Exception: '%A'" e
+            | Ok _ -> () 
+            
+            // let sink = new Subject<ChainItem>()
+            
+            // let flow = 
+            //     sink
+            //     // |> Observable.iter (printfn "%A")
+            //     |> Observable.bufferSpanCount (TimeSpan.FromMilliseconds(100.)) 10000
+            //     // |> Observable.bind(fun o -> Observable.FromAsync(fun () -> insertBatch connection tableName o))
+            //     // |> Observable.map(fun o -> insertBatch connection tableName o)
+            //     // |> Observable.subscribeOn(Scheduler.CurrentThread)
+            //     |> Observable.subscribe (fun o -> 
+            //                                     insertBatch connection o
+            //                                     printfn "Commited batch for logId: '%s'" logId
+            //                                     ()    )
+
             let offer str = task {
-                let! res = insert connection tableName { ChainItem.Id = 0UL; Data = str; Hash = str.Substring 10 }
-                return match res with 
-                        | Ok _ -> Ok ()
-                        | Error e -> e.ToString() |> WriteTechIssue |> ValueSetIssue |> Error
+                //let! res = insert connection tableName { ChainItem.Id = 0UL; Data = str; Hash = str.Substring 10 }
+//                return match res with 
+//                        | Ok _ -> Ok ()
+//                        | Error e -> e.ToString() |> WriteTechIssue |> ValueSetIssue |> Error
+                sink.OnNext { ChainItem.Id = 0UL; Data = str; Hash = str.Substring 10; TableName = tableName }
+                return Ok () // TODO: Add error handling 
             }
+            
+            let! view = createLogView connectionReadOnly logId
 
             return {OfferAsync = offer
                     View       = view }            
         }
+        
 
     type IHashStore = IKVStore<Hash>
 

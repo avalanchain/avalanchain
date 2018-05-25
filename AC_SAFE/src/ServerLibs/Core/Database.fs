@@ -9,6 +9,7 @@ module Database =
     open System.Threading.Tasks
     open Microsoft.Data.Sqlite
     open FSharp.Control.Tasks
+    open FSharp.Control.Tasks.ContextInsensitive
     open Dapper
 
     let inline (=>) k v = k, box v
@@ -66,15 +67,16 @@ module Database =
 
     type Pos = uint64
       
+    type ITableName = 
+        abstract TableName: string 
+    let tableName tn = { new ITableName with member __.TableName = tn }
+
     type [<CLIMutable>] ChainItem = {
         Id: Pos
         Hash: string
         Data: string
+        TableName: ITableName
     }
-
-    type ITableName = 
-        abstract TableName: string 
-    let tableName tn = { new ITableName with member __.TableName = tn }
 
     let connect connectionString = 
         let connection = new SqliteConnection(connectionString)
@@ -87,9 +89,9 @@ module Database =
     let prepareDatabase connection =
         createTable connection (tableName "Stream")
 
-    let insert connection (tableName: ITableName) (v: ChainItem): Task<Result<int,exn>> =
+    let insert connection (v: ChainItem): Task<Result<int,exn>> =
         //execute connection "INSERT INTO Stream(id, hash, data) VALUES (@id, @password, @login)" v
-        execute connection ("INSERT INTO " + tableName.TableName + "(hash, data) VALUES (@Hash, @Data)") v
+        execute connection ("INSERT INTO " + v.TableName.TableName + "(hash, data) VALUES (@Hash, @Data)") v
 
     let createChainItems n =
         let rnd = System.Random()
@@ -97,28 +99,40 @@ module Database =
             let bts = Array.zeroCreate n
             rnd.NextBytes bts 
             bts |> System.Convert.ToBase64String
-        [| for i in 1UL .. n -> { Id = i; Hash = rndStr 64; Data = rndStr 1024 }|]
+        [| for i in 1UL .. n -> { Id = i; Hash = rndStr 64; Data = rndStr 1024; TableName = tableName "Streams" }|]
 
-    let insertBatch (connection: #DbConnection) (tableName: ITableName) (items: ArraySegment<ChainItem>) = task {
+    let insertBatch (connection: #DbConnection) (items: ChainItem seq) = 
         //do! connection.OpenAsync().ContinueWith<unit>(fun _ -> ())
         let transaction = connection.BeginTransaction()
         let sw = Stopwatch()
         sw.Start()
         for item in items do
-          let! _ = connection.ExecuteAsync("INSERT INTO " + tableName.TableName + "(hash, data) VALUES (@Hash, @Data)", item, transaction)
+            connection.ExecuteAsync("INSERT INTO " + item.TableName.TableName + "(hash, data) VALUES (@Hash, @Data)", item, transaction) |> ignore
+        transaction.Commit()
+        transaction.Dispose()
+        sw.Stop()
+        printfn "batch inserts: '%A'" sw.Elapsed
+
+    let insertBatchAsync (connection: #DbConnection) (items: ChainItem seq) = task {
+        //do! connection.OpenAsync().ContinueWith<unit>(fun _ -> ())
+        use transaction = connection.BeginTransaction()
+        let sw = Stopwatch()
+        sw.Start()
+        for item in items do
+          let! _ = connection.ExecuteAsync("INSERT INTO " + item.TableName.TableName + "(hash, data) VALUES (@Hash, @Data)", item, transaction)
           ()
         transaction.Commit()
         sw.Stop()
         printfn "batch inserts: '%A'" sw.Elapsed
-    }
+    }    
 
 
-    let insert10000 connection tableName = task {
+    let insert10000 connection tn = task {
         let sw = Stopwatch()
         sw.Start()
         for i in 1UL .. 10000UL do
-          let v = { Id = i; Hash = "H" + i.ToString(); Data = "D" + i.ToString() }
-          let! _ = insert connection tableName v
+          let v = { Id = i; Hash = "H" + i.ToString(); Data = "D" + i.ToString(); TableName = tableName tn }
+          let! _ = insert connection v
           ()
         sw.Stop()
         printfn "1b1 inserts: '%A'" sw.Elapsed

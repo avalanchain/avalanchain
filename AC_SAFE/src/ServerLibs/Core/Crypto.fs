@@ -89,7 +89,7 @@ module Crypto =
                 member inline __.Kid() = __.PublicKey.Kid()
                 member inline __.Sign (str: string) = __.PrivateKey |> Option.map (fun privKey -> PublicKeyAuth.SignDetached(str, privKey)) 
                 member inline __.Verify (str: string) signature = 
-                    PublicKeyAuth.VerifyDetached(signature, Text.Encoding.UTF8.GetBytes(str), __.PublicKey.Bytes)
+                    PublicKeyAuth.VerifyDetached(signature, getBytes str, __.PublicKey.Bytes)
                 interface IDisposable with member __.Dispose() = match __ with  | NaClPair kp -> kp.Dispose() 
                                                                                 | NaClPub _ -> ()
     and NaClPubKey = NaClPubKey of byte[] 
@@ -98,8 +98,12 @@ module Crypto =
             member __.Kid() = BitConverter.ToUInt64(ShortHash.Hash(__.Bytes, (Array.zeroCreate<byte> 16)), 0)
 
     let private hashKey() = Array.zeroCreate<byte> 32
-    let hash (bytes: byte[]) = GenericHash.Hash (bytes, hashKey(), 32)
-    let hashString (str: string) = GenericHash.Hash (str, hashKey(), 32) 
+    let private sha = new System.Security.Cryptography.SHA256Managed()
+    let hash (bytes: byte[]) = 
+        //GenericHash.Hash (bytes, hashKey(), 32)
+        bytes |> sha.ComputeHash
+
+    let hashString (str: string) = str |> getBytes |> hash
 
 
     type KeyVaultEntry = {
@@ -165,7 +169,8 @@ module Crypto =
         else return token, header, payload, signature
     }
 
-    let toRef (str: string) = { Cid = str |> hashString |> Utilities.BinaryToHex } 
+    //let toRef (str: string) = { Cid = str |> hashString |> Utilities.BinaryToHex } 
+    let toRef (str: string) = { Cid = str |> hashString |> encodeBase64Bytes } 
 
     type SignedProof<'T> = { 
         Value: 'T

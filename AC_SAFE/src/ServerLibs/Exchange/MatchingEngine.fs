@@ -295,6 +295,7 @@ module MatchingEngine =
                         // let evts = evts @ expireEvts
                         let newSymbolStack = { symbolStack with OrderStack = newOrderStack; Pos = newPos }
                         let symbolMsStreams = symbolStreams symbolStack.Symbol
+
                         for o in updatedOrders do 
                             orders <- orders.Add(o.ID, o)
                             if o.FullyAllocated then 
@@ -309,6 +310,7 @@ module MatchingEngine =
                             let! _ = symbolMsStreams.OrderEvents.OfferAsync re
                             let! _ = streams.OrderEvents.OfferAsync re
                             ()
+                        
                         symbolStackMap <- symbolStackMap.Add (newSymbolStack.Symbol, newSymbolStack)
                     | Error e -> printfn "Command Offer error: '%A'" e
                 | OrderCommand.Cancel oid -> failwith "Not supported yet"
