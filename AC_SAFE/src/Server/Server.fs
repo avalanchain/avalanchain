@@ -1,6 +1,9 @@
 ﻿open System
 open System.Collections.Concurrent
 open System.IO
+open System.Reactive
+open System.Reactive.Subjects
+open System.Reactive.Linq
 open System.Threading
 open System.Threading.Tasks
 open Microsoft.AspNetCore
@@ -24,6 +27,7 @@ open Giraffe.Serialization.Json
 open Giraffe.ModelBinding
 
 open Fable.Remoting.Giraffe
+open FSharp.Control.Reactive
 open FSharp.Control.Tasks
 open FSharp.Control.Tasks.ContextInsensitive
 
@@ -199,15 +203,15 @@ let logger str (msg: WebSocketMessage) =
 
 
 type MatchingServiceSources = {
-    OrderCommandsSource: Source<OrderCommand, NotUsed>
-    OrderEventsSource: Source<OrderEvent, NotUsed>
-    FullOrdersSource: Source<Order, NotUsed>
+    OrderCommandsSource: IObservable<OrderCommand>
+    OrderEventsSource: IObservable<OrderEvent>
+    FullOrdersSource: IObservable<Order>
 }
 
 type MatchingServiceQueues = {
-    OrderCommandsQueue: ISourceQueueWithComplete<OrderCommand>
-    OrderEventsQueue: ISourceQueueWithComplete<OrderEvent>
-    FullOrdersQueue: ISourceQueueWithComplete<Order>
+    OrderCommandsQueue: IObserver<OrderCommand>
+    OrderEventsQueue: IObserver<OrderEvent>
+    FullOrdersQueue: IObserver<Order>
 }
 
 let toWebSocketMessage o = o.ToString() |> WebSocketMessage 
@@ -217,12 +221,13 @@ let wsStreamsBinding materializer (streams: MatchingServiceSources) cancellation
   let webSocketRouteCi route connection = routeCi route >=> webSocket route (printfn "%s") connection cancellationToken
   let webSocketBroadcastRouteCi route connection = routeCi route >=> webSocketBroadcast route (printfn "%s") connection cancellationToken
 
-  let toSourceHandler (dispatcher: WebSocketDispatcher) source = 
-    source 
-    |> Source.asyncMap 1 (toWebSocketMessage >> dispatcher)
-    |> Source.runWith materializer (Sink.ignore)
-    |> Async.RunSynchronously
-    (fun m -> m |> dispatcher)
+  let toSourceHandler (dispatcher: WebSocketDispatcher) (source: IObservable<_>) = 
+    let obs = source
+                |> Observable.bind(fun o -> Observable.FromAsync(fun () -> o |> toWebSocketMessage |> dispatcher))
+                |> Observable.subscribe ignore
+    (fun m ->
+        let _ = obs // Just not to loose the ref 
+        m |> dispatcher)
 
 //   subRouteCi "/ws" (
   choose [
@@ -246,13 +251,22 @@ let wsSymbolStreamsBinding materializer (symbol: Symbol) (streams: MatchingServi
 //    ]
 //  )
 
+//let prepareStreams (mat: IMaterializer) = 
+//    let ocq, ocs = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
+//    let oeq, oes = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
+//    let foq, fos = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
+//    let queues = {  OrderCommandsQueue = ocq
+//                    OrderEventsQueue = oeq
+//                    FullOrdersQueue = foq }
+//    let sources = { OrderCommandsSource = ocs
+//                    OrderEventsSource = oes
+//                    FullOrdersSource = fos }
+//    queues, sources    
+
 let prepareStreams (mat: IMaterializer) = 
-    let ocq, ocs = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
-    let oeq, oes = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
-    let foq, fos = Source.queue OverflowStrategy.DropTail 10000 |> Source.toMat (Sink.broadcastHub 1000) Keep.both |> Graph.run mat
-    let queues = {  OrderCommandsQueue = ocq
-                    OrderEventsQueue = oeq
-                    FullOrdersQueue = foq }
+    let queues = {  OrderCommandsQueue = new Subject<_>()
+                    OrderEventsQueue = new Subject<_>()
+                    FullOrdersQueue = new Subject<_>() }
     let sources = { OrderCommandsSource = ocs
                     OrderEventsSource = oes
                     FullOrdersSource = fos }
@@ -415,14 +429,14 @@ let webApp (wsConnectionManager: ConnectionManager) (ms: Facade.MatchingService)
                                         logger "ClientRec" >> clientDispatcher
                                     ) 
                                 cancellationToken
-          route "/wsecho5" >=> webSocket "wsecho5" (printfn "%s") 
-                                (fun dispatcher _ _ -> 
-                                        let source, sink, handler = toAsyncSeqPair cancellationToken dispatcher
-                                        let url = (sprintf "ws://localhost:%d/wsecho4" port) |> Uri
-                                        webSocketClient url (printfn "%s") (fun d _ _ -> fromAsyncSeqPair source sink cancellationToken dispatcher) cancellationToken |> ignore
-                                        handler
-                                    ) 
-                                cancellationToken
+//          route "/wsecho5" >=> webSocket "wsecho5" (printfn "%s") 
+//                                (fun dispatcher _ _ -> 
+//                                        let source, sink, handler = toAsyncSeqPair cancellationToken dispatcher
+//                                        let url = (sprintf "ws://localhost:%d/wsecho4" port) |> Uri
+//                                        webSocketClient url (printfn "%s") (fun d _ _ -> fromAsyncSeqPair source sink cancellationToken dispatcher) cancellationToken |> ignore
+//                                        handler
+//                                    ) 
+//                                cancellationToken
           route  "/termsOfService"       >=> text "TODO: Add Terms of Service" 
           FableGiraffeAdapter.httpHandlerWithBuilderFor counterProcotol Route.builder 
           ]
