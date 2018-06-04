@@ -1,13 +1,13 @@
 namespace Avalanchain.Core
 
 open System
-open FSharp.Control.AsyncSeqExtensions
-open FSharp.Control
-open Proto
-open Proto.Persistence
+// open FSharp.Control.AsyncSeqExtensions
+// open FSharp.Control
+// open Proto
+// open Proto.Persistence
 //open Proto.FSharp.Persistence
-open Proto.Persistence.SnapshotStrategies
-open Proto.FSharp
+// open Proto.Persistence.SnapshotStrategies
+// open Proto.FSharp
 
 module Observable =
     open System.Reactive
@@ -15,8 +15,8 @@ module Observable =
     open FSharp.Control.Reactive
 
     /// Creates an observable sequence from the specified Subscribe method implementation.
-    let create (subscribe: IObserver<'T> -> unit -> unit) =
-        Observable.Create(Func<_,_>(fun o -> Action(subscribe o)))
+    let create (subscribe: IObserver<'T> -> unit) =
+        Observable.Create(Func<_,_>(fun o -> Action(fun () -> subscribe o)))
 
 module Persistence = ()
     // open Proto

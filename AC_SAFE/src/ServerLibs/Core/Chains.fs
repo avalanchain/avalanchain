@@ -199,7 +199,7 @@ module Chains =
         type StreamingConfig = {
 //            Node: ACNode
             SnapshotInterval: int64
-            OverflowStrategy: OverflowStrategy
+            // OverflowStrategy: OverflowStrategy
             QueueMaxBuffer: int
             Verify: bool 
             KeyVault: IKeyVault
