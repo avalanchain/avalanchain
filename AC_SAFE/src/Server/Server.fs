@@ -1,5 +1,6 @@
 ﻿namespace Avalanchain.Server
 
+open Avalanchain.Core
 module Server =
 
     open System
@@ -204,11 +205,16 @@ module Server =
         match msg with | WebSocketMessage msg -> printfn "%s:%s" str msg 
         msg
 
+    type InternalError<'T> = InternalError of 'T * string 
+    let toInternalError<'T> (obs: IObservable<Result<'T, 'T * EventLogError>>) = 
+        obs |> Observable.map(Result.mapError(fun (t, e) -> InternalError(t, e.ToString())))
+
+    type ObservableSource<'T> = IObservable<Result<'T, InternalError<'T>>>
 
     type MatchingServiceSources = {
-        OrderCommandsSource: IObservable<OrderCommand>
-        OrderEventsSource: IObservable<OrderEvent>
-        FullOrdersSource: IObservable<Order>
+        OrderCommandsSource: ObservableSource<OrderCommand>
+        OrderEventsSource: ObservableSource<OrderEvent>
+        FullOrdersSource: ObservableSource<Order>
     }
 
     type MatchingServiceQueues = {
@@ -217,10 +223,10 @@ module Server =
         FullOrdersQueue: IObserver<Order>
     }
 
-    let toWebSocketMessage o = o.ToString() |> WebSocketMessage 
+    let toWebSocketMessage o = o |> toJson |> WebSocketMessage 
     let fromWebSocketMessage (msg: WebSocketMessage) = msg.Value 
 
-    let wsStreamsBinding (streams: MatchingServiceSources) cancellationToken =
+    let wsStreamsBinding prefix (streams: MatchingServiceSources) cancellationToken =
       let webSocketRouteCi route connection = routeCi route >=> webSocket route (printfn "%s") connection cancellationToken
       let webSocketBroadcastRouteCi route connection = routeCi route >=> webSocketBroadcast route (printfn "%s") connection cancellationToken
 
@@ -232,16 +238,16 @@ module Server =
             let _ = obs // Just not to loose the ref 
             m |> dispatcher)
 
-    //   subRouteCi "/ws" (
-      choose [
-        webSocketBroadcastRouteCi "/OrderRequests" (fun d _ _ -> toSourceHandler d streams.OrderCommandsSource)
-        webSocketBroadcastRouteCi "/OrderEvents" (fun d _ _ -> toSourceHandler d streams.OrderEventsSource)
-        webSocketBroadcastRouteCi "/FullOrders" (fun d _ _ -> toSourceHandler d streams.FullOrdersSource)
-      ]
-    //   )
+      subRouteCi prefix (
+        choose [
+          webSocketBroadcastRouteCi "/OrderRequests" (fun d _ _ -> toSourceHandler d streams.OrderCommandsSource)
+          webSocketBroadcastRouteCi "/OrderEvents" (fun d _ _ -> toSourceHandler d streams.OrderEventsSource)
+          webSocketBroadcastRouteCi "/FullOrders" (fun d _ _ -> toSourceHandler d streams.FullOrdersSource)
+        ]
+      )
 
-    let wsSymbolStreamsBinding (symbol: Symbol) (streams: MatchingServiceSources) cancellationToken =
-      subRouteCi ("/" + symbol.Value) ( wsStreamsBinding (streams: MatchingServiceSources) cancellationToken )
+    let wsSymbolStreamsBinding prefix (symbol: Symbol) (streams: MatchingServiceSources) cancellationToken =
+      wsStreamsBinding (prefix + "/" + symbol.Value) streams cancellationToken
 
     //let wsSymbolStreamsBinding materializer (streams: Map<Symbol, MatchingServiceSources>) cancellationToken =
     //  subRouteCi "/symbols" (choose [ for kv in streams -> wsSymbolStreamsBinding materializer kv.Key kv.Value cancellationToken ])
@@ -270,19 +276,16 @@ module Server =
         Streams: MatchingServiceLogs
         SymbolStreams: MatchingServiceSymbolLogs
     }
-    let prepareStreams (streams: MatchingServiceSources) = 
+    let prepareStreams (streams: MatchingServiceLogs) = 
         let queues = {  OrderCommandsQueue = new Subject<_>()
-                        OrderEventsQueue = new Subject<_>()
-                        FullOrdersQueue = new Subject<_>() }
-        let ocs = streams.OrderCommandsSource.Publish()
-        let oes = streams.OrderEventsSource.Publish()
-        let fos = streams.FullOrdersSource.Publish()
-        let sources = { OrderCommandsSource = ocs
-                        OrderEventsSource = oes
-                        FullOrdersSource = fos }
-        ocs.Connect() |> ignore
-        oes.Connect() |> ignore
-        fos.Connect() |> ignore
+                        OrderEventsQueue   = new Subject<_>()
+                        FullOrdersQueue    = new Subject<_>() }
+        let ocs = streams.OrderCommands.View.Subscribe()
+        let oes = streams.OrderEvents.View.Subscribe()
+        let fos = streams.FullOrders.View.Subscribe()
+        let sources = { OrderCommandsSource = ocs |> toInternalError
+                        OrderEventsSource   = oes |> toInternalError
+                        FullOrdersSource    = fos |> toInternalError }
                         
         queues, sources               
 
@@ -291,8 +294,8 @@ module Server =
       
     // let prepareStreams (streams: Symbol list)
 
-    let prefix = "/aa"
-    let eventLogViewSection<'T> name (eventLog: EventLogView<'T>) = //(handler: HttpHandler) = 
+    // let prefix = "/aa"
+    let eventLogViewSection<'T> prefix name (eventLog: EventLogView<'T>) = //(handler: HttpHandler) = 
         choose [
             routeCi  (prefix + "/" + name)       >=> bindPageStartQuery eventLog.GetPage
             routeCi  (prefix + "/token/" + name) >=> bindPageStartQuery eventLog.GetPageToken
@@ -430,6 +433,9 @@ module Server =
                                   route  "/ping"       >=> text "pong"
                         ]
                 ]) |> withConfig (docsConfig port)
+              
+              wsStreamsBinding "/wstreams" (ms.Streams |> prepareStreams |> snd) cancellationToken
+
               route "/wsecho" >=> (wsConnectionManager.CreateSocket(
                                     (fun ref -> task { return () }),
                                     (fun ref msg -> ref.SendTextAsync("Hi " + msg, cancellationToken)),

@@ -329,9 +329,13 @@ module MatchingEngine =
             member __.OrderEvents = streams.OrderEvents.View
             member __.FullOrders = streams.FullOrders.View
 
+            member __.Streams = streams
+
             member __.SymbolOrderCommands symbol = (symbolStreams symbol).OrderCommands.View //startIndex pageSize = getPage (symbol |> findSymbolStack).Commands startIndex pageSize
             member __.SymbolOrderEvents symbol = (symbolStreams symbol).OrderEvents.View
             member __.SymbolFullOrders symbol = (symbolStreams symbol).FullOrders.View
+
+            member __.SymbolStreams symbol = symbolStreams symbol
 
             member __.Orders (startIndex: uint64) (pageSize: uint32) = 
                 task { return orders |> Seq.skip (int startIndex) |> Seq.truncate (int pageSize) |> Seq.map (fun kv -> kv.Value) |> Seq.toArray } // TODO: Find a less expensive way
