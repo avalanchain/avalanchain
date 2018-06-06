@@ -173,11 +173,11 @@ module Chains =
             GetLastPage:        PageSize -> Task<Result<'T, EventLogError>[]>
             GetLastPageToken:   PageSize -> Task<Result<string, EventLogError>[]>
             GetLastPageJwt:     PageSize -> Task<Result<JwtToken<'T>, EventLogError>[]>
-            Subscribe:          unit -> IConnectableObservable<Result<'T, 'T * EventLogError>>
+            Subscribe:          unit -> IConnectableObservable<Result<string, 'T * EventLogError>>
         }
 
         type EventLog<'T> = {
-            OfferAsync: 'T -> Task<Result<unit, EventLogError>> // TODO: Add error handling
+            OfferAsync: 'T -> Task<Result<string, EventLogError>> // TODO: Add error handling
             View: EventLogView<'T>
         }
 
@@ -304,14 +304,15 @@ module Chains =
                                                         let tokenResult = result {  let! jwt = toJwt config.KeyVault.Active header v 
                                                                                     return jwt.Token } 
                                                                             |> Result.mapError (SigningError >> IntegrityError)
-                                                        let! (offerResult: Result<unit, EventLogError>) = 
+                                                        let! (offerResult: Result<string, EventLogError>) = 
                                                             match tokenResult with 
                                                             | Ok token -> task {    let! offerResult = pageLog.OfferAsync token
-                                                                                    return offerResult |> Result.mapError DataStoreError }
+                                                                                    return offerResult 
+                                                                                            |> Result.map (fun _ -> token)
+                                                                                            |> Result.mapError DataStoreError }
                                                             | Error e -> e |> Error |> Task.FromResult 
                                                         
                                                         offerResult // Update subscribers
-                                                        |> Result.map (fun _ -> v) 
                                                         |> Result.mapError (fun e -> v, e) 
                                                         |> subject.OnNext 
                                                         

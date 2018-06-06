@@ -284,7 +284,7 @@ module MatchingEngine =
                 | OrderCommand.Create order -> 
                     let! offerResult = streams.OrderCommands.OfferAsync command
                     match offerResult with 
-                    | Ok () -> 
+                    | Ok _ -> 
                         let symbolStack = findSymbolStack order.Symbol
                         let newPos = symbolStack.Pos + 1UL
                         let newOrderStack, evts, updatedOrders = order 
