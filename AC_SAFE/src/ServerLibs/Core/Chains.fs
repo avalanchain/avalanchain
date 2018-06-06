@@ -165,6 +165,21 @@ module Chains =
             | IntegrityError of IntegrityError
             | DataStoreError of KVStore.ValueIssue
 
+        type LogOfferReceipt = {
+            // Account: TradingAccount // TODO: Change to PartitionId
+            Token: string
+            Json: string
+            // Ref: TokenRef
+            // Hash: Hash
+            Pos: Pos option
+        }
+
+        type LogOfferReceipt<'T> = {
+            Token: string
+            Payload: 'T
+            Pos: Pos option
+        }        
+
         type EventLogView<'T> = {
             GetCount:           unit -> Task<Pos>
             GetPage:            Pos -> PageSize -> Task<Result<'T, EventLogError>[]>
@@ -173,11 +188,11 @@ module Chains =
             GetLastPage:        PageSize -> Task<Result<'T, EventLogError>[]>
             GetLastPageToken:   PageSize -> Task<Result<string, EventLogError>[]>
             GetLastPageJwt:     PageSize -> Task<Result<JwtToken<'T>, EventLogError>[]>
-            Subscribe:          unit -> IConnectableObservable<Result<string, 'T * EventLogError>>
+            Subscribe:          unit -> IConnectableObservable<Result<LogOfferReceipt<'T>, 'T * EventLogError>>
         }
 
         type EventLog<'T> = {
-            OfferAsync: 'T -> Task<Result<string, EventLogError>> // TODO: Add error handling
+            OfferAsync: 'T -> Task<Result<LogOfferReceipt<'T>, EventLogError>> // TODO: Add error handling
             View: EventLogView<'T>
         }
 
@@ -301,14 +316,17 @@ module Chains =
                         OfferAsync = fun v -> task {    let! lastPos = getCount()
                                                         let newPos = lastPos + 1UL 
                                                         let header = newPos |> Some |> toHeader 
-                                                        let tokenResult = result {  let! jwt = toJwt config.KeyVault.Active header v 
-                                                                                    return jwt.Token } 
+                                                        let tokenResult = result {  let! jwtToken = toJwt config.KeyVault.Active header v 
+                                                                                    return jwtToken } 
                                                                             |> Result.mapError (SigningError >> IntegrityError)
-                                                        let! (offerResult: Result<string, EventLogError>) = 
+                                                        let! (offerResult: Result<_, EventLogError>) = 
                                                             match tokenResult with 
-                                                            | Ok token -> task {    let! offerResult = pageLog.OfferAsync token
+                                                            | Ok jwtToken -> task { let! offerResult = pageLog.OfferAsync jwtToken.Token
                                                                                     return offerResult 
-                                                                                            |> Result.map (fun _ -> token)
+                                                                                            |> Result.map (fun _ -> {   Token = jwtToken.Token
+                                                                                                                        // Json = jwtToken.Json
+                                                                                                                        Payload = jwtToken.Payload
+                                                                                                                        Pos = jwtToken.Header.pos } )
                                                                                             |> Result.mapError DataStoreError }
                                                             | Error e -> e |> Error |> Task.FromResult 
                                                         

@@ -5,6 +5,7 @@ module Server =
 
     open System
     open System.Collections.Concurrent
+    open System.Collections.Generic
     open System.IO
     open System.Reactive
     open System.Reactive.Subjects
@@ -206,8 +207,10 @@ module Server =
         msg
 
     type InternalError<'T> = InternalError of 'T * string 
-    let toInternalError<'T> (obs: IObservable<Result<'T, 'T * EventLogError>>) = 
-        obs |> Observable.map(Result.mapError(fun (t, e) -> InternalError(t, e.ToString())))
+    let toInternalError<'T> (obs: IObservable<Result<LogOfferReceipt<'T>, 'T * EventLogError>>) = 
+        obs 
+        |> Observable.map(  Result.map(fun r -> r.Payload) 
+                            >> Result.mapError(fun (t, e) -> InternalError(t, e.ToString())))
 
     type ObservableSource<'T> = IObservable<Result<'T, InternalError<'T>>>
 
@@ -227,27 +230,28 @@ module Server =
     let fromWebSocketMessage (msg: WebSocketMessage) = msg.Value 
 
     let wsStreamsBinding prefix (streams: MatchingServiceSources) cancellationToken =
-      let webSocketRouteCi route connection = routeCi route >=> webSocket route (printfn "%s") connection cancellationToken
-      let webSocketBroadcastRouteCi route connection = routeCi route >=> webSocketBroadcast route (printfn "%s") connection cancellationToken
+        let webSocketRouteCi route connection = routeCi route >=> webSocket route ignore connection cancellationToken
+        let webSocketBroadcastRouteCi route connection = routeCi route >=> webSocketBroadcast route ignore connection cancellationToken
 
-      let toSourceHandler (dispatcher: WebSocketDispatcher) (source: IObservable<_>) = 
-        let obs = source
-                    |> Observable.bind(fun o -> Observable.FromAsync(fun () -> o |> toWebSocketMessage |> dispatcher))
-                    |> Observable.subscribe ignore
-        (fun m ->
-            let _ = obs // Just not to loose the ref 
-            m |> dispatcher)
+        let toSourceHandler (dispatcher: WebSocketDispatcher) (source: IObservable<_>) = 
+            let obs = source
+                        |> Observable.bind(fun o -> Observable.FromAsync(fun () -> o |> toWebSocketMessage |> dispatcher))
+                        |> Observable.subscribe ignore
+            (fun m ->
+                let _ = obs // Just not to loose the ref 
+                m |> dispatcher)
 
-      subRouteCi prefix (
         choose [
-          webSocketBroadcastRouteCi "/OrderRequests" (fun d _ _ -> toSourceHandler d streams.OrderCommandsSource)
-          webSocketBroadcastRouteCi "/OrderEvents" (fun d _ _ -> toSourceHandler d streams.OrderEventsSource)
-          webSocketBroadcastRouteCi "/FullOrders" (fun d _ _ -> toSourceHandler d streams.FullOrdersSource)
+            webSocketBroadcastRouteCi (prefix + "/OrderRequests") (fun d _ _ -> toSourceHandler d streams.OrderCommandsSource)
+            webSocketBroadcastRouteCi (prefix + "/OrderEvents") (fun d _ _ -> toSourceHandler d streams.OrderEventsSource)
+            webSocketBroadcastRouteCi (prefix + "/FullOrders") (fun d _ _ -> toSourceHandler d streams.FullOrdersSource)
         ]
-      )
 
     let wsSymbolStreamsBinding prefix (symbol: Symbol) (streams: MatchingServiceSources) cancellationToken =
-      wsStreamsBinding (prefix + "/" + symbol.Value) streams cancellationToken
+        wsStreamsBinding (prefix + "/" + symbol.Value) streams cancellationToken
+
+    let wsSymbolStreamsBindings prefix (streams: Map<Symbol, MatchingServiceSources>) cancellationToken =
+        choose [ for kv in streams -> wsSymbolStreamsBinding (prefix + "/symbol") kv.Key kv.Value cancellationToken ]
 
     //let wsSymbolStreamsBinding materializer (streams: Map<Symbol, MatchingServiceSources>) cancellationToken =
     //  subRouteCi "/symbols" (choose [ for kv in streams -> wsSymbolStreamsBinding materializer kv.Key kv.Value cancellationToken ])
@@ -308,7 +312,7 @@ module Server =
             routeCi  (prefix + "/" + name + "Count") >=> primitive eventLog.GetCount
         ]
 
-    let webApp (ms: Facade.MatchingService) port cancellationToken : HttpHandler =
+    let webApp (ms: Facade.MatchingService) port symbols cancellationToken : HttpHandler =
       let wsConnectionManager = ConnectionManager()
       let counterProcotol = 
         { getInitCounter = getInitCounter >> Async.AwaitTask }
@@ -435,6 +439,7 @@ module Server =
                 ]) |> withConfig (docsConfig port)
               
               wsStreamsBinding "/wstreams" (ms.Streams |> prepareStreams |> snd) cancellationToken
+              wsSymbolStreamsBindings "/wstreams" (symbols |> Seq.map (fun s -> s, ms.SymbolStreams s |> prepareStreams |> snd) |> Map.ofSeq) cancellationToken
 
               route "/wsecho" >=> (wsConnectionManager.CreateSocket(
                                     (fun ref -> task { return () }),
@@ -476,13 +481,12 @@ module Server =
 
     let symbolMatchingServiceLogs (config: StreamingConfig) pidPrefix (symbol: Symbol) = matchingServiceLogs config (pidPrefix + "__" + symbol.Value)
 
-    let symbolsMatchingServiceLogs (config: StreamingConfig) pidPrefix (symbols: string seq) =
+    let symbolsMatchingServiceLogs (config: StreamingConfig) pidPrefix (symbols: Symbol seq) =
         symbols 
-        |> Seq.map (fun s ->    let symbol = s |> Symbol 
-                                symbol, symbolMatchingServiceLogs config pidPrefix symbol)
+        |> Seq.map (fun symbol -> symbol, symbolMatchingServiceLogs config pidPrefix symbol)
         |> Map.ofSeq                            
 
-    let matchingServiceStreaming (config: StreamingConfig) pidPrefix (symbols: string seq) = // TODO: Apply this 
+    let matchingServiceStreaming (config: StreamingConfig) pidPrefix (symbols: Symbol seq) = // TODO: Apply this 
         let symbolStreamsMap = symbolsMatchingServiceLogs config pidPrefix symbols  
         {   Streams = matchingServiceLogs config pidPrefix
             SymbolStreams = fun symbol -> symbolStreamsMap.[symbol] }
@@ -508,14 +512,14 @@ module Server =
     let startSimulation ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
 
     let configureApp port (app : IApplicationBuilder) =
-      let symbols = ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ]
+      let symbols = ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ] |> List.map Symbol
       let ms = matchingService symbols
       startSimulation ms symbols
 
       app
         .UseStaticFiles()
         .UseWebSockets()
-        .UseGiraffe (webApp ms port CancellationToken.None)
+        .UseGiraffe (webApp ms port symbols CancellationToken.None)
 
     let configureServices (services : IServiceCollection) =
         services.AddGiraffe() |> ignore

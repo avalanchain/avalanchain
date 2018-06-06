@@ -247,8 +247,6 @@ module MatchingEngine =
         }
 
     module Facade = 
-        open Avalanchain.Core.Chains.PagedLog
-
         type SymbolStack = {
             Symbol: Symbol
             ExpirationPosLimit: Pos 

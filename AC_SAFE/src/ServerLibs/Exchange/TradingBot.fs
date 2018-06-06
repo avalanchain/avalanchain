@@ -61,7 +61,7 @@ module TradingBot =
         
     let tradingBot(ms: MatchingService, symbols) = 
         let rnd = Random()
-        let tradeStep lowCap highCap (dt: DateTime) (dtStep: TimeSpan) (symbols: string list) count = 
+        let tradeStep lowCap highCap (dt: DateTime) (dtStep: TimeSpan) (symbols: Symbol list) count = 
             // [| for i in 1 .. count do
             //     let timestamp = dt.Add(TimeSpan(dtStep.Ticks * int64(i))) |> DateTimeOffset
             //     yield [|    for sym in symbols do 
@@ -89,7 +89,6 @@ module TradingBot =
                 for i in 1 .. count do
                     let timestamp = dt.Add(TimeSpan(dtStep.Ticks * int64(i))) |> DateTimeOffset
                     for sym in symbols do 
-                        let sym = Symbol sym
                         let quantity = decimal(rnd.Next(52, 100)) * 1M<qty>
                         let st = ms.OrderStack(sym)
                         let medianPrice = decimal(((highCap - lowCap) / st.PriceStep) / 2M |> Math.Round) * st.PriceStep
