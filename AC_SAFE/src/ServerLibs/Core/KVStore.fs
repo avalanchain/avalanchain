@@ -12,7 +12,7 @@ module KVStore =
     open FSharpx.Result
     open LightningDB
     open EtcdGrpcClient
-    open Akavache
+    // open Akavache
     open System.Reactive.Concurrency
     open System.Reactive.Linq
     open System.Reactive.Threading.Tasks

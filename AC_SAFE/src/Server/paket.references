@@ -4,7 +4,7 @@ group Server
   Microsoft.AspNetCore.StaticFiles
   Microsoft.AspNetCore.WebSockets
   Fable.JsonConverter
-  Microsoft.DotNet.Watcher.Tools
+
   Giraffe
 
   Proto.Actor
@@ -20,13 +20,3 @@ group Server
   Proto.Persistence.Sqlite 
   Proto.Serialization.Wire 
   
-
-  Akka
-  Akka.Streams
-  Akka.Persistence
-  Akka.Persistence.Sqlite
-  Akka.Persistence.Sql.Common
-  Akka.Persistence.Query
-  Akka.Persistence.Query.Sql
-  Akka.Cluster
-  Akka.Cluster.Tools  

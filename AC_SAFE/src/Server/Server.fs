@@ -43,10 +43,10 @@ module Server =
     open Avalanchain.Core
     open Avalanchain.Core.Crypto
     open Avalanchain.Core.Chains
-    open Avalanchain.Core.Node
+    // open Avalanchain.Core.Node
     open Avalanchain.Core.Observable
     open Avalanchain.Server.WebSocketActor
-    open Network
+    // open Network
 
     // open Akka
     // open Akka.Actor
@@ -281,9 +281,9 @@ module Server =
         SymbolStreams: MatchingServiceSymbolLogs
     }
     let prepareStreams (streams: MatchingServiceLogs) = 
-        let queues = {  OrderCommandsQueue = new Subject<_>()
-                        OrderEventsQueue   = new Subject<_>()
-                        FullOrdersQueue    = new Subject<_>() }
+        let queues = {  OrderCommandsQueue = Subject.broadcast
+                        OrderEventsQueue   = Subject.broadcast
+                        FullOrdersQueue    = Subject.broadcast }
         let ocs = streams.OrderCommands.View.Subscribe()
         let oes = streams.OrderEvents.View.Subscribe()
         let fos = streams.FullOrders.View.Subscribe()

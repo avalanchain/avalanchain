@@ -5,7 +5,6 @@ group Server
   Sodium.Core
   VaultSharp
   TaskBuilder.fs
-  Akavache
 
   Proto.Actor
   Proto.Actor.Extensions
@@ -20,16 +19,3 @@ group Server
   Proto.Persistence.Sqlite 
   Proto.Serialization.Wire 
   
-
-  Akka
-  Akka.Streams
-  Akka.Persistence
-  Akka.Persistence.Sqlite
-  Akka.Persistence.Sql.Common
-  Akka.Persistence.Query
-  Akka.Persistence.Query.Sql
-  Akka.Cluster
-  Akka.Cluster.Tools
-
-  Akkling.Streams
-  Akkling.Persistence

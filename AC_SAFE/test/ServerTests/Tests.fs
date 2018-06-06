@@ -3,8 +3,6 @@ module ServerTests.Tests
 open Expecto
 open System
 open Proto
-open Proto.FSharp
-//open Proto.FSharp.Persistence
 open Proto.Persistence.Sqlite
 open Microsoft.Data.Sqlite
 open FSharp.Control.Reactive

@@ -10,7 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actor.fs" />
-    <Compile Include="Node.fs" />
     <Compile Include="Crypto.fs" />
     <Compile Include="ChainDefs.fs" />
     <Compile Include="Database.fs" />

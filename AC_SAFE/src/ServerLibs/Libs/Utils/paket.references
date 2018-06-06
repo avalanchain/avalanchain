@@ -3,4 +3,3 @@ group Server
   TaskBuilder.fs
   Microsoft.AspNetCore
   Microsoft.AspNetCore.WebSockets
-  Giraffe

@@ -1,12 +1,12 @@
 namespace Avalanchain.Core
 
-open System.Reactive.Linq
-open FSharp.Control.Reactive
 module Chains =
 
     open System
     open System.Collections.Generic
+    open System.Reactive
     open System.Reactive.Subjects
+    open System.Reactive.Linq
     open System.Text.RegularExpressions
     open System.Threading.Tasks
     open FSharp.Control.Reactive
@@ -36,7 +36,7 @@ module Chains =
     open Crypto
     open ChainDefs 
     open Database
-    open Node
+    // open Node
 
     // type PersistEvent = {   
     //     Pos: Pos
@@ -292,7 +292,7 @@ module Chains =
                                             let! length = getCount()
                                             return! if length > uint64(countL) then getPage (length - countL) count
                                                     else getPage 0UL count } 
-            let subject = new Subject<_>()
+            let subject = Subject.broadcast
             subject.Subscribe() |> ignore
 
             let eventLogView() = {  GetCount = getCount

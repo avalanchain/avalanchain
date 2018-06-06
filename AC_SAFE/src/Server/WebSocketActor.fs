@@ -13,9 +13,9 @@ module WebSocketActor =
     open Giraffe.Common
     open Giraffe.WebSocket
     open FSharp.Control
-    open Akka.Streams
-    open Akka.Streams.Dsl
-    open Akkling.Streams
+    // open Akka.Streams
+    // open Akka.Streams.Dsl
+    // open Akkling.Streams
 
     module Actor =
         let func (receive: IContext -> Task<unit>): Receive = Receive(receive >> fun t -> t :> Task)
