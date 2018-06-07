@@ -506,7 +506,7 @@ module Server =
                                  Verify = false
                                  KeyVault = keyVault }
         let streaming: MatchingServiceStreaming = matchingServiceStreaming streamingConfig "matchingService" symbols
-        let ms = MatchingService (streaming.Streams, streaming.SymbolStreams, 1M<price>, 100UL) //Facade.MatchingService.Instance
+        let ms = MatchingService (streaming.Streams, symbols, streaming.SymbolStreams, 1M<price>, 100UL) //Facade.MatchingService.Instance
         ms
 
     let startSimulation ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start

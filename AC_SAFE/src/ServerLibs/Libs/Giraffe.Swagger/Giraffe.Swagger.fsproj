@@ -14,9 +14,6 @@
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Giraffe\Giraffe.fsproj" />
-  </ItemGroup>  
-  <ItemGroup>
     <Compile Include="Common.fs" />
     <Compile Include="Analyzer.fs" />
     <Compile Include="Generator.fs" />

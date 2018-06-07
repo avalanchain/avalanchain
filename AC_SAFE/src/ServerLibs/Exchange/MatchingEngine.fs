@@ -266,7 +266,7 @@ module MatchingEngine =
 
         type MatchingServiceSymbolLogs = Symbol -> MatchingServiceLogs
 
-        type MatchingService(streams: MatchingServiceLogs, symbolStreams: MatchingServiceSymbolLogs, priceStep, posLimit) as __ =
+        type MatchingService(streams: MatchingServiceLogs, symbols, symbolStreams: MatchingServiceSymbolLogs, priceStep, posLimit) as __ =
             // let orderCommands = ResizeArray<OrderCommand>()
             // let fullOrders = ResizeArray<Order>()
             // let events = ResizeArray<OrderEvent>()
@@ -318,7 +318,7 @@ module MatchingEngine =
             member __.SubmitOrder orderCommand: Task<unit> = processCommand orderCommand posLimit
 
             member __.MainSymbol = Symbol "AVC"
-            member __.Symbols with get() = symbolStackMap |> Map.toSeq |> Seq.map fst |> Seq.filter(fun s -> s <> __.MainSymbol)
+            member __.Symbols with get() = symbols //symbolStackMap |> Map.toSeq |> Seq.map fst |> Seq.filter(fun s -> s <> __.MainSymbol)
             member __.SymbolStrings = __.Symbols |> Seq.map(fun (Symbol s) -> s) |> Seq.toArray
             member __.OrderStack symbol: OrderStack = (findSymbolStack symbol).OrderStack
             member __.OrderStackView symbol maxDepth = (findSymbolStack symbol).OrderStack |> toOrderStackView maxDepth
