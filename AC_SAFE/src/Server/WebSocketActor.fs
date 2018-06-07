@@ -13,16 +13,8 @@ module WebSocketActor =
     open Giraffe.Common
     open Giraffe.WebSocket
     open FSharp.Control
-    // open Akka.Streams
-    // open Akka.Streams.Dsl
-    // open Akkling.Streams
 
-    module Actor =
-        let func (receive: IContext -> Task<unit>): Receive = Receive(receive >> fun t -> t :> Task)
-        let fromFunc = func >> Actor.FromFunc
-        let spawn = fromFunc >> Actor.Spawn
-        let spawnNamed name = fromFunc >> fun props -> Actor.SpawnNamed(props, name)
-        let spawnPrefix prefix = fromFunc >> fun props -> Actor.SpawnPrefix(props, prefix)    
+    open Avalanchain.Core
 
     type WebSocketMessage = | WebSocketMessage of string
         with member __.Value = match __ with | WebSocketMessage msg -> msg
@@ -66,9 +58,9 @@ module WebSocketActor =
         }
 
         //let pid = Actor.create2Async handler |> Actor.initProps |> Actor.spawnNamed ("ws_" + route)
-        let pid = Actor.spawnNamed ("ws_" + route) <| fun (ctx: IContext) -> task { match ctx.Message with 
-                                                                                    | :? WebSocketConnectionMessage as msg -> do! handler ctx msg
-                                                                                    | _ -> () }
+        let pid = Actor.spawnFNamed ("ws_" + route) <| fun (ctx: IContext) -> task { match ctx.Message with 
+                                                                                        | :? WebSocketConnectionMessage as msg -> do! handler ctx msg
+                                                                                        | _ -> () }
 
         connectionManager.CreateSocket( (fun ref -> task { pid.Tell <| NewConnection ref } ),
                                         (fun ref msg -> task { pid.Tell <| Message(ref, WebSocketMessage msg) }),
@@ -143,10 +135,11 @@ module WebSocketActor =
                 running <- msg
         }
         
-        let props = Actor.fromFunc <| fun (ctx: IContext) -> task { match ctx.Message with 
-                                                                    | :? string as msg -> do! receiver msg
-                                                                    | _ -> () }
-        let pid = Actor.SpawnNamed(props, "wsClient_" + url.ToString() + "_")
+        let pid = 
+            fun (ctx: IContext) -> task { match ctx.Message with 
+                                            | :? string as msg -> do! receiver msg
+                                            | _ -> () }
+            |> Actor.spawnFNamed ("wsClient_" + url.ToString() + "_")
         pid.Tell "start"
 
         actorPid <- Some pid

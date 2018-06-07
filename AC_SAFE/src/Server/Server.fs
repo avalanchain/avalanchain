@@ -39,7 +39,6 @@ module Server =
 
     open Shared
     open Avalanchain.Exchange.MatchingEngine
-    open Facade
     open Avalanchain.Core
     open Avalanchain.Core.Crypto
     open Avalanchain.Core.Chains
@@ -312,7 +311,7 @@ module Server =
             routeCi  (prefix + "/" + name + "Count") >=> primitive eventLog.GetCount
         ]
 
-    let webApp (ms: Facade.MatchingService) port symbols cancellationToken : HttpHandler =
+    let webApp (ms: MatchingService) port symbols cancellationToken : HttpHandler =
       let wsConnectionManager = ConnectionManager()
       let counterProcotol = 
         { getInitCounter = getInitCounter >> Async.AwaitTask }
@@ -506,7 +505,7 @@ module Server =
                                  Verify = false
                                  KeyVault = keyVault }
         let streaming: MatchingServiceStreaming = matchingServiceStreaming streamingConfig "matchingService" symbols
-        let ms = MatchingService (streaming.Streams, symbols, streaming.SymbolStreams, 1M<price>, 100UL) //Facade.MatchingService.Instance
+        let ms = MatchingService (streaming.Streams, symbols, streaming.SymbolStreams, 1M<price>, 100UL) 
         ms
 
     let startSimulation ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start

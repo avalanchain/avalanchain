@@ -7,7 +7,6 @@ module TradingBot =
     open FSharp.Control.Tasks.ContextInsensitive
 
     open MatchingEngine
-    open MatchingEngine.Facade
 
     let orderData = {
         OrderType = Limit 5M<price>

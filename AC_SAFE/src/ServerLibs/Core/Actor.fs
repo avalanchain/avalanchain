@@ -1,15 +1,37 @@
 namespace Avalanchain.Core
 
-open System
+
 // open FSharp.Control.AsyncSeqExtensions
 // open FSharp.Control
-// open Proto
+
 // open Proto.Persistence
 //open Proto.FSharp.Persistence
 // open Proto.Persistence.SnapshotStrategies
 // open Proto.FSharp
 
+module Actor =
+    open System
+    open System.Threading.Tasks
+    open Proto
+
+    type IActor =
+        abstract member ReceiveAsync: IContext -> Task<unit>
+
+    let props (producer: unit -> IActor) = 
+        Actor.FromProducer ( fun () -> 
+                                let p = producer()
+                                {   new Proto.IActor 
+                                        with member __.ReceiveAsync ctx = (p.ReceiveAsync ctx) :> Task } )
+    let func (receive: IContext -> Task<unit>): Receive = Receive(receive >> fun t -> t :> Task)
+    let fromFunc = func >> Actor.FromFunc
+
+    let spawnF = fromFunc >> Actor.Spawn
+    let spawnFNamed name = fromFunc >> fun props -> Actor.SpawnNamed(props, name)
+    let spawnFPrefix prefix = fromFunc >> fun props -> Actor.SpawnPrefix(props, prefix)    
+
+
 module Observable =
+    open System
     open System.Reactive
     open System.Reactive.Linq
     open FSharp.Control.Reactive

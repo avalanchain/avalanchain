@@ -7,6 +7,142 @@ open System.Collections.Generic
 open System.Runtime.ExceptionServices
 //open FSharpx.Collections
 
+
+
+module TaskResult =
+    open System.Threading.Tasks
+    open FSharp.Control.Tasks
+
+    // type TaskResultBuilder () =
+    //     member __.Return value : Task<Result<'T, 'Error>> =
+    //         Ok value
+    //         |> task.Return
+
+    //     member __.ReturnFrom (asyncResult : Task<Result<'T, 'Error>>) =
+    //         asyncResult
+
+    //     member inline this.Zero () : Task<Result<unit, 'Error>> =
+    //         this.Return ()
+
+    //     member inline this.Delay (generator : unit -> Task<Result<'T, 'Error>>) : Task<Result<'T, 'Error>> =
+    //         task.Delay generator
+
+    //     member __.Combine (r1, r2) : Task<Result<'T, 'Error>> =
+    //         task {
+    //             let! r1' = r1
+    //             match r1' with
+    //             | Error error ->
+    //                 return Error error
+    //             | Ok () ->
+    //                 return! r2
+    //         }
+
+    //     member __.Bind (value : Task<Result<'T, 'Error>>, binder : 'T -> Task<Result<'U, 'Error>>)
+    //         : Task<Result<'U, 'Error>> =
+    //         task {
+    //             let! value' = value
+    //             match value' with
+    //             | Error error ->
+    //                 return Error error
+    //             | Ok x ->
+    //                 return! binder x
+    //         }
+
+    //     member inline __.TryWith (computation : Task<Result<'T, 'Error>>, catchHandler : exn -> Task<Result<'T, 'Error>>)
+    //         : Task<Result<'T, 'Error>> =
+    //         task.TryWith(computation, catchHandler)
+
+    //     member inline __.TryFinally (computation : Task<Result<'T, 'Error>>, compensation : unit -> unit)
+    //         : Task<Result<'T, 'Error>> =
+    //         task.TryFinally (computation, compensation)
+
+    //     member inline __.Using (resource : ('T :> System.IDisposable), binder : _ -> Task<Result<'U, 'Error>>)
+    //         : Task<Result<'U, 'Error>> =
+    //         task.Using (resource, binder)
+
+    //     member this.While (guard, body : Task<Result<unit, 'Error>>) : Task<Result<_,_>> =
+    //         if guard () then
+    //             this.Bind (body, (fun () -> this.While (guard, body)))
+    //         else
+    //             this.Zero ()
+
+    //     member this.For (sequence : seq<_>, body : 'T -> Task<Result<unit, 'Error>>) =
+    //         this.Using (sequence.GetEnumerator (), fun enum ->
+    //             this.While (
+    //                 enum.MoveNext,
+    //                 this.Delay (fun () ->
+    //                     body enum.Current)))
+
+
+    // let taskResult = TaskResultBuilder()
+    // type TaskResult<'a> = Task<Result<'a, exn>>
+
+module AsyncResult =
+    type AsyncResultBuilder () =
+        member __.Return value : Async<Result<'T, 'Error>> =
+            Ok value
+            |> async.Return
+
+        member __.ReturnFrom (asyncResult : Async<Result<'T, 'Error>>) =
+            asyncResult
+
+        member inline this.Zero () : Async<Result<unit, 'Error>> =
+            this.Return ()
+
+        member inline this.Delay (generator : unit -> Async<Result<'T, 'Error>>) : Async<Result<'T, 'Error>> =
+            async.Delay generator
+
+        member __.Combine (r1, r2) : Async<Result<'T, 'Error>> =
+            async {
+                let! r1' = r1
+                match r1' with
+                | Error error ->
+                    return Error error
+                | Ok () ->
+                    return! r2
+            }
+
+        member __.Bind (value : Async<Result<'T, 'Error>>, binder : 'T -> Async<Result<'U, 'Error>>)
+            : Async<Result<'U, 'Error>> =
+            async {
+                let! value' = value
+                match value' with
+                | Error error ->
+                    return Error error
+                | Ok x ->
+                    return! binder x
+            }
+
+        member inline __.TryWith (computation : Async<Result<'T, 'Error>>, catchHandler : exn -> Async<Result<'T, 'Error>>)
+            : Async<Result<'T, 'Error>> =
+            async.TryWith(computation, catchHandler)
+
+        member inline __.TryFinally (computation : Async<Result<'T, 'Error>>, compensation : unit -> unit)
+            : Async<Result<'T, 'Error>> =
+            async.TryFinally (computation, compensation)
+
+        member inline __.Using (resource : ('T :> System.IDisposable), binder : _ -> Async<Result<'U, 'Error>>)
+            : Async<Result<'U, 'Error>> =
+            async.Using (resource, binder)
+
+        member this.While (guard, body : Async<Result<unit, 'Error>>) : Async<Result<_,_>> =
+            if guard () then
+                this.Bind (body, (fun () -> this.While (guard, body)))
+            else
+                this.Zero ()
+
+        member this.For (sequence : seq<_>, body : 'T -> Async<Result<unit, 'Error>>) =
+            this.Using (sequence.GetEnumerator (), fun enum ->
+                this.While (
+                    enum.MoveNext,
+                    this.Delay (fun () ->
+                        body enum.Current)))
+
+
+    let asyncResult = AsyncResultBuilder()
+    type AsyncResult<'a> = Async<Result<'a, exn>>
+
+
 module Result =
     let ofOption error = function Some s -> Ok s | None -> Error error
 

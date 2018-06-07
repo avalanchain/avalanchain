@@ -102,7 +102,6 @@ module Database =
         [| for i in 1UL .. n -> { Id = i; Hash = rndStr 64; Data = rndStr 1024; TableName = tableName "Streams" }|]
 
     let insertBatch (connection: #DbConnection) (items: ChainItem seq) = 
-        //do! connection.OpenAsync().ContinueWith<unit>(fun _ -> ())
         let transaction = connection.BeginTransaction()
         let sw = Stopwatch()
         sw.Start()
@@ -114,7 +113,6 @@ module Database =
         printfn "batch inserts: '%A'" sw.Elapsed
 
     let insertBatchAsync (connection: #DbConnection) (items: ChainItem seq) = task {
-        //do! connection.OpenAsync().ContinueWith<unit>(fun _ -> ())
         use transaction = connection.BeginTransaction()
         let sw = Stopwatch()
         sw.Start()
