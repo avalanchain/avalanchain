@@ -1,21 +1,19 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\Shared\Shared.fs" />
-    <Compile Include="..\ServerLibs\Utils\PersistentVector.fs" />
-    <Compile Include="..\ServerLibs\Exchange\MatchingEngine.fs" />
-    <Compile Include="WebSocketActor.fs" />
-    <Compile Include="Server.fs" />
+    <ProjectReference Include="..\ServerLibs\Libs\Utils\Utils.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Libs\Giraffe.Swagger\Giraffe.Swagger.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Core\Core.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Payments\Payments.fsproj" />
+    <ProjectReference Include="..\ServerLibs\Exchange\Exchange.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ServerLibs\Giraffe\Giraffe.fsproj" />
-    <ProjectReference Include="..\ServerLibs\Giraffe.Swagger\Giraffe.Swagger.fsproj" />
-
-    <ProjectReference Include="..\ServerLibs\Payments\Payments.fsproj" />
+    <Compile Include="../Shared/Shared.fs" />
+    <Compile Include="WebSocketActor.fs" />
+    <Compile Include="Server.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

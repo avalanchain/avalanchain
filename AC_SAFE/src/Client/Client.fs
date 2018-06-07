@@ -7,6 +7,8 @@ open Fable.Helpers.React
 open Fable.Helpers.React.Props
 open Fable.PowerPack.Fetch
 
+open rxjs
+
 open Shared
 
 
@@ -75,6 +77,8 @@ let show = function
 | None -> "Loading..."
 
 let view model dispatch =
+  //let o = ObservableStatic.Create()
+
   div []
     [ h1 [] [ str "SAFE Template" ]
       p  [] [ str "The initial counter is fetched from server" ]

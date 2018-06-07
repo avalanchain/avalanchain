@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>LightningDB</Description>
+    <VersionPrefix>0.9.9</VersionPrefix>
+    <Authors>Ilya Lukyanov;Corey Kaylor</Authors>
+    <AssemblyName>LightningDB</AssemblyName>
+    <PackageId>LightningDB</PackageId>
+    <PackageTags>lmdb;lightning;storage;persistance;key-value;nosql</PackageTags>
+    <PackageProjectUrl>https://github.com/CoreyKaylor/Lightning.NET</PackageProjectUrl>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DefineConstants>UNSAFE_BYTEBUFFER;BYTEBUFFER_NO_BOUNDS_CHECK;RELEASE;NETCOREAPP2_0</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DefineConstants>UNSAFE_BYTEBUFFER;BYTEBUFFER_NO_BOUNDS_CHECK;DEBUG;NETCOREAPP2_0</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="runtimes\win-x64\native\lmdb.dll" Pack="true" PackagePath="runtimes/win-x64/native/lmdb.dll" />
+    <None Include="runtimes\win-x86\native\lmdb.dll" Pack="true" PackagePath="runtimes/win-x86/native/lmdb.dll" />
+    <None Include="runtimes\osx\native\lmdb.dylib" Pack="true" PackagePath="runtimes/osx/native/lmdb.dylib" />
+    <None Include="LightningDB.targets" Pack="true" PackagePath="build" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="System.Net.Primitives" Version="4.3.0" />
+    <PackageReference Include="System.Runtime" Version="4.3.0" />
+    <PackageReference Include="System.Linq" Version="4.3.0" />
+    <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" />
+    <PackageReference Include="System.IO.FileSystem" Version="4.3.0" />
+    <PackageReference Include="System.Threading" Version="4.3.0" />
+  </ItemGroup>
+</Project>

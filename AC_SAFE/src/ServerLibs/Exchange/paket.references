@@ -1,0 +1,20 @@
+group Server
+  FSharp.Core
+  Microsoft.AspNetCore
+  Microsoft.AspNetCore.StaticFiles
+  Fable.JsonConverter
+  Fable.Remoting.Giraffe
+
+  Proto.Actor
+  Proto.Actor.Extensions
+  Proto.Mailbox 
+  Proto.Router
+  Proto.Remote 
+  Proto.Persistence
+  Proto.Cluster
+  Proto.Cluster.Consul
+  Proto.Schedulers.SimpleScheduler
+  Proto.Cluster.WeightedMemberStrategy 
+  Proto.Persistence.Sqlite 
+  Proto.Serialization.Wire 
+  

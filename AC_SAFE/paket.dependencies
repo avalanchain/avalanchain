@@ -25,17 +25,29 @@ group Server
   nuget Microsoft.AspNetCore.WebSockets = 2.0.1
   nuget Microsoft.AspNetCore.TestHost = 2.0.1
 
-  nuget FSharp.Control.Reactive
+  nuget FSharp.Control.Reactive = 4.1.0
   nuget FSharp.Control.AsyncSeq
-
+  nuget TaskBuilder.fs 
+  
   nuget Fable.Remoting.Giraffe
   nuget Fable.JsonConverter
 
   nuget Sodium.Core
   nuget TypeShape
   nuget FParsec
-  nuget FSharp.Control.FusionTasks.FS41
   nuget VaultSharp
+  nuget EtcdGrpcClient
+  nuget Dapper
+  nuget Microsoft.Data.Sqlite
+
+  nuget System.Reactive = 4.0.0 redirects: force
+  nuget System.Reactive.Core = 4.0.0 redirects: force
+  nuget System.Reactive.Interfaces = 4.0.0 redirects: force
+  nuget System.Reactive.Linq = 4.0.0 redirects: force
+  nuget System.Reactive.PlatformServices = 4.0.0 redirects: force
+  nuget System.Reactive.Observable.Aliases = 4.0.0 redirects: force
+  
+  nuget Giraffe
 
   nuget Proto.Actor
   nuget Proto.Actor.Extensions
@@ -50,11 +62,6 @@ group Server
   nuget Proto.Persistence.Sqlite 
   nuget Proto.Serialization.Wire 
 
-  github cotyar/protoactor-fsharp:dev src/Proto.Actor.FSharp/Proto.FSharp.fs 
-  github cotyar/protoactor-fsharp:dev src/Proto.Actor.FSharp.Persistence/Proto.FSharp.Persistence.fs  
-
-  clitool Microsoft.DotNet.Watcher.Tools
-
 group Client
   source https://api.nuget.org/v3/index.json
 
@@ -66,12 +73,10 @@ group Client
   nuget Fable.Remoting.Client
 
   clitool dotnet-fable
-  clitool Microsoft.DotNet.Watcher.Tools
 
 group ServerTests
   source https://nuget.org/api/v2
   storage:none
-  clitool Microsoft.DotNet.Watcher.Tools
   nuget FSharp.Core redirects: force
   nuget Argu
   nuget Expecto

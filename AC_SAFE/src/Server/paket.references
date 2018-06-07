@@ -2,6 +2,21 @@ group Server
   FSharp.Core
   Microsoft.AspNetCore
   Microsoft.AspNetCore.StaticFiles
+  Microsoft.AspNetCore.WebSockets
   Fable.JsonConverter
-  Fable.Remoting.Giraffe
-  Microsoft.DotNet.Watcher.Tools
+
+  Giraffe
+
+  Proto.Actor
+  Proto.Actor.Extensions
+  Proto.Mailbox 
+  Proto.Router
+  Proto.Remote 
+  Proto.Persistence
+  Proto.Cluster
+  Proto.Cluster.Consul
+  Proto.Schedulers.SimpleScheduler
+  Proto.Cluster.WeightedMemberStrategy 
+  Proto.Persistence.Sqlite 
+  Proto.Serialization.Wire 
+  

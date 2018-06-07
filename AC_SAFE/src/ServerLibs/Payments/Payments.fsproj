@@ -1,20 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PersistenceProviders\PersistenceProviders.csproj" />
-    <ProjectReference Include="..\Utils\TypeShape.Tools\TypeShape.Tools.fsproj" />
+    <ProjectReference Include="..\Libs\TypeShape.Tools\TypeShape.Tools.fsproj" />
+    <ProjectReference Include="..\Libs\Utils\Utils.fsproj" />
+    <ProjectReference Include="..\Core\Core.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="../../../paket-files/server/cotyar/protoactor-fsharp/src/Proto.Actor.FSharp/Proto.FSharp.fs" />
-    <Compile Include="../../../paket-files/server/cotyar/protoactor-fsharp/src/Proto.Actor.FSharp.Persistence/Proto.FSharp.Persistence.fs" />
     <Compile Include="Crdt.fs" />
-    <Compile Include="Actor.fs" />
-    <Compile Include="Crypto.fs" />
-    <Compile Include="Chain.fs" />
     <Compile Include="Payments.fs" />
-    <Compile Include="Communication.fs" />
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
 </Project>

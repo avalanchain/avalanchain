@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Libs\Utils\Utils.fsproj" />
+    <ProjectReference Include="..\Libs\TypeShape.Tools\TypeShape.Tools.fsproj" />
+    <ProjectReference Include="..\Libs\LightningDB\LightningDB.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Actor.fs" />
+    <Compile Include="Crypto.fs" />
+    <Compile Include="ChainDefs.fs" />
+    <Compile Include="Database.fs" />
+    <Compile Include="KVStore.fs" />
+    <Compile Include="Chains.fs" />
+    <Compile Include="Communication.fs" />
+  </ItemGroup>
+  <Import Project="..\..\..\.paket\Paket.Restore.targets" />
+</Project>
