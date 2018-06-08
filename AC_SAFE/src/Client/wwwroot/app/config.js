@@ -419,7 +419,7 @@
                     loadPlugin: function ($ocLazyLoad) {
                         return $ocLazyLoad.load([
                             {
-                                files: ['/wwwroot/lib/jquery-sparkline/jquery.sparkline.min.js']
+                                files: ['/wwwroot/lib/jquery-sparkline/dist/jquery.sparkline.min.js']
                             }
                         ]);
                     }
