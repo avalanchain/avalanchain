@@ -24,5 +24,7 @@
 	"src/**/bin":true,
 	"src/**/obj":true,
 	"src/Client/out":true
-	}
+	},
+	"FSharp.fsacRuntime": "netcore",
+	"FSharp.minimizeBackgroundParsing":true
 }

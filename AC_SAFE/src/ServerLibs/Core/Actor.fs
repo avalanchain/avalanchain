@@ -17,18 +17,37 @@ module Actor =
     type IActor =
         abstract member ReceiveAsync: IContext -> Task<unit>
 
-    let props (producer: unit -> IActor) = 
+    let Done = Proto.Actor.Done
+
+    let inline props (producer: unit -> IActor) = 
         Actor.FromProducer ( fun () -> 
                                 let p = producer()
                                 {   new Proto.IActor 
                                         with member __.ReceiveAsync ctx = (p.ReceiveAsync ctx) :> Task } )
-    let func (receive: IContext -> Task<unit>): Receive = Receive(receive >> fun t -> t :> Task)
+    let inline func (receive: IContext -> Task<unit>): Receive = Receive(receive >> fun t -> t :> Task)
     let fromFunc = func >> Actor.FromFunc
 
     let spawnF = fromFunc >> Actor.Spawn
-    let spawnFNamed name = fromFunc >> fun props -> Actor.SpawnNamed(props, name)
-    let spawnFPrefix prefix = fromFunc >> fun props -> Actor.SpawnPrefix(props, prefix)    
+    let inline spawnFNamed name = fromFunc >> fun props -> Actor.SpawnNamed(props, name)
+    let inline spawnFPrefix prefix = fromFunc >> fun props -> Actor.SpawnPrefix(props, prefix)    
 
+    let spawn = Actor.Spawn
+    let inline spawnNamed name props = Actor.SpawnNamed(props, name)
+    let inline spawnPrefix prefix props = Actor.SpawnPrefix(props, prefix)
+
+    let inline spawnChild (ctx: IContext) = ctx.Spawn
+    let inline spawnChildNamed (ctx: IContext) name props = ctx.SpawnNamed(props, name)
+    let inline spawnChildPrefix (ctx: IContext) prefix props = ctx.SpawnPrefix(props, prefix) 
+
+    let inline tell (pid: PID) msg = pid.Tell msg
+    let inline ask (pid: PID) msg = pid.RequestAsync msg
+    
+    let inline (>!) msg pid = tell pid msg
+    let inline (<!) pid msg = tell pid msg
+    let inline (>?) msg pid = ask pid msg 
+    let inline (<?) pid msg = ask pid msg  
+
+    type ReplyChannel<'Reply> = 'Reply -> unit
 
 module Observable =
     open System

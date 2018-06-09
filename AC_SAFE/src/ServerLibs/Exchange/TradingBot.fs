@@ -89,7 +89,7 @@ module TradingBot =
                     let timestamp = dt.Add(TimeSpan(dtStep.Ticks * int64(i))) |> DateTimeOffset
                     for sym in symbols do 
                         let quantity = decimal(rnd.Next(52, 100)) * 1M<qty>
-                        let st = ms.OrderStack(sym)
+                        let! st = ms.OrderStack(sym)
                         let medianPrice = decimal(((highCap - lowCap) / st.PriceStep) / 2M |> Math.Round) * st.PriceStep
                         let p, side = match st.BidOrders, st.AskOrders with
                                         | [], [] -> medianPrice, MarketSide.Ask
@@ -132,7 +132,10 @@ module TradingBot =
                                                 OrderType = Limit cappedPrice
                                                 Quantity = quantity
                                                 CreatedTime = timestamp } |> OrderCommand.Create 
-                        do! ms.SubmitOrder orderCommand
+                        let! res = ms.SubmitOrder orderCommand
+                        match res with 
+                        | Ok _ -> ()
+                        | Error e -> printfn "Order submitted with an error: '%A'" e 
             }
         task {
             do! tradeStep 100M<price> 400M<price> (DateTime.Today.AddHours 7.) (TimeSpan.FromSeconds 1.) symbols 200

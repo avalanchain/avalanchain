@@ -187,7 +187,7 @@ module Server =
         bindQuery<SymbolMaxDepthQuery> None (fun qs -> (successHandler (qs.symbol |> Option.defaultValue "" |> Symbol) (qs.maxDepth |> Option.defaultValue 10)) |> json |> Successful.ok)
 
     let bindOrderIDQuery successHandler = 
-        bindQuery<OrderIDQuery> None (fun qs -> qs.orderID |> Option.defaultValue "" |> successHandler |> json |> Successful.ok)
+        bindQuery<OrderIDQuery> None (fun qs -> qs.orderID |> Option.defaultValue "" |> successHandler |> jsonAsync |> Successful.ok)
 
     let bindPageStartQuery successHandler = 
         bindQuery<PageStartQuery> None (fun pq -> successHandler (pq.startIndex |> Option.defaultValue 0UL) (pq.pageSize |> Option.defaultValue 0u) |> jsonAsync |> Successful.ok)
@@ -337,7 +337,7 @@ module Server =
                                                                         (fun oq -> match oq.orderID with
                                                                                     | None -> parsingError "Missing order ID"
                                                                                     | Some guidStr -> guidStr |> Guid.Parse |> ms.OrderById |> json |> Successful.ok)
-                                        routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
+                                        // routeCi  "/GetOrder2"       >=> bindOrderIDQuery ms.OrderById2
                                         routeCi  "/GetOrders"       >=> bindPageStartQuery ms.Orders
                                         routeCi  "/GetOrdersCount"  >=> primitive ms.OrdersCount
                                         
