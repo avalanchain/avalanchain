@@ -319,9 +319,10 @@ module MatchingEngine =
         | GetSymbolStack 
 
     let symbolStackProps priceStep expireLimit (ordersState: OrdersState) (streams: MatchingServiceLogs) 
-                        (symbol: Symbol) (symbolStreams: MatchingServiceLogs) =
+                        (symbol: Symbol) (symbolStreams: MatchingServiceLogs) = task {
         let mutable symbolStack = SymbolStack.Create priceStep expireLimit symbol
-        {   new IActor  
+        let actor = 
+            {   new IActor  
                 with member __.ReceiveAsync ctx = task {
                         match ctx.Message with 
                         | :? OrderCommand as command -> 
@@ -370,49 +371,53 @@ module MatchingEngine =
                         | _ -> ()
                     }
             }
+        return actor
+    }
 
     let symbolStacksProps priceStep expireLimit (streams: MatchingServiceLogs) (symbolStreams: MatchingServiceSymbolLogs) (symbols: Symbol list) = 
         let ordersState = cdOrdersState()
-        let mutable symbolStackMap = Map.empty<Symbol, PID>
-        {   new IActor  
-                with member __.ReceiveAsync ctx = task {
-                        match ctx.Message with 
-                        | :? Proto.Started ->
-                            let newSymbolStackMap = 
-                                symbols 
-                                |> List.map (fun s -> 
-                                                let actor = fun () -> symbolStackProps priceStep expireLimit ordersState streams s (symbolStreams s)
-                                                let pid = actor |> Actor.props |> Actor.spawnChildNamed ctx s.Value
-                                                s, pid)
-                                |> Map.ofList
-                            symbolStackMap <- newSymbolStackMap
-                        | :? OrderCommand as command ->
-                            match command with 
-                            | OrderCommand.Create order -> 
-                                let! (res: OrderCommandResult) = symbolStackMap.[order.Symbol] <? command // TODO: Add no symbol
-                                ctx.Sender <! res
-                            | OrderCommand.Cancel(_) -> failwith "Not Implemented"                            
-                            // | _ -> ()
-                        | :? MatchingEngineQuery as q -> 
-                            match q with 
-                            | GetOrder oid -> 
-                                let! order = ordersState.TryGet oid
-                                ctx.Sender <! order
-                            | GetOrders (startIndex, pageSize) -> 
-                                let! page = ordersState.GetPage startIndex pageSize
-                                ctx.Sender <! page
-                            | GetOrdersCount ->  
-                                let! count = ordersState.Count()
-                                ctx.Sender <! count    
-                            | GetSymbolStack symbol -> 
-                                let! (res: SymbolStack) = symbolStackMap.[symbol] <? SymbolStackQuery.GetSymbolStack // TODO: Add no symbol
-                                ctx.Sender <! res                   
-                        | _ -> ()
-                    }
-            }
+        task {
+            let mutable symbolStackMap = Map.empty<Symbol, PID>
+            return {   new IActor  
+                    with member __.ReceiveAsync ctx = task {
+                            match ctx.Message with 
+                            | :? Proto.Started ->
+                                let newSymbolStackMap = 
+                                    symbols 
+                                    |> List.map (fun s -> 
+                                                    let actor = fun () -> symbolStackProps priceStep expireLimit ordersState streams s (symbolStreams s)
+                                                    let pid = actor |> Actor.props |> Actor.spawnChildNamed ctx s.Value
+                                                    s, pid)
+                                    |> Map.ofList
+                                symbolStackMap <- newSymbolStackMap
+                            | :? OrderCommand as command ->
+                                match command with 
+                                | OrderCommand.Create order -> 
+                                    let! (res: OrderCommandResult) = symbolStackMap.[order.Symbol] <? command // TODO: Add no symbol
+                                    ctx.Sender <! res
+                                | OrderCommand.Cancel(_) -> failwith "Not Implemented"                            
+                                // | _ -> ()
+                            | :? MatchingEngineQuery as q -> 
+                                match q with 
+                                | GetOrder oid -> 
+                                    let! order = ordersState.TryGet oid
+                                    ctx.Sender <! order
+                                | GetOrders (startIndex, pageSize) -> 
+                                    let! page = ordersState.GetPage startIndex pageSize
+                                    ctx.Sender <! page
+                                | GetOrdersCount ->  
+                                    let! count = ordersState.Count()
+                                    ctx.Sender <! count    
+                                | GetSymbolStack symbol -> 
+                                    let! (res: SymbolStack) = symbolStackMap.[symbol] <? SymbolStackQuery.GetSymbolStack // TODO: Add no symbol
+                                    ctx.Sender <! res                   
+                            | _ -> ()
+                        }
+                }
+        }
 
 
-    type MatchingService(streams: MatchingServiceLogs, symbols, symbolStreams: MatchingServiceSymbolLogs, priceStep, expireLimit) as __ =
+    type MatchingService(streams: MatchingServiceLogs, symbols, symbolStreams: MatchingServiceSymbolLogs, priceStep, expireLimit) as __ = 
         // let mutable orders = Map.empty<OrderID, Order>
         // let mutable symbolStackMap = Map.empty<Symbol, SymbolStack>
         // let findSymbolStack symbol = match symbolStackMap.TryFind symbol with

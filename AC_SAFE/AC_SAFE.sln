@@ -15,23 +15,26 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{524A9C44
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "ServerTests", "test\ServerTests\ServerTests.fsproj", "{E50A51DF-B22E-4277-8004-96B6B71082C4}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Core", "src\ServerLibs\Core\Core.fsproj", "{A375900C-EC2F-4674-93CF-86B9FE885B86}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Core", "src\ServerLibs\Core\Core.fsproj", "{A375900C-EC2F-4674-93CF-86B9FE885B86}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PersistenceProviders", "src\ServerLibs\PersistenceProviders\PersistenceProviders.csproj", "{05980591-E2CC-4923-8A56-B6109244B530}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Exchange", "src\ServerLibs\Exchange\Exchange.fsproj", "{739E34BB-9C35-49A4-B76E-568636CC1555}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Exchange", "src\ServerLibs\Exchange\Exchange.fsproj", "{739E34BB-9C35-49A4-B76E-568636CC1555}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libs", "Libs", "{125321C1-A00F-4BBE-B359-88338D370AC6}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Giraffe.Swagger", "src\ServerLibs\Libs\Giraffe.Swagger\Giraffe.Swagger.fsproj", "{1A0ACF22-5B80-4419-B453-2CD640C3ADA2}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Giraffe.Swagger", "src\ServerLibs\Libs\Giraffe.Swagger\Giraffe.Swagger.fsproj", "{1A0ACF22-5B80-4419-B453-2CD640C3ADA2}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TypeShape.Tools", "src\ServerLibs\Libs\TypeShape.Tools\TypeShape.Tools.fsproj", "{16095615-DAA8-46AE-803F-5B8CE5075C87}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "TypeShape.Tools", "src\ServerLibs\Libs\TypeShape.Tools\TypeShape.Tools.fsproj", "{16095615-DAA8-46AE-803F-5B8CE5075C87}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Utils", "src\ServerLibs\Libs\Utils\Utils.fsproj", "{2BD9EAF6-809A-4118-81F3-095801F17394}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Utils", "src\ServerLibs\Libs\Utils\Utils.fsproj", "{2BD9EAF6-809A-4118-81F3-095801F17394}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LightningDB", "src\ServerLibs\Libs\LightningDB\LightningDB.csproj", "{9A46F129-5FD2-472B-A298-80AA0E8D52B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LightningDB", "src\ServerLibs\Libs\LightningDB\LightningDB.csproj", "{9A46F129-5FD2-472B-A298-80AA0E8D52B3}"
 EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
@@ -89,18 +92,6 @@ Global
 		{E50A51DF-B22E-4277-8004-96B6B71082C4}.Release|x64.Build.0 = Release|Any CPU
 		{E50A51DF-B22E-4277-8004-96B6B71082C4}.Release|x86.ActiveCfg = Release|Any CPU
 		{E50A51DF-B22E-4277-8004-96B6B71082C4}.Release|x86.Build.0 = Release|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x64.Build.0 = Debug|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x86.Build.0 = Debug|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Release|Any CPU.Build.0 = Release|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x64.ActiveCfg = Release|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x64.Build.0 = Release|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x86.ActiveCfg = Release|Any CPU
-		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x86.Build.0 = Release|Any CPU
 		{A375900C-EC2F-4674-93CF-86B9FE885B86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A375900C-EC2F-4674-93CF-86B9FE885B86}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A375900C-EC2F-4674-93CF-86B9FE885B86}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -113,6 +104,18 @@ Global
 		{A375900C-EC2F-4674-93CF-86B9FE885B86}.Release|x64.Build.0 = Release|Any CPU
 		{A375900C-EC2F-4674-93CF-86B9FE885B86}.Release|x86.ActiveCfg = Release|Any CPU
 		{A375900C-EC2F-4674-93CF-86B9FE885B86}.Release|x86.Build.0 = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x64.Build.0 = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Debug|x86.Build.0 = Debug|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x64.ActiveCfg = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x64.Build.0 = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x86.ActiveCfg = Release|Any CPU
+		{05980591-E2CC-4923-8A56-B6109244B530}.Release|x86.Build.0 = Release|Any CPU
 		{739E34BB-9C35-49A4-B76E-568636CC1555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{739E34BB-9C35-49A4-B76E-568636CC1555}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{739E34BB-9C35-49A4-B76E-568636CC1555}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -180,8 +183,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{6CA1C3BF-E6A8-4A4A-81FE-6C1E728AE786} = {E710C621-0941-4196-AF33-DCAF94879341}
 		{E50A51DF-B22E-4277-8004-96B6B71082C4} = {524A9C44-3AEA-45AA-873A-6DEB54E0985E}
-		{05980591-E2CC-4923-8A56-B6109244B530} = {E710C621-0941-4196-AF33-DCAF94879341}
 		{A375900C-EC2F-4674-93CF-86B9FE885B86} = {E710C621-0941-4196-AF33-DCAF94879341}
+		{05980591-E2CC-4923-8A56-B6109244B530} = {E710C621-0941-4196-AF33-DCAF94879341}
 		{739E34BB-9C35-49A4-B76E-568636CC1555} = {E710C621-0941-4196-AF33-DCAF94879341}
 		{125321C1-A00F-4BBE-B359-88338D370AC6} = {E710C621-0941-4196-AF33-DCAF94879341}
 		{1A0ACF22-5B80-4419-B453-2CD640C3ADA2} = {125321C1-A00F-4BBE-B359-88338D370AC6}
@@ -191,5 +194,8 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {229C5A8D-F14E-44D7-AC34-4A80C9B77A59}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

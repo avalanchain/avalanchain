@@ -509,6 +509,17 @@ module Server =
         ms
 
     let startSimulation ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation2 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation3 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation4 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation5 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation6 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation7 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation8 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation9 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation10 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation11 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
+    let startSimulation12 ms symbols = async { do! TradingBot.tradingBot(ms, symbols) |> Async.AwaitTask } |> Async.Start
 
     let configureApp port (app : IApplicationBuilder) =
       let symbols = ["AVC"; "BTC"; "XRP"; "ETH"; "AIM"; "LTC"; "ADA"; "XLM"; "NEO"; "EOS"; "MIOTA"; "XMR"; "DASH"; "XEM"; "TRX"; "USDT"; "BTS"; "ETC"; "NANO" ] |> List.map Symbol

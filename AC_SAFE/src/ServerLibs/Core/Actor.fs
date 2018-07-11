@@ -1,4 +1,6 @@
 namespace Avalanchain.Core
+open FSharp.Control.Tasks.ContextSensitive
+open System.Threading.Tasks
 
 
 // open FSharp.Control.AsyncSeqExtensions
@@ -19,11 +21,17 @@ module Actor =
 
     let Done = Proto.Actor.Done
 
-    let inline props (producer: unit -> IActor) = 
-        Actor.FromProducer ( fun () -> 
-                                let p = producer()
-                                {   new Proto.IActor 
-                                        with member __.ReceiveAsync ctx = (p.ReceiveAsync ctx) :> Task } )
+    let await (t: Task<_>) = t.GetAwaiter().GetResult() 
+
+
+    let inline props (producer: unit -> Task<IActor>) = 
+        task {
+            let! p = producer()
+            return Actor.FromProducer ( fun () -> 
+                                            {   new Proto.IActor 
+                                                    with member __.ReceiveAsync ctx = (p.ReceiveAsync ctx) :> Task } )
+        } |> await
+
     let inline func (receive: IContext -> Task<unit>): Receive = Receive(receive >> fun t -> t :> Task)
     let fromFunc = func >> Actor.FromFunc
 
@@ -32,6 +40,7 @@ module Actor =
     let inline spawnFPrefix prefix = fromFunc >> fun props -> Actor.SpawnPrefix(props, prefix)    
 
     let spawn = Actor.Spawn
+    
     let inline spawnNamed name props = Actor.SpawnNamed(props, name)
     let inline spawnPrefix prefix props = Actor.SpawnPrefix(props, prefix)
 
