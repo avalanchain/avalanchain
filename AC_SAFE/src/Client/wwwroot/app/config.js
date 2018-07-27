@@ -64,6 +64,14 @@
             files: ['/wwwroot/assets/css/plugins/touchspin/jquery.bootstrap-touchspin.min.css', '/wwwroot/assets/js/plugins/touchspin/jquery.bootstrap-touchspin.min.js']
         };
 
+        var codemirror ={
+            serie: true,
+                files: ['/wwwroot/lib/codemirror/lib/codemirror.css','/wwwroot/lib/codemirror/theme/ambiance.css','/wwwroot/lib/codemirror/lib/codemirror.js','/wwwroot/lib/codemirror/mode/javascript/javascript.js']
+        };
+        var codemirrorui ={
+            name: 'ui.codemirror',
+                files: ['/wwwroot/lib/angular-ui-codemirror/ui-codemirror.js']
+        };
 
         $stateProvider
             .state('dashboards',
@@ -328,6 +336,21 @@
                 // },
                 ncyBreadcrumb: {
                     label: 'Chains'
+                }
+            })
+            .state('index.chains2', {
+                url: "/chains2",
+                templateUrl: "/wwwroot/app/views/chains/chains.html",
+                data: {
+                    pageTitle: 'Chains'
+                },
+                resolve: {
+                    loadPlugin: function($ocLazyLoad) {
+                        return $ocLazyLoad.load([codemirror, codemirrorui]);
+                    }
+                },
+                ncyBreadcrumb: {
+                    label: 'Chains2'
                 }
             })
             .state('assets.createassets',

@@ -1,0 +1,62 @@
+<div class="modal-body">
+    <div class="row">
+        <div class="col-lg-12"><h3> Derived: {{modal.radioModel}}</h3>
+
+
+            <form role="form">
+                <div class="form-group">
+                    <label>Choose Function</label><br>
+                    <div class="btn-group">
+                        <label class="btn btn-default active" ng-model="modal.radioModel" uib-btn-radio="'Copy'">Copy</label>
+                        <label class="btn btn-default" ng-model="modal.radioModel" uib-btn-radio="'Map'">Map</label>
+                        <label class="btn btn-default" ng-model="modal.radioModel" uib-btn-radio="'Filter'">Filter</label>
+                        <label class="btn btn-default" ng-model="modal.radioModel" uib-btn-radio="'Fold'">Fold</label>
+                        <label class="btn btn-default" ng-model="modal.radioModel" uib-btn-radio="'Group'">Group</label>
+                        <label class="btn btn-default" ng-model="modal.radioModel" uib-btn-radio="'Reduce'">Reduce</label>
+                    </div>
+                </div>
+                <div class="hr-line-dashed"></div>
+                <div class="form-group"><label>Parent</label> <input type="text" ng-model="modal.parent" disabled class="form-control"></div>
+                <div ng-hide="modal.radioModel=='Copy'" data-ng-show="modal.code.length>0" class="form-group"><label>Function</label>
+                    <ui-codemirror id="codemr" ng-model="modal.code" data-ng-init="modal.init()" ui-refresh='modal.refresh' ui-codemirror-opts="modal.editorOptions">
+                </ui-codemirror>
+                </div>
+                <div ng-show="modal.radioModel=='Group'" class="form-group"><label>Max</label> <input type="number" ng-model="modal.max" class="form-control"></div>
+                <div ng-show="modal.radioModel=='Fold'" class="form-group"><label>Json</label>
+                    <textarea ng-model="modal.json" class="form-control"></textarea></div>
+                <br>
+                <div>
+                    <button class="btn btn-sm btn-white pull-right m-t-n-xs" type="submit" ng-click="ok()"><strong>Derive</strong></button>
+                    <button class="btn btn-sm btn-white pull-right m-t-n-xs m-r-xs" type="submit" ng-click="cancel()"><strong>Cancel</strong></button>
+                    <!--<label> <input icheck type="checkbox" ng-model="main.unCheck"> Remember me </label>-->
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+<!--var SpeechApp = angular.module('SpeechApp', []);-->
+
+<!--function VoiceCtrl($scope) {-->
+
+<!--$scope.said='...';-->
+
+<!--$scope.helloWorld = function() {-->
+<!--$scope.said = "Hello world!";-->
+<!--}-->
+
+<!--$scope.commands = {-->
+<!--'hello (world)': function() {-->
+<!--if (typeof console !== "undefined") console.log('hello world!')-->
+<!--$scope.$apply($scope.helloWorld);-->
+<!--},-->
+<!--'hey': function() {-->
+<!--if (typeof console !== "undefined") console.log('hey!')-->
+<!--$scope.$apply($scope.helloWorld);-->
+<!--}-->
+<!--};-->
+
+<!--annyang.debug();-->
+<!--annyang.init($scope.commands);-->
+<!--annyang.start();-->
+<!--}-->
