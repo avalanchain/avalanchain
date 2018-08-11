@@ -7,7 +7,60 @@ open System.Collections.Generic
 open System.Runtime.ExceptionServices
 //open FSharpx.Collections
 
+[<RequireQualifiedAccess>]
+module Map =
 
+    /// returns a new map with the keys from m2 removed from m1
+    let inline difference m1 m2 =
+        Map.fold (fun s k _ -> Map.remove k s) m1 m2
+
+    /// filters m1 by the keys that ar elso present in m2
+    let inline intersect m1 m2 =
+        Map.fold (fun s k v ->
+            if Map.containsKey k m2 then
+                Map.add k v s
+            else s) Map.empty m1 
+
+    let inline zipIntersect m1 m2 =
+        Map.fold (fun s k v ->
+            match Map.tryFind k m2 with
+            | Some x -> Map.add k (v, x) s
+            | None -> s) Map.empty m1
+
+    /// merges two maps using f - if there are identical keys present the key in m1 will be used
+    let inline mergeWith f m1 m2 = 
+        Map.fold (fun s k v ->
+            match Map.tryFind k s with
+            | Some x -> Map.add k (f x v) s
+            | None -> Map.add k v s) m1 m2 
+
+    /// merges two maps - if there are identical keys present the key in m1 will be used
+    let inline merge m1 m2 =
+        mergeWith (fun x _ -> x) m1 m2
+
+    /// updates exisiting values in m1 with values from matching keys in m2
+    let inline update m1 m2 =
+        Map.fold (fun s k v ->
+            match Map.tryFind k s with
+            | Some x -> Map.add k v s
+            | None -> s) m1 m2
+
+    let inline except key =
+        Map.filter (fun k _ -> k <> key)
+
+    /// concatenates a list of maps using the merge function. head first.
+    let inline concat maps =
+        List.fold merge Map.empty maps 
+
+    /// returns a list of the keys in the map 
+    let inline keys m =
+        Map.foldBack (fun k _ s -> k :: s) m []
+
+    /// returns a list of the values in the map 
+    let inline values m =
+        Map.foldBack (fun _ v s -> v :: s) m []
+
+    let inline count (m : Map<'T,'T2>) = m.Count
 
 module TaskResult =
     open System.Threading.Tasks
